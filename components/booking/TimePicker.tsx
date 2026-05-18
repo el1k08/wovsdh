@@ -1,0 +1,90 @@
+'use client'
+
+import type { SlotDTO } from '@/lib/types'
+
+interface TimePickerProps {
+  slots: SlotDTO[]
+  value: string | null
+  onChange: (slotId: string) => void
+  loading: boolean
+  disabled?: boolean
+}
+
+const TIME_FORMATTER = new Intl.DateTimeFormat('ru-IL', {
+  hour: '2-digit',
+  minute: '2-digit',
+  timeZone: 'Asia/Jerusalem',
+})
+
+function SkeletonBlock() {
+  return (
+    <div className="h-10 w-20 animate-pulse rounded-xl bg-gray-200" aria-hidden="true" />
+  )
+}
+
+export default function TimePicker({
+  slots,
+  value,
+  onChange,
+  loading,
+  disabled = false,
+}: TimePickerProps) {
+  if (loading) {
+    return (
+      <div
+        role="status"
+        aria-label="Загрузка доступных слотов"
+        className="flex flex-wrap gap-3 pt-1"
+      >
+        {Array.from({ length: 4 }).map((_, i) => (
+          <SkeletonBlock key={i} />
+        ))}
+        <span className="sr-only">Загрузка...</span>
+      </div>
+    )
+  }
+
+  if (slots.length === 0) {
+    return (
+      <p className="text-sm py-2" style={{ color: 'var(--color-charcoal)', opacity: 0.6 }}>
+        На выбранную дату свободных окон нет
+      </p>
+    )
+  }
+
+  return (
+    <div
+      role="group"
+      aria-label="Выберите время"
+      className="flex flex-wrap gap-3 pt-1"
+    >
+      {slots.map((slot) => {
+        const isSelected = value === slot.id
+        const timeLabel = TIME_FORMATTER.format(new Date(slot.start_at))
+
+        return (
+          <button
+            key={slot.id}
+            type="button"
+            onClick={() => !disabled && onChange(slot.id)}
+            disabled={disabled}
+            aria-pressed={isSelected}
+            aria-label={`Время ${timeLabel}`}
+            className={[
+              'rounded-xl px-4 py-2 text-sm font-medium transition-all duration-200',
+              'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-1',
+              'focus-visible:ring-[var(--color-rose)]',
+              disabled ? 'cursor-not-allowed opacity-40' : 'cursor-pointer',
+              isSelected
+                ? 'text-white shadow-md'
+                : 'bg-white border border-gray-200 hover:border-[var(--color-rose)] text-[var(--color-charcoal)]',
+            ].join(' ')}
+            style={isSelected ? { background: 'var(--color-rose)' } : undefined}
+          >
+            {timeLabel}
+          </button>
+        )
+      })}
+    </div>
+  )
+}

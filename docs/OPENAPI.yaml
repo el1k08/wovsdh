@@ -1,0 +1,1022 @@
+openapi: 3.0.3
+info:
+  title: WOVSDH Nails Booking API
+  description: |
+    Complete RESTful API for online nail salon booking system with Telegram notifications, Google Calendar integration, and email confirmations.
+
+    ## Base URLs
+
+    - **Local Development**: `http://localhost:3000`
+    - **Production**: `https://your-domain.com`
+
+    ## Authentication
+
+    ### Public Endpoints
+    Most endpoints are public and don't require authentication. However, Supabase RLS (Row Level Security) ensures data isolation.
+
+    ### Admin Endpoints
+    Admin endpoints require `X-Admin-Secret` header with the value of `ADMIN_SECRET_KEY` environment variable.
+
+    ### Internal Endpoints
+    Internal endpoints (confirmed bookings, email sending) require `X-Internal-Secret` header with the value of `ADMIN_SECRET_KEY`.
+
+    ## Response Format
+
+    All responses are JSON. Errors follow a standard format:
+
+    ```json
+    {
+      "error": {
+        "code": "ERROR_CODE",
+        "message": "Human-readable error message"
+      }
+    }
+    ```
+
+    ## Dates and Times
+
+    All timestamps are returned in ISO 8601 format with timezone offset (e.g., `2025-06-01T08:00:00+03:00`).
+
+    All dates in query parameters use format `YYYY-MM-DD`.
+
+    ## Rate Limiting
+
+    No rate limiting is currently implemented. For production use, implement rate limiting via Vercel's edge functions or external service.
+
+    ## Webhooks
+
+    Telegram webhook is configured at `/api/telegram/webhook` and receives updates from Telegram Bot API.
+
+servers:
+  - url: http://localhost:3000
+    description: Local development server
+  - url: https://your-domain.com
+    description: Production server
+
+paths:
+  /api/slots:
+    get:
+      summary: Get available and booked slots for a specific date
+      description: |
+        Retrieve all slots (available, booked, blocked) for a given studio and date.
+
+        Returns both free slots and booked slots with associated booking information.
+
+        Results are paginated by date.
+      operationId: getSlots
+      tags:
+        - Slots
+      parameters:
+        - name: studio_id
+          in: query
+          required: true
+          schema:
+            type: string
+            enum:
+              - rishon
+              - ashdod
+          description: Studio identifier
+          example: rishon
+        - name: date
+          in: query
+          required: true
+          schema:
+            type: string
+            format: date
+          description: Date in YYYY-MM-DD format (local Asia/Jerusalem time)
+          example: '2025-06-01'
+      responses:
+        '200':
+          description: Successfully retrieved slots
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GetSlotsResponse'
+          examples:
+            success:
+              value:
+                slots:
+                  - id: f47ac10b-58cc-4372-a567-0e02b2c3d479
+                    studio_id: rishon
+                    start_at: '2025-06-01T08:00:00+03:00'
+                    end_at: '2025-06-01T09:00:00+03:00'
+                    status: available
+                  - id: 7f8c72c0-1234-5678-9abc-def012345678
+                    studio_id: rishon
+                    start_at: '2025-06-01T09:00:00+03:00'
+                    end_at: '2025-06-01T10:00:00+03:00'
+                    status: booked
+        '400':
+          description: Invalid request parameters
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+              examples:
+                invalid_params:
+                  value:
+                    error:
+                      code: INVALID_PARAMS
+                      message: Invalid studio_id or date format
+        '404':
+          description: Studio not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+              examples:
+                not_found:
+                  value:
+                    error:
+                      code: SLOT_NOT_FOUND
+                      message: No studio found with id 'invalid'
+
+  /api/bookings:
+    post:
+      summary: Create a new booking
+      description: |
+        Create a new booking for a specific slot. The booking starts in PENDING status and requires confirmation via Telegram bot.
+
+        The system will:
+        1. Check if the slot is available
+        2. Create a booking record
+        3. Mark the slot as booked
+        4. Send a Telegram notification to staff
+        5. Generate a unique cancellation token
+
+        A cancellation token is automatically generated and embedded in the cancellation email link.
+      operationId: createBooking
+      tags:
+        - Bookings
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateBookingRequest'
+            examples:
+              example1:
+                value:
+                  slot_id: f47ac10b-58cc-4372-a567-0e02b2c3d479
+                  studio_id: rishon
+                  client_first_name: Анна
+                  client_last_name: Иванова
+                  client_phone: '+972501234567'
+                  client_email: anna@example.com
+      responses:
+        '201':
+          description: Booking created successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CreateBookingResponse'
+          examples:
+            success:
+              value:
+                booking:
+                  id: 550e8400-e29b-41d4-a716-446655440000
+                  slot_id: f47ac10b-58cc-4372-a567-0e02b2c3d479
+                  studio_id: rishon
+                  status: PENDING
+                  start_at: '2025-06-01T08:00:00+03:00'
+                  end_at: '2025-06-01T09:00:00+03:00'
+                  created_at: '2025-05-18T12:34:56.000Z'
+        '400':
+          description: Invalid request data
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+              examples:
+                validation_error:
+                  value:
+                    error:
+                      code: VALIDATION_ERROR
+                      message: Invalid email format
+        '409':
+          description: Slot is not available
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+              examples:
+                unavailable:
+                  value:
+                    error:
+                      code: SLOT_UNAVAILABLE
+                      message: Slot is already booked
+
+  /api/bookings/cancel:
+    post:
+      summary: Cancel a booking
+      description: |
+        Cancel an existing booking using the cancellation token. The token is sent to the client via email when the booking is confirmed.
+
+        Cancellation will:
+        1. Update booking status to CANCELLED
+        2. Free the slot (mark as available)
+        3. Delete the event from Google Calendar (if it exists)
+        4. Send a cancellation email to the client
+      operationId: cancelBooking
+      tags:
+        - Bookings
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CancelBookingRequest'
+            examples:
+              example1:
+                value:
+                  token: 550e8400-e29b-41d4-a716-446655440000
+      responses:
+        '200':
+          description: Booking cancelled successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CancelBookingResponse'
+          examples:
+            success:
+              value:
+                message: Booking cancelled successfully
+                booking:
+                  id: 550e8400-e29b-41d4-a716-446655440000
+                  status: CANCELLED
+                  cancelled_at: '2025-05-18T12:34:56.000Z'
+        '400':
+          description: Invalid token
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+              examples:
+                invalid_token:
+                  value:
+                    error:
+                      code: VALIDATION_ERROR
+                      message: Invalid cancellation token
+        '404':
+          description: Booking not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+              examples:
+                not_found:
+                  value:
+                    error:
+                      code: BOOKING_NOT_FOUND
+                      message: Booking not found
+        '409':
+          description: Booking is already cancelled
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+              examples:
+                already_cancelled:
+                  value:
+                    error:
+                      code: ALREADY_CANCELLED
+                      message: Booking is already cancelled
+
+  /api/calendar/ics:
+    get:
+      summary: Get calendar event as .ics file
+      description: |
+        Generate and download a .ics (iCalendar) file for a booking event. This file can be imported into any calendar application (Google Calendar, Outlook, Apple Calendar, etc.).
+
+        The file contains:
+        - Event title (client name)
+        - Date and time
+        - Studio information in description
+        - Client contact information
+      operationId: getCalendarIcs
+      tags:
+        - Calendar
+      parameters:
+        - name: booking_id
+          in: query
+          required: true
+          schema:
+            type: string
+            format: uuid
+          description: Booking ID
+          example: 550e8400-e29b-41d4-a716-446655440000
+      responses:
+        '200':
+          description: .ics file generated successfully
+          content:
+            text/calendar:
+              schema:
+                type: string
+                format: binary
+              examples:
+                success:
+                  value: |
+                    BEGIN:VCALENDAR
+                    VERSION:2.0
+                    PRODID:-//WOVSDH Nails//Booking//EN
+                    BEGIN:VEVENT
+                    UID:550e8400-e29b-41d4-a716-446655440000@wovsdh-nails.com
+                    DTSTART:20250601T080000
+                    DTEND:20250601T090000
+                    SUMMARY:Анна Иванова
+                    DESCRIPTION:Телефон: +972501234567\nEmail: anna@example.com
+                    LOCATION:WOVSDH Nails Rishon
+                    END:VEVENT
+                    END:VCALENDAR
+        '404':
+          description: Booking not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+              examples:
+                not_found:
+                  value:
+                    error:
+                      code: BOOKING_NOT_FOUND
+                      message: Booking not found
+
+  /api/admin/slots:
+    get:
+      summary: List all slots for admin (with booking info)
+      description: |
+        Retrieve all slots for a studio within a date range, including information about bookings. Each slot can show the associated booking (if booked).
+
+        Requires admin authentication.
+      operationId: getAdminSlots
+      tags:
+        - Admin
+      security:
+        - AdminSecret: []
+      parameters:
+        - name: studio_id
+          in: query
+          required: true
+          schema:
+            type: string
+            enum:
+              - rishon
+              - ashdod
+          description: Studio identifier
+          example: rishon
+        - name: date_from
+          in: query
+          required: true
+          schema:
+            type: string
+            format: date
+          description: Start date (YYYY-MM-DD)
+          example: '2025-06-01'
+        - name: date_to
+          in: query
+          required: true
+          schema:
+            type: string
+            format: date
+          description: End date (YYYY-MM-DD)
+          example: '2025-06-30'
+      responses:
+        '200':
+          description: Slots retrieved successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GetAdminSlotsResponse'
+          examples:
+            success:
+              value:
+                slots:
+                  - id: f47ac10b-58cc-4372-a567-0e02b2c3d479
+                    studio_id: rishon
+                    start_at: '2025-06-01T08:00:00+03:00'
+                    end_at: '2025-06-01T09:00:00+03:00'
+                    status: available
+                  - id: 7f8c72c0-1234-5678-9abc-def012345678
+                    studio_id: rishon
+                    start_at: '2025-06-01T09:00:00+03:00'
+                    end_at: '2025-06-01T10:00:00+03:00'
+                    status: booked
+                    booking:
+                      id: 550e8400-e29b-41d4-a716-446655440000
+                      client_first_name: Анна
+                      client_last_name: Иванова
+                      status: PENDING
+        '401':
+          description: Unauthorized - invalid or missing admin secret
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+              examples:
+                unauthorized:
+                  value:
+                    error:
+                      code: UNAUTHORIZED
+                      message: Invalid admin credentials
+        '400':
+          description: Invalid request parameters
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+
+    post:
+      summary: Generate slots for a date range
+      description: |
+        Create multiple slots for a specific date, studio, and time period with the specified duration.
+
+        System will:
+        1. Split the time period into slots of the specified duration
+        2. Create slots that don't overlap with existing ones
+        3. Return count of created and skipped slots
+
+        Requires admin authentication.
+
+        Example: Create 1-hour slots from 09:00 to 17:30 will generate:
+        09:00-10:00, 10:00-11:00, ..., 16:30-17:30
+      operationId: generateSlots
+      tags:
+        - Admin
+      security:
+        - AdminSecret: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/GenerateSlotsRequest'
+            examples:
+              example1:
+                value:
+                  studio_id: rishon
+                  date: '2025-06-01'
+                  slot_duration_minutes: 60
+                  start_time: '09:00'
+                  end_time: '17:30'
+      responses:
+        '200':
+          description: Slots generated successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GenerateSlotsResponse'
+          examples:
+            success:
+              value:
+                created: 8
+                skipped: 0
+                slots:
+                  - id: f47ac10b-58cc-4372-a567-0e02b2c3d479
+                    studio_id: rishon
+                    start_at: '2025-06-01T09:00:00+03:00'
+                    end_at: '2025-06-01T10:00:00+03:00'
+                    status: available
+                  - id: 7f8c72c0-1234-5678-9abc-def012345678
+                    studio_id: rishon
+                    start_at: '2025-06-01T10:00:00+03:00'
+                    end_at: '2025-06-01T11:00:00+03:00'
+                    status: available
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+        '400':
+          description: Invalid request data
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+
+  /api/admin/slots/{id}:
+    delete:
+      summary: Delete a single slot
+      description: |
+        Delete a specific slot by ID. If the slot is booked, the associated booking will be cancelled and the client notified.
+
+        Requires admin authentication.
+      operationId: deleteSlot
+      tags:
+        - Admin
+      security:
+        - AdminSecret: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+          description: Slot ID
+          example: f47ac10b-58cc-4372-a567-0e02b2c3d479
+      responses:
+        '200':
+          description: Slot deleted successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DeleteSlotResponse'
+          examples:
+            success:
+              value:
+                message: Slot deleted successfully
+                id: f47ac10b-58cc-4372-a567-0e02b2c3d479
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+        '404':
+          description: Slot not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+
+  /api/telegram/webhook:
+    post:
+      summary: Telegram Bot webhook endpoint
+      description: |
+        Receive and process updates from Telegram Bot API. Telegram sends updates as POST requests to this endpoint.
+
+        This endpoint:
+        1. Validates the X-Telegram-Bot-Api-Secret-Hash header
+        2. Processes callback queries (button clicks)
+        3. Handles bot commands from authorized users
+        4. Returns 200 OK to all requests (even invalid ones, to avoid redelivery)
+
+        No authentication header required - Telegram includes a cryptographic signature.
+      operationId: telegramWebhook
+      tags:
+        - Telegram
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/TelegramUpdate'
+      responses:
+        '200':
+          description: Update processed (always returns 200)
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  ok:
+                    type: boolean
+
+  /api/internal/confirm-booking:
+    post:
+      summary: Confirm a pending booking (internal)
+      description: |
+        Internal endpoint to confirm a booking. This is called by Telegram webhook when staff clicks "Confirm" button.
+
+        Confirmation will:
+        1. Update booking status to CONFIRMED
+        2. Create event in Google Calendar
+        3. Send confirmation email to client
+        4. Update Telegram message
+
+        Requires internal secret authentication.
+      operationId: confirmBooking
+      tags:
+        - Internal
+      security:
+        - InternalSecret: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                booking_id:
+                  type: string
+                  format: uuid
+                  description: Booking ID to confirm
+              required:
+                - booking_id
+            examples:
+              example1:
+                value:
+                  booking_id: 550e8400-e29b-41d4-a716-446655440000
+      responses:
+        '200':
+          description: Booking confirmed successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  event_id:
+                    type: string
+                    description: Google Calendar event ID
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+        '404':
+          description: Booking not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+
+  /api/internal/send-confirmation-email:
+    post:
+      summary: Send confirmation email (internal)
+      description: |
+        Internal endpoint to send confirmation email to a client. Normally called automatically by the confirmation flow, but can be manually triggered.
+
+        Requires internal secret authentication.
+      operationId: sendConfirmationEmail
+      tags:
+        - Internal
+      security:
+        - InternalSecret: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                booking_id:
+                  type: string
+                  format: uuid
+                  description: Booking ID
+              required:
+                - booking_id
+            examples:
+              example1:
+                value:
+                  booking_id: 550e8400-e29b-41d4-a716-446655440000
+      responses:
+        '200':
+          description: Email sent successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+        '500':
+          description: Email sending failed
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+
+components:
+  schemas:
+    SlotDTO:
+      type: object
+      description: A time slot (available, booked, or blocked)
+      properties:
+        id:
+          type: string
+          format: uuid
+          description: Unique slot identifier
+        studio_id:
+          type: string
+          description: Studio identifier (rishon or ashdod)
+        start_at:
+          type: string
+          format: date-time
+          description: Slot start time (ISO 8601 with timezone)
+        end_at:
+          type: string
+          format: date-time
+          description: Slot end time (ISO 8601 with timezone)
+        status:
+          type: string
+          enum:
+            - available
+            - booked
+            - blocked
+          description: Slot status
+      required:
+        - id
+        - studio_id
+        - start_at
+        - end_at
+        - status
+
+    AdminSlotDTO:
+      allOf:
+        - $ref: '#/components/schemas/SlotDTO'
+        - type: object
+          properties:
+            booking:
+              type: object
+              description: Booking information (only if slot is booked)
+              properties:
+                id:
+                  type: string
+                  format: uuid
+                client_first_name:
+                  type: string
+                client_last_name:
+                  type: string
+                status:
+                  type: string
+                  enum:
+                    - PENDING
+                    - CONFIRMED
+                    - CANCELLED
+
+    BookingCreatedDTO:
+      type: object
+      description: Minimal booking information returned after creation
+      properties:
+        id:
+          type: string
+          format: uuid
+          description: Booking ID
+        slot_id:
+          type: string
+          format: uuid
+          description: Associated slot ID
+        studio_id:
+          type: string
+          description: Studio ID
+        status:
+          type: string
+          enum:
+            - PENDING
+            - CONFIRMED
+            - CANCELLED
+          description: Booking status
+        start_at:
+          type: string
+          format: date-time
+          description: Event start time
+        end_at:
+          type: string
+          format: date-time
+          description: Event end time
+        created_at:
+          type: string
+          format: date-time
+          description: When booking was created
+      required:
+        - id
+        - slot_id
+        - studio_id
+        - status
+        - start_at
+        - end_at
+        - created_at
+
+    CreateBookingRequest:
+      type: object
+      description: Request to create a new booking
+      properties:
+        slot_id:
+          type: string
+          format: uuid
+          description: Slot to book
+        studio_id:
+          type: string
+          description: Studio identifier
+        client_first_name:
+          type: string
+          description: Client first name
+        client_last_name:
+          type: string
+          description: Client last name
+        client_phone:
+          type: string
+          description: Client phone number (including country code, e.g. +972...)
+        client_email:
+          type: string
+          format: email
+          description: Client email address
+      required:
+        - slot_id
+        - studio_id
+        - client_first_name
+        - client_last_name
+        - client_phone
+        - client_email
+
+    CancelBookingRequest:
+      type: object
+      description: Request to cancel a booking
+      properties:
+        token:
+          type: string
+          format: uuid
+          description: Cancellation token from email
+      required:
+        - token
+
+    GenerateSlotsRequest:
+      type: object
+      description: Request to generate slots for a date
+      properties:
+        studio_id:
+          type: string
+          description: Studio identifier
+        date:
+          type: string
+          format: date
+          description: Date in YYYY-MM-DD format
+        slot_duration_minutes:
+          type: integer
+          description: Duration of each slot in minutes (e.g., 60)
+        start_time:
+          type: string
+          pattern: '^\d{2}:\d{2}$'
+          description: Day start time in HH:mm format (local time)
+        end_time:
+          type: string
+          pattern: '^\d{2}:\d{2}$'
+          description: Day end time in HH:mm format (local time)
+      required:
+        - studio_id
+        - date
+        - slot_duration_minutes
+        - start_time
+        - end_time
+
+    GetSlotsResponse:
+      type: object
+      properties:
+        slots:
+          type: array
+          items:
+            $ref: '#/components/schemas/SlotDTO'
+
+    CreateBookingResponse:
+      type: object
+      properties:
+        booking:
+          $ref: '#/components/schemas/BookingCreatedDTO'
+
+    CancelBookingResponse:
+      type: object
+      properties:
+        message:
+          type: string
+        booking:
+          type: object
+          properties:
+            id:
+              type: string
+              format: uuid
+            status:
+              type: string
+              enum:
+                - CANCELLED
+            cancelled_at:
+              type: string
+              format: date-time
+
+    GetAdminSlotsResponse:
+      type: object
+      properties:
+        slots:
+          type: array
+          items:
+            $ref: '#/components/schemas/AdminSlotDTO'
+
+    GenerateSlotsResponse:
+      type: object
+      properties:
+        created:
+          type: integer
+          description: Number of slots created
+        skipped:
+          type: integer
+          description: Number of slots skipped (already existed)
+        slots:
+          type: array
+          items:
+            $ref: '#/components/schemas/SlotDTO'
+
+    DeleteSlotResponse:
+      type: object
+      properties:
+        message:
+          type: string
+        id:
+          type: string
+          format: uuid
+
+    ApiError:
+      type: object
+      properties:
+        error:
+          type: object
+          properties:
+            code:
+              type: string
+              enum:
+                - INVALID_PARAMS
+                - SLOT_NOT_FOUND
+                - SLOT_UNAVAILABLE
+                - SLOT_HAS_ACTIVE_BOOKING
+                - BOOKING_NOT_FOUND
+                - ALREADY_CANCELLED
+                - UNAUTHORIZED
+                - VALIDATION_ERROR
+                - INTERNAL_ERROR
+            message:
+              type: string
+              description: Human-readable error message
+
+    TelegramUpdate:
+      type: object
+      description: Telegram Bot API update
+      properties:
+        update_id:
+          type: integer
+        callback_query:
+          type: object
+          properties:
+            id:
+              type: string
+            from:
+              type: object
+              properties:
+                id:
+                  type: integer
+                username:
+                  type: string
+            message:
+              type: object
+              properties:
+                message_id:
+                  type: integer
+                chat:
+                  type: object
+                  properties:
+                    id:
+                      type: integer
+            data:
+              type: string
+              description: Button callback data (format - confirm:booking_id or cancel:booking_id)
+        message:
+          type: object
+          properties:
+            message_id:
+              type: integer
+            from:
+              type: object
+              properties:
+                id:
+                  type: integer
+            chat:
+              type: object
+              properties:
+                id:
+                  type: integer
+            text:
+              type: string
+
+  securitySchemes:
+    AdminSecret:
+      type: apiKey
+      in: header
+      name: X-Admin-Secret
+      description: Admin secret key (value of ADMIN_SECRET_KEY env var)
+
+    InternalSecret:
+      type: apiKey
+      in: header
+      name: X-Internal-Secret
+      description: Internal secret key (value of ADMIN_SECRET_KEY env var)
+
+tags:
+  - name: Slots
+    description: Public endpoints for getting available slots
+  - name: Bookings
+    description: Public endpoints for creating and cancelling bookings
+  - name: Calendar
+    description: Public endpoints for calendar operations
+  - name: Admin
+    description: Admin-only endpoints for managing slots
+  - name: Telegram
+    description: Telegram Bot webhook integration
+  - name: Internal
+    description: Internal endpoints for asynchronous operations
