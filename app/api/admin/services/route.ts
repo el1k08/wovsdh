@@ -125,5 +125,13 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
 
   const service = data as ServiceDTO
 
+  // Also assign to the studio via junction table when studio_id is provided
+  if (service.id && typeof studio_id === 'string' && studio_id.trim()) {
+    await supabaseAdmin
+      .from('studio_services')
+      .insert({ studio_id: studio_id.trim(), service_id: service.id })
+      .select()
+  }
+
   return NextResponse.json<{ service: ServiceDTO }>({ service }, { status: 201 })
 }

@@ -212,6 +212,12 @@ function ServicesTab({ studio, apiFetch, onUnauth }: ServicesTabProps) {
   const dragOverItem = useRef<number | null>(null)
   const [dragIndex, setDragIndex] = useState<number | null>(null)
 
+  // Studio assignment state
+  const [assignedIds, setAssignedIds] = useState<Set<string>>(new Set())
+  const [assignmentLoading, setAssignmentLoading] = useState(false)
+  const [assignmentSaving, setAssignmentSaving] = useState(false)
+  const [assignmentMessage, setAssignmentMessage] = useState<InlineMessage | null>(null)
+
   const loadServices = useCallback(async () => {
     setLoading(true)
     setMessage(null)
@@ -232,9 +238,58 @@ function ServicesTab({ studio, apiFetch, onUnauth }: ServicesTabProps) {
     }
   }, [studio, apiFetch, onUnauth])
 
+  const loadAssignments = useCallback(async () => {
+    setAssignmentLoading(true)
+    try {
+      const res = await apiFetch(`/api/admin/studio-services?studio_id=${studio}`)
+      if (res.status === 401) { onUnauth(); return }
+      if (res.ok) {
+        const data = await res.json() as { service_ids: string[] }
+        setAssignedIds(new Set(data.service_ids))
+      }
+    } catch {
+      // silently fail — not critical
+    } finally {
+      setAssignmentLoading(false)
+    }
+  }, [studio, apiFetch, onUnauth])
+
   useEffect(() => {
     loadServices()
-  }, [loadServices])
+    loadAssignments()
+  }, [loadServices, loadAssignments])
+
+  async function handleSaveAssignments() {
+    setAssignmentSaving(true)
+    setAssignmentMessage(null)
+    try {
+      const res = await apiFetch('/api/admin/studio-services', {
+        method: 'PUT',
+        body: JSON.stringify({ studio_id: studio, service_ids: [...assignedIds] }),
+      })
+      if (res.status === 401) { onUnauth(); return }
+      if (!res.ok) {
+        const body = await res.json() as { error?: { message?: string } }
+        setAssignmentMessage({ type: 'error', text: body.error?.message ?? 'Ошибка сохранения' })
+        return
+      }
+      setAssignmentMessage({ type: 'success', text: 'Назначения сохранены' })
+    } catch {
+      setAssignmentMessage({ type: 'error', text: 'Сетевая ошибка при сохранении' })
+    } finally {
+      setAssignmentSaving(false)
+    }
+  }
+
+  function toggleAssignment(serviceId: string) {
+    setAssignedIds((prev) => {
+      const next = new Set(prev)
+      if (next.has(serviceId)) next.delete(serviceId)
+      else next.add(serviceId)
+      return next
+    })
+    setAssignmentMessage(null)
+  }
 
   async function handleCreate(e: React.FormEvent) {
     e.preventDefault()
@@ -658,6 +713,60 @@ function ServicesTab({ studio, apiFetch, onUnauth }: ServicesTabProps) {
           </table>
         </div>
       )}
+
+      {/* Studio assignment section */}
+      <div className="mt-8 pt-6 border-t border-gray-100">
+        <h3 className="text-base font-semibold text-[var(--color-charcoal)] mb-1">
+          Услуги в студии
+        </h3>
+        <p className="text-xs text-gray-400 mb-4">
+          Отметьте услуги, доступные в этой студии. Только они будут отображаться при онлайн-записи.
+        </p>
+
+        {assignmentLoading ? (
+          <p className="text-sm text-gray-400">Загрузка...</p>
+        ) : services.length === 0 ? (
+          <p className="text-sm text-gray-400">Нет услуг для назначения</p>
+        ) : (
+          <div className="space-y-1">
+            {services.filter((s) => s.is_active).map((svc) => (
+              <label
+                key={svc.id}
+                className="flex items-center gap-3 cursor-pointer rounded-lg px-3 py-2 hover:bg-gray-50 transition-colors"
+              >
+                <input
+                  type="checkbox"
+                  checked={assignedIds.has(svc.id)}
+                  onChange={() => toggleAssignment(svc.id)}
+                  className="w-4 h-4 accent-[var(--color-rose)] shrink-0"
+                />
+                {svc.icon && <span className="text-lg">{svc.icon}</span>}
+                <span className="text-sm text-[var(--color-charcoal)] font-medium flex-1">
+                  {svc.name}
+                </span>
+                <span className="text-xs text-gray-400">
+                  ₪{svc.price} · {formatDuration(svc.duration_minutes)}
+                </span>
+              </label>
+            ))}
+          </div>
+        )}
+
+        <div className="mt-4 flex items-center gap-4">
+          <button
+            onClick={handleSaveAssignments}
+            disabled={assignmentSaving || assignmentLoading}
+            className="bg-[var(--color-rose)] text-white rounded-lg px-5 py-2 text-sm font-medium hover:opacity-90 transition-opacity disabled:opacity-50"
+          >
+            {assignmentSaving ? 'Сохранение...' : 'Сохранить назначения'}
+          </button>
+          {assignmentMessage && (
+            <p className={`text-sm ${assignmentMessage.type === 'success' ? 'text-green-600' : 'text-red-500'}`}>
+              {assignmentMessage.text}
+            </p>
+          )}
+        </div>
+      </div>
     </div>
   )
 }
