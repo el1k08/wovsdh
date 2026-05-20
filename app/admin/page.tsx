@@ -706,15 +706,15 @@ function StudiosTab({ apiFetch, onUnauth, onStudiosChanged, secret }: StudiosTab
   const dragOverItem = useRef<number | null>(null)
   const [dragIndex, setDragIndex] = useState<number | null>(null)
 
-  const load = useCallback(async () => {
-    setLoading(true)
+  const load = useCallback(async (silent = false) => {
+    if (!silent) setLoading(true)
     const res = await apiFetch('/api/admin/studios')
     if (res.status === 401) { onUnauth(); return }
     if (res.ok) {
       const data = await res.json() as { studios: Studio[] }
       setStudiosList(data.studios)
     }
-    setLoading(false)
+    if (!silent) setLoading(false)
   }, [apiFetch, onUnauth])
 
   useEffect(() => { load() }, [load])
@@ -744,7 +744,7 @@ function StudiosTab({ apiFetch, onUnauth, onStudiosChanged, secret }: StudiosTab
       setShowCreate(false)
       setNewId(''); setNewName(''); setNewStreet(''); setNewCity('')
       setNewTimezone('Asia/Jerusalem'); setNewScheduleText(''); setNewSchedule(buildStudioDefaultSchedule())
-      await load()
+      await load(true)
       onStudiosChanged()
     }
     setFormLoading(false)
@@ -775,7 +775,7 @@ function StudiosTab({ apiFetch, onUnauth, onStudiosChanged, secret }: StudiosTab
     } else {
       setMessage({ type: 'success', text: 'Студия обновлена' })
       setEditingId(null)
-      await load()
+      await load(true)
       onStudiosChanged()
     }
     setEditLoading(false)
@@ -792,7 +792,7 @@ function StudiosTab({ apiFetch, onUnauth, onStudiosChanged, secret }: StudiosTab
     } else {
       setMessage({ type: 'success', text: 'Студия удалена' })
       setDeleteTarget(null)
-      await load()
+      await load(true)
       onStudiosChanged()
     }
     setDeleting(false)
@@ -815,7 +815,7 @@ function StudiosTab({ apiFetch, onUnauth, onStudiosChanged, secret }: StudiosTab
         setImageError(data.error?.message ?? 'Ошибка загрузки фото')
       } else {
         setImageError(null)
-        await load()
+        await load(true)
         onStudiosChanged()
       }
     } catch {
@@ -834,7 +834,7 @@ function StudiosTab({ apiFetch, onUnauth, onStudiosChanged, secret }: StudiosTab
         setImageError(data.error?.message ?? 'Ошибка удаления фото')
       } else {
         setImageError(null)
-        await load()
+        await load(true)
         onStudiosChanged()
       }
     } catch {
@@ -878,14 +878,12 @@ function StudiosTab({ apiFetch, onUnauth, onStudiosChanged, secret }: StudiosTab
     // Optimistically update local state
     setStudiosList(reordered)
 
-    // Persist to server
+    // Persist to server — no need to notify parent, reorder doesn't change the studio list
     await apiFetch('/api/admin/studios/reorder', {
       method: 'PUT',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ ids: reordered.map(s => s.id) }),
     })
-
-    onStudiosChanged()
   }
 
   return (
