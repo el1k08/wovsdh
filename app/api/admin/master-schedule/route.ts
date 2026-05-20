@@ -147,8 +147,8 @@ export async function PUT(request: NextRequest): Promise<NextResponse> {
     studio_id: req.studio_id,
     day_of_week: day.day_of_week,
     is_working: day.is_working,
-    work_start: day.is_working ? `${day.work_start}:00` : '00:00:00',
-    work_end: day.is_working ? `${day.work_end}:00` : '00:00:00',
+    work_start: `${day.work_start}:00`,
+    work_end: `${day.work_end}:00`,
   }))
 
   const { error } = await supabaseAdmin

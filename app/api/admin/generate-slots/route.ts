@@ -99,22 +99,49 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
   const validDateFrom = date_from as string
   const validDateTo = date_to as string
 
-  const { data: templates, error: templateError } = await supabaseAdmin
-    .from('studio_schedule_templates')
-    .select('day_of_week, is_working, work_start, work_end')
-    .eq('studio_id', validStudioId)
+  // Optional custom time ranges (used for single-day custom slots)
+  const rawRanges = (body as Record<string, unknown>).ranges
+  let customRanges: Array<{ from: string; to: string }> | undefined
 
-  if (templateError) {
-    console.error(`${LOG_PREFIX} DB error fetching templates`, { studio_id: validStudioId, error: templateError })
-    return NextResponse.json<ApiError>(
-      { error: { code: 'INTERNAL_ERROR', message: 'Failed to fetch schedule templates.' } },
-      { status: 500 },
-    )
+  if (rawRanges !== undefined) {
+    const HM_RE = /^\d{2}:\d{2}$/
+    if (!Array.isArray(rawRanges) || rawRanges.length === 0) {
+      return NextResponse.json<ApiError>(
+        { error: { code: 'INVALID_PARAMS', message: "'ranges' must be a non-empty array." } },
+        { status: 400 },
+      )
+    }
+    for (const r of rawRanges) {
+      const rec = r as Record<string, unknown>
+      if (typeof rec.from !== 'string' || !HM_RE.test(rec.from) || typeof rec.to !== 'string' || !HM_RE.test(rec.to)) {
+        return NextResponse.json<ApiError>(
+          { error: { code: 'INVALID_PARAMS', message: "Each range must have 'from' and 'to' as HH:mm strings." } },
+          { status: 400 },
+        )
+      }
+    }
+    customRanges = rawRanges as Array<{ from: string; to: string }>
   }
 
+  // Only fetch schedule templates when not using custom ranges
   const templatesByDay = new Map<number, StudioScheduleTemplate>()
-  for (const t of (templates ?? []) as StudioScheduleTemplate[]) {
-    templatesByDay.set(t.day_of_week, t)
+  if (!customRanges) {
+    const { data: templates, error: templateError } = await supabaseAdmin
+      .from('studio_schedule_templates')
+      .select('day_of_week, is_working, work_start, work_end')
+      .eq('studio_id', validStudioId)
+
+    if (templateError) {
+      console.error(`${LOG_PREFIX} DB error fetching templates`, { studio_id: validStudioId, error: templateError })
+      return NextResponse.json<ApiError>(
+        { error: { code: 'INTERNAL_ERROR', message: 'Failed to fetch schedule templates.' } },
+        { status: 500 },
+      )
+    }
+
+    for (const t of (templates ?? []) as StudioScheduleTemplate[]) {
+      templatesByDay.set(t.day_of_week, t)
+    }
   }
 
   // Iterate over each date in the range and generate 15-minute slots
@@ -125,24 +152,38 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
 
   while (cursor <= end) {
     const dateStr = cursor.toISOString().slice(0, 10)
-    // getUTCDay returns 0=Sun..6=Sat which matches our schema
-    const dayOfWeek = cursor.getUTCDay()
+    const dayOfWeek = cursor.getUTCDay() // 0=Sun..6=Sat, matches schema
 
-    const template = templatesByDay.get(dayOfWeek)
-
-    if (template && template.is_working) {
-      const startMinutes = parseMinutes(template.work_start)
-      const endMinutes = parseMinutes(template.work_end)
-
-      for (let slotStart = startMinutes; slotStart + 15 <= endMinutes; slotStart += 15) {
-        const hh = padTwo(Math.floor(slotStart / 60))
-        const mm = padTwo(slotStart % 60)
-        const utcDate = localToUTC(`${dateStr}T${hh}:${mm}:00`)
-        candidateRows.push({
-          studio_id: validStudioId,
-          start_at: utcDate.toISOString(),
-          status: SlotStatus.Available,
-        })
+    if (customRanges) {
+      // Custom time ranges — apply to every day in the range regardless of schedule
+      for (const range of customRanges) {
+        const startMinutes = parseMinutes(range.from)
+        const endMinutes = parseMinutes(range.to)
+        for (let slotStart = startMinutes; slotStart + 15 <= endMinutes; slotStart += 15) {
+          const hh = padTwo(Math.floor(slotStart / 60))
+          const mm = padTwo(slotStart % 60)
+          candidateRows.push({
+            studio_id: validStudioId,
+            start_at: localToUTC(`${dateStr}T${hh}:${mm}:00`).toISOString(),
+            status: SlotStatus.Available,
+          })
+        }
+      }
+    } else {
+      // Schedule template — only working days
+      const template = templatesByDay.get(dayOfWeek)
+      if (template && template.is_working) {
+        const startMinutes = parseMinutes(template.work_start)
+        const endMinutes = parseMinutes(template.work_end)
+        for (let slotStart = startMinutes; slotStart + 15 <= endMinutes; slotStart += 15) {
+          const hh = padTwo(Math.floor(slotStart / 60))
+          const mm = padTwo(slotStart % 60)
+          candidateRows.push({
+            studio_id: validStudioId,
+            start_at: localToUTC(`${dateStr}T${hh}:${mm}:00`).toISOString(),
+            status: SlotStatus.Available,
+          })
+        }
       }
     }
 

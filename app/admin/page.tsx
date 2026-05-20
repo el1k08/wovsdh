@@ -898,6 +898,17 @@ function ScheduleTab({ studio, apiFetch, onUnauth }: ScheduleTabProps) {
   const [studioSlots, setStudioSlots] = useState<AdminSlotDTO[]>([])
   const [slotsLoading, setSlotsLoading] = useState(false)
 
+  // Dropdown + modals state
+  const dropdownRef = useRef<HTMLDivElement>(null)
+  const [dropdownOpen, setDropdownOpen] = useState(false)
+  const [slotModal, setSlotModal] = useState<'day' | 'range' | null>(null)
+  const [customRanges, setCustomRanges] = useState<Array<{ from: string; to: string }>>([{ from: '09:00', to: '18:00' }])
+  const [rangeFrom, setRangeFrom] = useState('')
+  const [rangeTo, setRangeTo] = useState('')
+  const [generating, setGenerating] = useState(false)
+  const [generateMsg, setGenerateMsg] = useState<InlineMessage | null>(null)
+  const [pendingGenerate, setPendingGenerate] = useState<{ dateFrom: string; dateTo: string } | null>(null)
+
   // Days of the selected month for the horizontal slider
   const daysInMonth = (() => {
     const year = selectedMonth.getFullYear()
@@ -981,6 +992,48 @@ function ScheduleTab({ studio, apiFetch, onUnauth }: ScheduleTabProps) {
     const br = btn.getBoundingClientRect()
     container.scrollLeft += br.left + br.width / 2 - cr.left - cr.width / 2
   }, [selectedMonth])
+
+  // Close dropdown on outside click
+  useEffect(() => {
+    function handleOutside(e: MouseEvent) {
+      if (dropdownRef.current && !dropdownRef.current.contains(e.target as Node)) {
+        setDropdownOpen(false)
+      }
+    }
+    document.addEventListener('mousedown', handleOutside)
+    return () => document.removeEventListener('mousedown', handleOutside)
+  }, [])
+
+  async function handleGenerateSlots(
+    dateFrom: string,
+    dateTo: string,
+    ranges?: Array<{ from: string; to: string }>,
+  ) {
+    setGenerating(true)
+    setGenerateMsg(null)
+    try {
+      const body: Record<string, unknown> = { studio_id: studio, date_from: dateFrom, date_to: dateTo }
+      if (ranges) body.ranges = ranges
+      const res = await apiFetch('/api/admin/generate-slots', { method: 'POST', body: JSON.stringify(body) })
+      if (res.status === 401) { onUnauth(); return }
+      const data = await res.json() as GenerateSlotsFromTemplateResponse & { error?: { message?: string } }
+      if (!res.ok) {
+        setGenerateMsg({ type: 'error', text: data.error?.message ?? 'Ошибка генерации слотов' })
+        return
+      }
+      setSlotModal(null)
+      setPendingGenerate(null)
+      setGenerateMsg({
+        type: 'success',
+        text: `Создано ${data.created} слотов` + (data.skipped > 0 ? `, пропущено ${data.skipped}` : ''),
+      })
+      await loadSlots()
+    } catch {
+      setGenerateMsg({ type: 'error', text: 'Сетевая ошибка' })
+    } finally {
+      setGenerating(false)
+    }
+  }
 
   function updateRow(dayOfWeek: number, patch: Partial<ScheduleRow>) {
     setRows(prev => prev.map(r => r.day_of_week === dayOfWeek ? { ...r, ...patch } : r))
@@ -1101,9 +1154,70 @@ function ScheduleTab({ studio, apiFetch, onUnauth }: ScheduleTabProps) {
 
       {/* Right: Slots panel (2/3) */}
       <div className="flex-1 min-w-0">
-        <h2 className="text-lg font-semibold text-[var(--color-charcoal)] mb-4">
-          Слоты
-        </h2>
+        {/* Header with dropdown */}
+        <div className="flex items-center justify-between mb-4">
+          <h2 className="text-lg font-semibold text-[var(--color-charcoal)]">Слоты</h2>
+          <div className="relative" ref={dropdownRef}>
+            <button
+              onClick={() => setDropdownOpen(v => !v)}
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-gray-200 bg-white text-sm text-[var(--color-charcoal)] hover:border-[var(--color-rose)] transition-colors"
+            >
+              Добавить слоты
+              <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
+                <path d="M2 4.5l5 5 5-5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+              </svg>
+            </button>
+
+            {dropdownOpen && (
+              <div className="absolute right-0 top-full mt-1 z-20 bg-white border border-gray-100 rounded-xl shadow-lg py-1 min-w-[220px]">
+                <button
+                  onClick={() => {
+                    setDropdownOpen(false)
+                    setCustomRanges([{ from: '09:00', to: '18:00' }])
+                    setSlotModal('day')
+                  }}
+                  className="w-full text-left px-4 py-2.5 text-sm text-[var(--color-charcoal)] hover:bg-gray-50 transition-colors"
+                >
+                  На текущий день
+                </button>
+                <button
+                  onClick={() => {
+                    setDropdownOpen(false)
+                    const d = selectedDay ?? todayStr
+                    setGenerateMsg(null)
+                    setPendingGenerate({ dateFrom: d, dateTo: addDays(d, 6) })
+                  }}
+                  className="w-full text-left px-4 py-2.5 text-sm text-[var(--color-charcoal)] hover:bg-gray-50 transition-colors"
+                >
+                  На следующие 7 дней
+                </button>
+                <button
+                  onClick={() => {
+                    setDropdownOpen(false)
+                    const d = selectedDay ?? todayStr
+                    setGenerateMsg(null)
+                    setPendingGenerate({ dateFrom: d, dateTo: addDays(d, 13) })
+                  }}
+                  className="w-full text-left px-4 py-2.5 text-sm text-[var(--color-charcoal)] hover:bg-gray-50 transition-colors"
+                >
+                  На следующие 14 дней
+                </button>
+                <div className="my-1 border-t border-gray-100" />
+                <button
+                  onClick={() => {
+                    setDropdownOpen(false)
+                    setRangeFrom(selectedDay ?? todayStr)
+                    setRangeTo(selectedDay ?? todayStr)
+                    setSlotModal('range')
+                  }}
+                  className="w-full text-left px-4 py-2.5 text-sm text-[var(--color-charcoal)] hover:bg-gray-50 transition-colors"
+                >
+                  Между датами
+                </button>
+              </div>
+            )}
+          </div>
+        </div>
 
         {/* Month navigation */}
         <div className="flex items-center justify-between mb-4">
@@ -1161,6 +1275,13 @@ function ScheduleTab({ studio, apiFetch, onUnauth }: ScheduleTabProps) {
           </div>
         </div>
 
+        {/* Generate feedback */}
+        {generateMsg && (
+          <p className={`text-sm mb-3 ${generateMsg.type === 'success' ? 'text-green-600' : 'text-red-500'}`}>
+            {generateMsg.text}
+          </p>
+        )}
+
         {/* Slot cubes */}
         {slotsLoading ? (
           <p className="text-sm text-gray-400 py-4">Загрузка слотов...</p>
@@ -1181,6 +1302,192 @@ function ScheduleTab({ studio, apiFetch, onUnauth }: ScheduleTabProps) {
           </div>
         )}
       </div>
+
+      {/* Modal: custom ranges for current day */}
+      {slotModal === 'day' && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/30 backdrop-blur-sm">
+          <div className="bg-white rounded-2xl shadow-xl p-6 w-full max-w-sm mx-4">
+            <h3 className="text-base font-semibold text-[var(--color-charcoal)] mb-4">
+              Добавить слоты на{' '}
+              {selectedDay
+                ? new Date(selectedDay + 'T12:00:00').toLocaleDateString('ru-RU', { day: 'numeric', month: 'long' })
+                : 'выбранный день'}
+            </h3>
+
+            <div className="flex flex-col gap-3 mb-3">
+              {customRanges.map((range, i) => (
+                <div key={i} className="flex items-center gap-2">
+                  <select
+                    value={range.from}
+                    onChange={e => setCustomRanges(prev => prev.map((r, j) => j === i ? { ...r, from: e.target.value } : r))}
+                    className={INPUT_CLS}
+                  >
+                    {TIME_OPTIONS.map(t => <option key={t} value={t}>{t}</option>)}
+                  </select>
+                  <span className="text-sm text-gray-400 shrink-0">—</span>
+                  <select
+                    value={range.to}
+                    onChange={e => setCustomRanges(prev => prev.map((r, j) => j === i ? { ...r, to: e.target.value } : r))}
+                    className={INPUT_CLS}
+                  >
+                    {TIME_OPTIONS.map(t => <option key={t} value={t}>{t}</option>)}
+                  </select>
+                  {customRanges.length > 1 && (
+                    <button
+                      onClick={() => setCustomRanges(prev => prev.filter((_, j) => j !== i))}
+                      className="text-gray-400 hover:text-red-500 transition-colors text-lg leading-none shrink-0"
+                    >
+                      ×
+                    </button>
+                  )}
+                </div>
+              ))}
+            </div>
+
+            <button
+              onClick={() => setCustomRanges(prev => [...prev, { from: '09:00', to: '18:00' }])}
+              className="text-sm text-[var(--color-rose)] hover:opacity-80 transition-opacity mb-5 flex items-center gap-1"
+            >
+              + Добавить промежуток
+            </button>
+
+            {generateMsg && (
+              <p className={`text-sm mb-3 ${generateMsg.type === 'success' ? 'text-green-600' : 'text-red-500'}`}>
+                {generateMsg.text}
+              </p>
+            )}
+
+            <div className="flex items-center justify-end gap-3">
+              <button
+                onClick={() => { setSlotModal(null); setGenerateMsg(null) }}
+                className="px-4 py-2 text-sm text-gray-500 hover:text-gray-700 transition-colors"
+              >
+                Отмена
+              </button>
+              <button
+                onClick={() => handleGenerateSlots(selectedDay ?? todayStr, selectedDay ?? todayStr, customRanges)}
+                disabled={generating}
+                className="px-4 py-2 bg-[var(--color-rose)] text-white rounded-lg text-sm font-medium hover:opacity-90 transition-opacity disabled:opacity-50"
+              >
+                {generating ? 'Добавление...' : 'Добавить'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Confirmation modal for schedule-based bulk generation */}
+      {pendingGenerate && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/30 backdrop-blur-sm">
+          <div className="bg-white rounded-2xl shadow-xl p-6 w-full max-w-sm mx-4">
+            <h3 className="text-base font-semibold text-[var(--color-charcoal)] mb-2">
+              Подтвердите создание слотов
+            </h3>
+            <p className="text-sm text-gray-500 mb-5">
+              {'Создать слоты по расписанию с '}
+              <span className="font-medium text-[var(--color-charcoal)]">
+                {new Date(pendingGenerate.dateFrom + 'T12:00:00').toLocaleDateString('ru-RU', { day: 'numeric', month: 'long' })}
+              </span>
+              {' по '}
+              <span className="font-medium text-[var(--color-charcoal)]">
+                {new Date(pendingGenerate.dateTo + 'T12:00:00').toLocaleDateString('ru-RU', { day: 'numeric', month: 'long', year: 'numeric' })}
+              </span>
+              {' включительно? '}
+              <span className="text-gray-400">
+                {'('}
+                {Math.round(
+                  (new Date(pendingGenerate.dateTo + 'T12:00:00').getTime() -
+                    new Date(pendingGenerate.dateFrom + 'T12:00:00').getTime()) /
+                    86400000,
+                ) + 1}
+                {' дн.)'}
+              </span>
+            </p>
+
+            {generateMsg && (
+              <p className={`text-sm mb-3 ${generateMsg.type === 'success' ? 'text-green-600' : 'text-red-500'}`}>
+                {generateMsg.text}
+              </p>
+            )}
+
+            <div className="flex items-center justify-end gap-3">
+              <button
+                onClick={() => { setPendingGenerate(null); setGenerateMsg(null) }}
+                disabled={generating}
+                className="px-4 py-2 text-sm text-gray-500 hover:text-gray-700 transition-colors disabled:opacity-50"
+              >
+                Отмена
+              </button>
+              <button
+                onClick={() => handleGenerateSlots(pendingGenerate.dateFrom, pendingGenerate.dateTo)}
+                disabled={generating}
+                className="px-4 py-2 bg-[var(--color-rose)] text-white rounded-lg text-sm font-medium hover:opacity-90 transition-opacity disabled:opacity-50"
+              >
+                {generating ? 'Создание...' : 'Создать'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Modal: date range (uses schedule) */}
+      {slotModal === 'range' && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/30 backdrop-blur-sm">
+          <div className="bg-white rounded-2xl shadow-xl p-6 w-full max-w-sm mx-4">
+            <h3 className="text-base font-semibold text-[var(--color-charcoal)] mb-4">
+              Добавить слоты между датами
+            </h3>
+            <p className="text-xs text-gray-400 mb-4">Используется расписание работы студии</p>
+
+            <div className="flex flex-col gap-3 mb-5">
+              <div className="flex items-center gap-3">
+                <label className="text-sm text-gray-500 w-5 shrink-0">С</label>
+                <input
+                  type="date"
+                  value={rangeFrom}
+                  onChange={e => setRangeFrom(e.target.value)}
+                  className={INPUT_CLS + ' flex-1'}
+                />
+              </div>
+              <div className="flex items-center gap-3">
+                <label className="text-sm text-gray-500 w-5 shrink-0">По</label>
+                <input
+                  type="date"
+                  value={rangeTo}
+                  onChange={e => setRangeTo(e.target.value)}
+                  className={INPUT_CLS + ' flex-1'}
+                />
+              </div>
+            </div>
+
+            {generateMsg && (
+              <p className={`text-sm mb-3 ${generateMsg.type === 'success' ? 'text-green-600' : 'text-red-500'}`}>
+                {generateMsg.text}
+              </p>
+            )}
+
+            <div className="flex items-center justify-end gap-3">
+              <button
+                onClick={() => { setSlotModal(null); setGenerateMsg(null) }}
+                className="px-4 py-2 text-sm text-gray-500 hover:text-gray-700 transition-colors"
+              >
+                Отмена
+              </button>
+              <button
+                onClick={() => {
+                  setSlotModal(null)
+                  setGenerateMsg(null)
+                  setPendingGenerate({ dateFrom: rangeFrom, dateTo: rangeTo })
+                }}
+                disabled={!rangeFrom || !rangeTo || rangeTo < rangeFrom}
+                className="px-4 py-2 bg-[var(--color-rose)] text-white rounded-lg text-sm font-medium hover:opacity-90 transition-opacity disabled:opacity-50"
+              >
+                Далее
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )
 }
