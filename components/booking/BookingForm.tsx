@@ -15,6 +15,7 @@ import type {
   CreateBookingRequest,
   PublicStudioDTO,
   GetStudiosResponse,
+  Client,
 } from '@/lib/types'
 import type { ContactFormData } from './ContactForm'
 
@@ -169,6 +170,34 @@ export default function BookingForm() {
       setBookingLoading(true)
       setError(null)
 
+      // Resolve the client ID: use the one from the lookup, or create a new client record
+      let resolvedClientId: string | undefined = data.existingClientId
+
+      if (!resolvedClientId) {
+        try {
+          const clientRes = await fetch('/api/clients', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              firstName: data.firstName,
+              lastName: data.lastName,
+              phone: data.phone,
+              email: data.email || undefined,
+              city: selectedCity,
+              consent: true,
+            }),
+          })
+          if (clientRes.ok) {
+            const clientJson = (await clientRes.json()) as { client: Client }
+            resolvedClientId = clientJson.client.id
+          }
+          // If client creation fails (e.g. race condition with PHONE_ALREADY_EXISTS),
+          // proceed without client_id — booking will still succeed.
+        } catch {
+          // Network error during client creation — proceed without client_id
+        }
+      }
+
       const payload: CreateBookingRequest = {
         studio_id: selectedCity,
         service_id: selectedService.id,
@@ -179,6 +208,7 @@ export default function BookingForm() {
         client_email: data.email,
         comment: data.comment || undefined,
         marketing_consent: data.marketing_consent,
+        ...(resolvedClientId && { client_id: resolvedClientId }),
       }
 
       try {
@@ -452,6 +482,8 @@ export default function BookingForm() {
         <BookingSuccess
           booking={completedBooking}
           studioName={studios.find(s => s.id === selectedCity)?.name ?? selectedCity ?? ''}
+          serviceName={selectedService?.name ?? ''}
+          serviceDuration={selectedService?.duration_minutes ?? 0}
           onReset={handleReset}
         />
       )}

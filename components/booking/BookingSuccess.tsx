@@ -7,8 +7,11 @@ import type { BookingCreatedDTO } from '@/lib/types'
 interface BookingSuccessProps {
   booking: BookingCreatedDTO
   studioName: string
+  serviceName: string
+  serviceDuration: number
   onReset: () => void
 }
+
 
 const DATE_FORMATTER = new Intl.DateTimeFormat('ru-IL', {
   weekday: 'long',
@@ -24,7 +27,7 @@ const TIME_FORMATTER = new Intl.DateTimeFormat('ru-IL', {
   timeZone: 'Asia/Jerusalem',
 })
 
-export default function BookingSuccess({ booking, studioName, onReset }: BookingSuccessProps) {
+export default function BookingSuccess({ booking, studioName, serviceName, serviceDuration: _serviceDuration, onReset }: BookingSuccessProps) {
   const startDate = new Date(booking.start_at)
   const endDate = new Date(booking.end_at)
 
@@ -75,6 +78,14 @@ export default function BookingSuccess({ booking, studioName, onReset }: Booking
             </dd>
           </div>
           <div className="flex items-start justify-between gap-4">
+            <dt className="flex items-center gap-1.5 text-sm font-medium" style={{ color: 'var(--color-charcoal)', opacity: 0.6 }}>
+              Услуга
+            </dt>
+            <dd className="text-sm font-semibold text-right" style={{ color: 'var(--color-charcoal)' }}>
+              {serviceName}
+            </dd>
+          </div>
+          <div className="flex items-start justify-between gap-4">
             <dt className="text-sm font-medium" style={{ color: 'var(--color-charcoal)', opacity: 0.6 }}>
               Дата
             </dt>
@@ -92,15 +103,6 @@ export default function BookingSuccess({ booking, studioName, onReset }: Booking
           </div>
         </dl>
       </div>
-
-      <Button
-        variant="secondary"
-        size="md"
-        onClick={onReset}
-        className="mt-2"
-      >
-        Записаться ещё раз
-      </Button>
     </div>
   )
 }

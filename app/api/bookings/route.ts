@@ -47,6 +47,7 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
     client_email,
     comment,
     marketing_consent,
+    client_id,
   } = body as Record<string, unknown>
 
   const validationErrors: string[] = []
@@ -134,6 +135,8 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
     icon: service.icon,
   }
 
+  const validClientId = typeof client_id === 'string' && client_id.trim() ? client_id.trim() : null
+
   // Insert the booking as PENDING first
   const { data: bookingData, error: insertError } = await supabaseAdmin
     .from('bookings')
@@ -148,6 +151,7 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
       comment: validComment,
       marketing_consent: validConsent,
       status: BookingStatus.Pending,
+      ...(validClientId && { client_id: validClientId }),
     })
     .select('id, studio_id, service_id, status, created_at')
     .single()

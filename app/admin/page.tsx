@@ -1,7 +1,7 @@
 'use client'
 
 import React, { useState, useEffect, useCallback, useRef } from 'react'
-import { Building2, Settings } from 'lucide-react'
+import { Building2, Settings, Users, Pencil, CalendarDays } from 'lucide-react'
 import { Switch } from '@/components/ui/Switch'
 import type {
   AdminSlotDTO,
@@ -2121,6 +2121,404 @@ function StudiosTab({ apiFetch, onUnauth, onStudiosChanged, secret }: StudiosTab
 }
 
 // ---------------------------------------------------------------------------
+// Clients Section
+// ---------------------------------------------------------------------------
+
+interface AdminClientDTO {
+  id: string
+  first_name: string
+  last_name: string
+  phone: string
+  email: string | null
+  city: string
+  consent: boolean
+  created_at: string
+}
+
+interface ClientBookingDTO {
+  id: string
+  status: string
+  start_at: string
+  end_at: string
+  service_snapshot: Record<string, unknown>
+  studio_id: string
+  created_at: string
+}
+
+interface ClientsSectionProps {
+  apiFetch: (path: string, options?: RequestInit) => Promise<Response>
+}
+
+function ClientsSection({ apiFetch }: ClientsSectionProps) {
+  const [clients, setClients] = useState<AdminClientDTO[]>([])
+  const [total, setTotal] = useState(0)
+  const [loading, setLoading] = useState(false)
+  const [error, setError] = useState<string | null>(null)
+  const [searchInput, setSearchInput] = useState('')
+  const [search, setSearch] = useState('')
+  const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+
+  // Edit modal state
+  const [editingClient, setEditingClient] = useState<AdminClientDTO | null>(null)
+  const [editForm, setEditForm] = useState({ first_name: '', last_name: '', email: '', city: '' })
+  const [editSaving, setEditSaving] = useState(false)
+  const [editError, setEditError] = useState<string | null>(null)
+
+  // Bookings modal state
+  const [viewingClientId, setViewingClientId] = useState<string | null>(null)
+  const [clientDetail, setClientDetail] = useState<{ client: AdminClientDTO; bookings: ClientBookingDTO[] } | null>(null)
+  const [bookingsLoading, setBookingsLoading] = useState(false)
+
+  const loadClients = useCallback(async (searchTerm: string) => {
+    setLoading(true)
+    setError(null)
+    try {
+      const params = new URLSearchParams({ limit: '50', page: '1' })
+      if (searchTerm) params.set('search', searchTerm)
+      const res = await apiFetch(`/api/admin/clients?${params.toString()}`)
+      if (!res.ok) {
+        const body = await res.json() as { error?: { message?: string } }
+        setError(body.error?.message ?? 'Ошибка загрузки клиентов')
+        return
+      }
+      const data = await res.json() as { clients: AdminClientDTO[]; total: number }
+      setClients(data.clients ?? [])
+      setTotal(data.total ?? 0)
+    } catch {
+      setError('Сетевая ошибка при загрузке клиентов')
+    } finally {
+      setLoading(false)
+    }
+  }, [apiFetch])
+
+  useEffect(() => {
+    void loadClients(search)
+  }, [loadClients, search])
+
+  function handleSearchChange(e: React.ChangeEvent<HTMLInputElement>) {
+    const value = e.target.value
+    setSearchInput(value)
+    if (debounceRef.current) clearTimeout(debounceRef.current)
+    debounceRef.current = setTimeout(() => {
+      setSearch(value)
+    }, 300)
+  }
+
+  function formatDate(isoStr: string): string {
+    return new Date(isoStr).toLocaleDateString('ru-IL', {
+      timeZone: 'Asia/Jerusalem',
+      day: '2-digit',
+      month: '2-digit',
+      year: 'numeric',
+    })
+  }
+
+  function formatBookingDateTime(isoStr: string): string {
+    if (!isoStr) return '—'
+    return new Date(isoStr).toLocaleString('ru-IL', {
+      timeZone: 'Asia/Jerusalem',
+      day: '2-digit',
+      month: '2-digit',
+      year: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit',
+    })
+  }
+
+  function openEditModal(client: AdminClientDTO) {
+    setEditingClient(client)
+    setEditForm({
+      first_name: client.first_name,
+      last_name: client.last_name,
+      email: client.email ?? '',
+      city: client.city,
+    })
+    setEditError(null)
+  }
+
+  async function handleEditSave() {
+    if (!editingClient) return
+    setEditSaving(true)
+    setEditError(null)
+    try {
+      const res = await apiFetch(`/api/admin/clients/${editingClient.id}`, {
+        method: 'PUT',
+        body: JSON.stringify(editForm),
+      })
+      if (!res.ok) {
+        const body = await res.json() as { error?: { message?: string } }
+        setEditError(body.error?.message ?? 'Ошибка сохранения')
+        return
+      }
+      setEditingClient(null)
+      void loadClients(search)
+    } catch {
+      setEditError('Сетевая ошибка при сохранении')
+    } finally {
+      setEditSaving(false)
+    }
+  }
+
+  async function openBookingsModal(client: AdminClientDTO) {
+    setViewingClientId(client.id)
+    setClientDetail(null)
+    setBookingsLoading(true)
+    try {
+      const res = await apiFetch(`/api/admin/clients/${client.id}`)
+      if (res.ok) {
+        const data = await res.json() as { client: AdminClientDTO; bookings: ClientBookingDTO[] }
+        setClientDetail(data)
+      }
+    } catch {
+      // detail stays null; modal will show empty state
+    } finally {
+      setBookingsLoading(false)
+    }
+  }
+
+  return (
+    <div>
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6">
+        <h2 className="text-lg font-semibold text-[var(--color-charcoal)]">
+          Клиенты
+          {!loading && (
+            <span className="ml-2 text-sm font-normal text-gray-500">
+              Всего клиентов: {total}
+            </span>
+          )}
+        </h2>
+        <input
+          type="text"
+          placeholder="Поиск по имени или номеру телефона"
+          value={searchInput}
+          onChange={handleSearchChange}
+          className="border border-gray-300 rounded-lg px-3 py-2 text-sm text-[var(--color-charcoal)] focus:outline-none focus:border-[var(--color-rose)] w-full sm:w-72"
+        />
+      </div>
+
+      {error && (
+        <p className="mb-4 text-sm text-red-500">{error}</p>
+      )}
+
+      <div className="overflow-x-auto">
+        <table className="w-full text-sm">
+          <thead>
+            <tr className="border-b border-[var(--color-blush)]">
+              <th className="text-left py-2 pr-4 text-xs font-medium text-gray-500">Имя</th>
+              <th className="text-left py-2 pr-4 text-xs font-medium text-gray-500">Телефон</th>
+              <th className="text-left py-2 pr-4 text-xs font-medium text-gray-500">Email</th>
+              <th className="text-left py-2 pr-4 text-xs font-medium text-gray-500">Город</th>
+              <th className="text-left py-2 pr-4 text-xs font-medium text-gray-500">Дата регистрации</th>
+              <th className="text-right py-2 text-xs font-medium text-gray-500">Действия</th>
+            </tr>
+          </thead>
+          <tbody>
+            {loading && (
+              <>
+                {[1, 2, 3, 4, 5].map((n) => (
+                  <tr key={n} className="border-b border-gray-100">
+                    {[1, 2, 3, 4, 5, 6].map((c) => (
+                      <td key={c} className="py-3 pr-4">
+                        <div className="h-4 bg-gray-100 rounded animate-pulse w-24" />
+                      </td>
+                    ))}
+                  </tr>
+                ))}
+              </>
+            )}
+            {!loading && clients.length === 0 && (
+              <tr>
+                <td colSpan={6} className="py-10 text-center text-gray-400">
+                  Клиентов не найдено
+                </td>
+              </tr>
+            )}
+            {!loading && clients.map((client) => (
+              <tr key={client.id} className="border-b border-gray-100 transition-opacity hover:bg-gray-50">
+                <td className="py-3 pr-4 text-[var(--color-charcoal)] font-medium">
+                  {client.first_name} {client.last_name}
+                </td>
+                <td className="py-3 pr-4 text-gray-600">
+                  {client.phone}
+                </td>
+                <td className="py-3 pr-4 text-gray-600">
+                  {client.email || '—'}
+                </td>
+                <td className="py-3 pr-4 text-gray-600">
+                  {client.city}
+                </td>
+                <td className="py-3 pr-4 text-gray-600">
+                  {formatDate(client.created_at)}
+                </td>
+                <td className="py-3 text-right">
+                  <div className="flex items-center justify-end gap-2">
+                    <button
+                      onClick={() => openEditModal(client)}
+                      className="px-3 py-1 rounded text-xs border border-gray-300 text-[var(--color-charcoal)] hover:bg-gray-50"
+                    >
+                      Изменить
+                    </button>
+                    <button
+                      onClick={() => void openBookingsModal(client)}
+                      className="px-3 py-1 rounded text-xs border border-gray-300 text-[var(--color-charcoal)] hover:bg-gray-50"
+                    >
+                      Записи
+                    </button>
+                  </div>
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+
+      {/* Edit client modal */}
+      {editingClient !== null && (
+        <div
+          className="fixed inset-0 bg-black/40 z-50 flex items-center justify-center"
+          onClick={() => setEditingClient(null)}
+        >
+          <div
+            className="bg-white rounded-2xl p-6 w-full max-w-md mx-4 shadow-xl"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <h3 className="text-lg font-semibold text-[var(--color-charcoal)] mb-1">
+              Редактировать клиента
+            </h3>
+            <p className="text-sm text-gray-500 mb-4">Телефон: {editingClient.phone}</p>
+
+            <div className="flex flex-col gap-3 mb-4">
+              <label className="flex flex-col gap-1 text-sm text-gray-600">
+                Имя
+                <input
+                  type="text"
+                  value={editForm.first_name}
+                  onChange={(e) => setEditForm((f) => ({ ...f, first_name: e.target.value }))}
+                  className="border border-gray-300 rounded-lg px-3 py-2 text-sm text-[var(--color-charcoal)] focus:outline-none focus:border-[var(--color-rose)]"
+                />
+              </label>
+              <label className="flex flex-col gap-1 text-sm text-gray-600">
+                Фамилия
+                <input
+                  type="text"
+                  value={editForm.last_name}
+                  onChange={(e) => setEditForm((f) => ({ ...f, last_name: e.target.value }))}
+                  className="border border-gray-300 rounded-lg px-3 py-2 text-sm text-[var(--color-charcoal)] focus:outline-none focus:border-[var(--color-rose)]"
+                />
+              </label>
+              <label className="flex flex-col gap-1 text-sm text-gray-600">
+                Email
+                <input
+                  type="email"
+                  value={editForm.email}
+                  onChange={(e) => setEditForm((f) => ({ ...f, email: e.target.value }))}
+                  className="border border-gray-300 rounded-lg px-3 py-2 text-sm text-[var(--color-charcoal)] focus:outline-none focus:border-[var(--color-rose)]"
+                />
+              </label>
+              <label className="flex flex-col gap-1 text-sm text-gray-600">
+                Город
+                <input
+                  type="text"
+                  value={editForm.city}
+                  onChange={(e) => setEditForm((f) => ({ ...f, city: e.target.value }))}
+                  className="border border-gray-300 rounded-lg px-3 py-2 text-sm text-[var(--color-charcoal)] focus:outline-none focus:border-[var(--color-rose)]"
+                />
+              </label>
+            </div>
+
+            {editError && (
+              <p className="text-sm text-red-500 mb-3">{editError}</p>
+            )}
+
+            <div className="flex items-center justify-end gap-3">
+              <button
+                onClick={() => setEditingClient(null)}
+                className="px-4 py-2 text-sm border border-gray-300 text-gray-600 rounded-lg hover:bg-gray-50 transition-colors"
+              >
+                Отмена
+              </button>
+              <button
+                onClick={() => void handleEditSave()}
+                disabled={editSaving}
+                className="px-4 py-2 text-sm bg-[var(--color-rose)] text-white rounded-lg font-medium hover:opacity-90 transition-opacity disabled:opacity-50"
+              >
+                {editSaving ? 'Сохранение...' : 'Сохранить'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Client bookings modal */}
+      {viewingClientId !== null && (
+        <div
+          className="fixed inset-0 bg-black/40 z-50 flex items-center justify-center"
+          onClick={() => setViewingClientId(null)}
+        >
+          <div
+            className="bg-white rounded-2xl p-6 w-full max-w-md mx-4 shadow-xl max-h-[80vh] flex flex-col"
+            onClick={(e) => e.stopPropagation()}
+          >
+            {bookingsLoading || !clientDetail ? (
+              <div className="flex-1 flex items-center justify-center py-8">
+                <p className="text-sm text-gray-400">
+                  {bookingsLoading ? 'Загрузка...' : 'Не удалось загрузить данные'}
+                </p>
+              </div>
+            ) : (
+              <>
+                <div className="mb-4 shrink-0">
+                  <h3 className="text-lg font-semibold text-[var(--color-charcoal)]">
+                    Записи клиента: {clientDetail.client.first_name} {clientDetail.client.last_name}
+                  </h3>
+                  <p className="text-sm text-gray-500 mt-0.5">{clientDetail.client.phone}</p>
+                </div>
+
+                <div className="flex-1 overflow-y-auto -mx-1 px-1">
+                  {clientDetail.bookings.length === 0 ? (
+                    <p className="text-sm text-gray-400 text-center py-6">Записей нет</p>
+                  ) : (
+                    <ul className="flex flex-col gap-2">
+                      {clientDetail.bookings.map((booking) => (
+                        <li
+                          key={booking.id}
+                          className="flex items-center justify-between gap-3 rounded-lg border border-gray-100 px-3 py-2.5 bg-gray-50"
+                        >
+                          <div className="flex flex-col gap-0.5 min-w-0">
+                            <span className="text-sm font-medium text-[var(--color-charcoal)] truncate">
+                              {typeof (booking.service_snapshot as { name?: string }).name === 'string'
+                                ? (booking.service_snapshot as { name?: string }).name
+                                : '—'}
+                            </span>
+                            <span className="text-xs text-gray-500">
+                              {formatBookingDateTime(booking.start_at)}
+                            </span>
+                          </div>
+                          <BookingStatusBadge status={booking.status} />
+                        </li>
+                      ))}
+                    </ul>
+                  )}
+                </div>
+
+                <div className="flex justify-end mt-4 shrink-0">
+                  <button
+                    onClick={() => setViewingClientId(null)}
+                    className="px-4 py-2 rounded-lg text-sm border border-gray-300 text-gray-600 hover:bg-gray-50 transition-colors"
+                  >
+                    Закрыть
+                  </button>
+                </div>
+              </>
+            )}
+          </div>
+        </div>
+      )}
+    </div>
+  )
+}
+
+// ---------------------------------------------------------------------------
 // Main Admin Page
 // ---------------------------------------------------------------------------
 
@@ -2130,7 +2528,7 @@ export default function AdminPage() {
   const [studios, setStudios] = useState<Studio[]>([])
   const [activeTab, setActiveTab] = useState<AdminTab>('bookings')
   const [settingsSubTab, setSettingsSubTab] = useState<SettingsSubTab>('studios')
-  const [topSection, setTopSection] = useState<'studios' | 'settings'>('studios')
+  const [topSection, setTopSection] = useState<'studios' | 'settings' | 'clients'>('studios')
 
   // Generate form state
   const [genDateFrom, setGenDateFrom] = useState(todayString())
@@ -2374,6 +2772,17 @@ export default function AdminPage() {
             <Settings size={16} />
             Настройки
           </button>
+          <button
+            onClick={() => setTopSection('clients')}
+            className={`flex items-center gap-2 px-5 py-2.5 rounded-lg text-sm font-medium transition-colors ${
+              topSection === 'clients'
+                ? 'bg-[var(--color-rose)] text-white shadow-sm'
+                : 'text-[var(--color-charcoal)] hover:bg-gray-50'
+            }`}
+          >
+            <Users size={16} />
+            Клиенты
+          </button>
         </div>
 
         {/* Settings panel */}
@@ -2413,6 +2822,11 @@ export default function AdminPage() {
               </section>
             )}
           </div>
+        )}
+
+        {/* Clients section */}
+        {topSection === 'clients' && (
+          <ClientsSection apiFetch={apiFetch} />
         )}
 
         {/* Studio switcher + tabs */}

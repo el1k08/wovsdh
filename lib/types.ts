@@ -90,12 +90,25 @@ export interface Booking {
   marketing_consent: boolean;
   status: BookingStatus;
   cancellation_token: string;
+  client_id?: string;               // FK → clients.id (optional — legacy bookings predate client table)
   google_calendar_event_id: string | null;
   telegram_message_id: number | null;
   confirmed_at: string | null;
   cancelled_at: string | null;
   created_at: string;
   updated_at: string;
+}
+
+export interface Client {
+  id: string;                      // UUID
+  firstName: string;
+  lastName: string;
+  phone: string;                   // immutable after creation
+  email?: string;
+  city: string;
+  consent: boolean;
+  createdAt: string;               // TIMESTAMPTZ as ISO string
+  updatedAt: string;               // TIMESTAMPTZ as ISO string
 }
 
 export interface AllowedUser {
@@ -135,6 +148,7 @@ export interface CreateBookingRequest {
   client_email: string;
   comment?: string;
   marketing_consent: boolean;
+  client_id?: string;      // UUID FK → clients.id — omitted for legacy/anonymous bookings
 }
 
 export interface CancelBookingRequest {
@@ -200,6 +214,34 @@ export interface UpdateStudioRequest {
   city?: string;
   timezone?: string;
   schedule_text?: string;
+}
+
+export interface CreateClientRequest {
+  firstName: string;
+  lastName: string;
+  phone: string;
+  email?: string;
+  city: string;
+  consent: true;                   // must be explicitly true — enforced at the type level
+}
+
+export interface UpdateClientRequest {
+  firstName?: string;
+  lastName?: string;
+  email?: string;
+  consent?: boolean;
+  // phone is intentionally excluded — immutable after creation
+}
+
+/** Wizard-layer contact data collected in the booking flow. */
+export interface ClientContactData {
+  phone: string;
+  firstName: string;
+  lastName: string;
+  email?: string;
+  city: string;
+  consent: boolean;
+  existingClientId?: string;       // populated when a prior-client lookup succeeds
 }
 
 // ---------------------------------------------------------------------------
@@ -339,6 +381,11 @@ export interface DeleteSlotResponse {
   id: string;
 }
 
+/** Discriminated union — narrow on `found` to access `client`. */
+export type ClientLookupResponse =
+  | { found: true; client: Client }
+  | { found: false };
+
 // ---------------------------------------------------------------------------
 // Error Response Envelope
 // ---------------------------------------------------------------------------
@@ -356,6 +403,8 @@ export type ApiErrorCode =
   | 'STUDIO_NOT_FOUND'
   | 'STUDIO_HAS_ACTIVE_BOOKINGS'
   | 'STUDIO_ID_TAKEN'
+  | 'CLIENT_NOT_FOUND'
+  | 'PHONE_ALREADY_EXISTS'
   | 'INTERNAL_ERROR';
 
 export interface ApiError {

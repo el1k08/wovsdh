@@ -50,9 +50,9 @@ export default function BookingSection() {
 
         {/* Trust indicators */}
         <div className="mt-8 flex flex-col items-center gap-3 sm:flex-row sm:justify-center sm:gap-8 text-sm text-[var(--color-charcoal)] opacity-60">
-          <span>Подтверждение по SMS/WhatsApp</span>
+          <span>Подтверждение по Email</span>
           <span className="hidden sm:block h-3 w-px bg-current" aria-hidden="true" />
-          <span>Бесплатная отмена за 24 ч</span>
+          <span>Бесплатная отмена</span>
           <span className="hidden sm:block h-3 w-px bg-current" aria-hidden="true" />
           <span>Запись доступна 24/7</span>
         </div>
