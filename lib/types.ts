@@ -33,8 +33,11 @@ export interface Studio {
   id: string;                      // TEXT primary key, e.g. 'rishon', 'ashdod'
   name: string;
   city: string;
+  street: string;
   google_calendar_id: string | null;
   timezone: string;                // always 'Asia/Jerusalem'
+  schedule_text: string;           // Free-text schedule description for landing page
+  image_url: string | null;
   created_at: string;              // TIMESTAMPTZ as ISO string
 }
 
@@ -176,6 +179,28 @@ export interface UpdateServiceRequest extends Partial<CreateServiceRequest> {
   is_active?: boolean;
 }
 
+export interface CreateStudioRequest {
+  id: string;
+  name: string;
+  street: string;
+  city: string;
+  timezone?: string;
+  schedule: Array<{
+    day_of_week: number;
+    is_working: boolean;
+    work_start: string;
+    work_end: string;
+  }>;
+}
+
+export interface UpdateStudioRequest {
+  name?: string;
+  street?: string;
+  city?: string;
+  timezone?: string;
+  schedule_text?: string;
+}
+
 // ---------------------------------------------------------------------------
 // API Response Types
 // ---------------------------------------------------------------------------
@@ -312,6 +337,9 @@ export type ApiErrorCode =
   | 'SERVICE_NOT_FOUND'
   | 'UNAUTHORIZED'
   | 'VALIDATION_ERROR'
+  | 'STUDIO_NOT_FOUND'
+  | 'STUDIO_HAS_ACTIVE_BOOKINGS'
+  | 'STUDIO_ID_TAKEN'
   | 'INTERNAL_ERROR';
 
 export interface ApiError {

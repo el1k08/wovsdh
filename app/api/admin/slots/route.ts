@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { supabaseAdmin } from '@/lib/supabase'
-import { isValidStudioId } from '@/lib/validation'
+import { isNonEmptyString, studioExists } from '@/lib/validation'
 import type {
   ApiError,
   AdminSlotDTO,
@@ -61,12 +61,12 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
   const dateFrom = searchParams.get('date_from') ?? ''
   const dateTo = searchParams.get('date_to') ?? ''
 
-  if (!isValidStudioId(studioId)) {
+  if (!isNonEmptyString(studioId) || !(await studioExists(studioId))) {
     return NextResponse.json<ApiError>(
       {
         error: {
           code: 'INVALID_PARAMS',
-          message: "Query param 'studio_id' must be 'rishon' or 'ashdod'.",
+          message: "Query param 'studio_id' must be a valid studio ID.",
         },
       },
       { status: 400 },

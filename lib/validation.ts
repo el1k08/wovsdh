@@ -3,15 +3,14 @@
  * No external dependencies — native JS/TS only.
  */
 
+import { supabaseAdmin } from '@/lib/supabase'
+
 const UUID_RE =
   /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
 
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
 
 const DATE_RE = /^\d{4}-\d{2}-\d{2}$/
-
-const VALID_STUDIO_IDS = ['rishon', 'ashdod'] as const
-export type ValidStudioId = (typeof VALID_STUDIO_IDS)[number]
 
 /** Returns true when `str` is a well-formed RFC 4122 UUID (case-insensitive). */
 export function isValidUUID(str: string): boolean {
@@ -24,11 +23,6 @@ export function isValidUUID(str: string): boolean {
  */
 export function isValidEmail(str: string): boolean {
   return EMAIL_RE.test(str.trim())
-}
-
-/** Returns true and narrows the type when `str` is a known studio slug. */
-export function isValidStudioId(str: string): str is ValidStudioId {
-  return (VALID_STUDIO_IDS as readonly string[]).includes(str)
 }
 
 /**
@@ -65,4 +59,21 @@ export function isValidDateString(str: string): boolean {
 /** Narrows `unknown` to a non-empty string (trims before checking). */
 export function isNonEmptyString(value: unknown): value is string {
   return typeof value === 'string' && value.trim().length > 0
+}
+
+const STUDIO_SLUG_RE = /^[a-z][a-z0-9-]{0,29}$/
+
+/** Returns true when `str` is a valid studio URL slug (lowercase letters, digits, hyphens, 1–30 chars). */
+export function isValidStudioSlug(str: string): boolean {
+  return STUDIO_SLUG_RE.test(str)
+}
+
+/** Returns true when a studio with the given ID exists in the database. */
+export async function studioExists(id: string): Promise<boolean> {
+  const { data } = await supabaseAdmin
+    .from('studios')
+    .select('id')
+    .eq('id', id)
+    .maybeSingle()
+  return data !== null
 }

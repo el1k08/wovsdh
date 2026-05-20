@@ -3,8 +3,8 @@ import { supabaseAdmin } from '@/lib/supabase'
 import {
   isValidUUID,
   isValidEmail,
-  isValidStudioId,
   isNonEmptyString,
+  studioExists,
 } from '@/lib/validation'
 import { notifyStaffNewBooking } from '@/lib/notify'
 import type {
@@ -51,8 +51,8 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
 
   const validationErrors: string[] = []
 
-  if (!isNonEmptyString(studio_id) || !isValidStudioId(studio_id)) {
-    validationErrors.push("'studio_id' must be 'rishon' or 'ashdod'.")
+  if (!isNonEmptyString(studio_id) || !(await studioExists(studio_id))) {
+    validationErrors.push("'studio_id' must be a valid studio ID.")
   }
   if (!isNonEmptyString(service_id) || !isValidUUID(service_id)) {
     validationErrors.push("'service_id' must be a valid UUID.")

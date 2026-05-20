@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { supabaseAdmin } from '@/lib/supabase'
-import { isValidStudioId, isValidDateString, isValidUUID } from '@/lib/validation'
+import { isNonEmptyString, isValidDateString, isValidUUID, studioExists } from '@/lib/validation'
 import type { ApiError, GetAvailableSlotsResponse, AvailableStartTime } from '@/lib/types'
 
 const LOG_PREFIX = '[api/slots]'
@@ -12,12 +12,12 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
   const date = searchParams.get('date') ?? ''
   const serviceId = searchParams.get('service_id') ?? ''
 
-  if (!isValidStudioId(studioId)) {
+  if (!isNonEmptyString(studioId) || !(await studioExists(studioId))) {
     return NextResponse.json<ApiError>(
       {
         error: {
           code: 'INVALID_PARAMS',
-          message: "Query param 'studio_id' must be 'rishon' or 'ashdod'.",
+          message: "Query param 'studio_id' must be a valid studio ID.",
         },
       },
       { status: 400 },

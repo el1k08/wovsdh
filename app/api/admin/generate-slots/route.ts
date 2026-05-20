@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { supabaseAdmin } from '@/lib/supabase'
-import { isValidStudioId } from '@/lib/validation'
+import { isNonEmptyString, studioExists } from '@/lib/validation'
 import { SlotStatus } from '@/lib/types'
 import type { ApiError, GenerateSlotsFromTemplateResponse, StudioScheduleTemplate } from '@/lib/types'
 
@@ -69,8 +69,8 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
 
   const validationErrors: string[] = []
 
-  if (typeof studio_id !== 'string' || !isValidStudioId(studio_id)) {
-    validationErrors.push("'studio_id' must be 'rishon' or 'ashdod'.")
+  if (!isNonEmptyString(studio_id) || !(await studioExists(studio_id as string))) {
+    validationErrors.push("'studio_id' must be a valid studio ID.")
   }
   if (typeof date_from !== 'string' || !isValidDateParam(date_from)) {
     validationErrors.push("'date_from' must be a valid YYYY-MM-DD date.")

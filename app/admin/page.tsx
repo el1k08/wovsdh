@@ -1,11 +1,12 @@
 'use client'
 
-import { useState, useEffect, useCallback } from 'react'
+import React, { useState, useEffect, useCallback } from 'react'
 import type {
   AdminSlotDTO,
   GenerateSlotsFromTemplateResponse,
   GetAdminSlotsResponse,
   ServiceDTO,
+  Studio,
   StudioScheduleTemplate,
   GetMasterScheduleResponse,
 } from '@/lib/types'
@@ -50,8 +51,7 @@ function formatLocalDate(isoStr: string): string {
 // Types
 // ---------------------------------------------------------------------------
 
-type Studio = 'rishon' | 'ashdod'
-type AdminTab = 'bookings' | 'services' | 'schedule'
+type AdminTab = 'bookings' | 'services' | 'schedule' | 'studios'
 
 interface InlineMessage {
   type: 'success' | 'error'
@@ -146,7 +146,7 @@ function StatusBadge({ status }: { status: string }) {
 // ---------------------------------------------------------------------------
 
 interface ServicesTabProps {
-  studio: Studio
+  studio: string
   apiFetch: (path: string, options?: RequestInit) => Promise<Response>
   onUnauth: () => void
 }
@@ -412,7 +412,7 @@ function ServicesTab({ studio, apiFetch, onUnauth }: ServicesTabProps) {
 // ---------------------------------------------------------------------------
 
 interface ScheduleTabProps {
-  studio: Studio
+  studio: string
   apiFetch: (path: string, options?: RequestInit) => Promise<Response>
   onUnauth: () => void
 }
@@ -595,12 +595,537 @@ function ScheduleTab({ studio, apiFetch, onUnauth }: ScheduleTabProps) {
 }
 
 // ---------------------------------------------------------------------------
+// Studios Tab
+// ---------------------------------------------------------------------------
+
+interface StudiosTabProps {
+  apiFetch: (path: string, options?: RequestInit) => Promise<Response>
+  onUnauth: () => void
+  onStudiosChanged: () => void
+  secret: string | null
+}
+
+function buildStudioDefaultSchedule(): ScheduleRow[] {
+  return [
+    { day_of_week: 0, is_working: true,  work_start: '09:00', work_end: '20:00' }, // Вс
+    { day_of_week: 1, is_working: true,  work_start: '09:00', work_end: '20:00' }, // Пн
+    { day_of_week: 2, is_working: true,  work_start: '09:00', work_end: '20:00' }, // Вт
+    { day_of_week: 3, is_working: true,  work_start: '09:00', work_end: '20:00' }, // Ср
+    { day_of_week: 4, is_working: true,  work_start: '09:00', work_end: '20:00' }, // Чт
+    { day_of_week: 5, is_working: true,  work_start: '09:00', work_end: '14:00' }, // Пт
+    { day_of_week: 6, is_working: false, work_start: '09:00', work_end: '20:00' }, // Сб
+  ]
+}
+
+function ScheduleEditor({
+  rows,
+  onChange,
+  disabled = false,
+}: {
+  rows: ScheduleRow[]
+  onChange: (rows: ScheduleRow[]) => void
+  disabled?: boolean
+}) {
+  const STUDIO_DAY_LABELS = ['Вс', 'Пн', 'Вт', 'Ср', 'Чт', 'Пт', 'Сб']
+  const updateRow = (index: number, patch: Partial<ScheduleRow>) => {
+    const next = rows.map((r, i) => (i === index ? { ...r, ...patch } : r))
+    onChange(next)
+  }
+  return (
+    <div className="space-y-2">
+      {rows.map((row, i) => (
+        <div key={row.day_of_week} className="flex items-center gap-3">
+          <input
+            type="checkbox"
+            checked={row.is_working}
+            disabled={disabled}
+            onChange={e => updateRow(i, { is_working: e.target.checked })}
+            className="w-4 h-4 accent-[var(--color-rose)]"
+          />
+          <span className="w-6 text-sm text-[var(--color-charcoal)] font-medium">
+            {STUDIO_DAY_LABELS[row.day_of_week]}
+          </span>
+          <input
+            type="time"
+            value={row.work_start}
+            disabled={disabled || !row.is_working}
+            onChange={e => updateRow(i, { work_start: e.target.value })}
+            className="border border-gray-300 rounded-lg px-2 py-1 text-sm text-[var(--color-charcoal)] focus:outline-none focus:border-[var(--color-rose)] disabled:opacity-40"
+          />
+          <span className="text-sm text-gray-400">—</span>
+          <input
+            type="time"
+            value={row.work_end}
+            disabled={disabled || !row.is_working}
+            onChange={e => updateRow(i, { work_end: e.target.value })}
+            className="border border-gray-300 rounded-lg px-2 py-1 text-sm text-[var(--color-charcoal)] focus:outline-none focus:border-[var(--color-rose)] disabled:opacity-40"
+          />
+          {!row.is_working && (
+            <span className="text-xs text-gray-400">Выходной</span>
+          )}
+        </div>
+      ))}
+    </div>
+  )
+}
+
+function StudiosTab({ apiFetch, onUnauth, onStudiosChanged, secret }: StudiosTabProps) {
+  const [studiosList, setStudiosList] = useState<Studio[]>([])
+  const [loading, setLoading] = useState(true)
+  const [message, setMessage] = useState<InlineMessage | null>(null)
+
+  // Create form
+  const [showCreate, setShowCreate] = useState(false)
+  const [newId, setNewId] = useState('')
+  const [newName, setNewName] = useState('')
+  const [newStreet, setNewStreet] = useState('')
+  const [newCity, setNewCity] = useState('')
+  const [newTimezone, setNewTimezone] = useState('Asia/Jerusalem')
+  const [newScheduleText, setNewScheduleText] = useState('')
+  const [newSchedule, setNewSchedule] = useState<ScheduleRow[]>(buildStudioDefaultSchedule())
+  const [formLoading, setFormLoading] = useState(false)
+
+  // Edit form
+  const [editingId, setEditingId] = useState<string | null>(null)
+  const [editName, setEditName] = useState('')
+  const [editStreet, setEditStreet] = useState('')
+  const [editCity, setEditCity] = useState('')
+  const [editScheduleText, setEditScheduleText] = useState('')
+  const [editLoading, setEditLoading] = useState(false)
+
+  // Delete confirm
+  const [deleteTarget, setDeleteTarget] = useState<string | null>(null)
+  const [deleting, setDeleting] = useState(false)
+
+  // Image upload/delete
+  const [uploadingImage, setUploadingImage] = useState(false)
+  const [imageError, setImageError] = useState<string | null>(null)
+
+  const load = useCallback(async () => {
+    setLoading(true)
+    const res = await apiFetch('/api/admin/studios')
+    if (res.status === 401) { onUnauth(); return }
+    if (res.ok) {
+      const data = await res.json() as { studios: Studio[] }
+      setStudiosList(data.studios)
+    }
+    setLoading(false)
+  }, [apiFetch, onUnauth])
+
+  useEffect(() => { load() }, [load])
+
+  const handleCreate = async (e: React.FormEvent) => {
+    e.preventDefault()
+    setFormLoading(true)
+    setMessage(null)
+    const res = await apiFetch('/api/admin/studios', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        id: newId.trim(),
+        name: newName.trim(),
+        street: newStreet.trim(),
+        city: newCity.trim(),
+        timezone: newTimezone.trim(),
+        schedule_text: newScheduleText,
+        schedule: newSchedule,
+      }),
+    })
+    const data = await res.json() as { error?: { message?: string } }
+    if (!res.ok) {
+      setMessage({ type: 'error', text: data.error?.message ?? 'Ошибка создания студии' })
+    } else {
+      setMessage({ type: 'success', text: 'Студия создана' })
+      setShowCreate(false)
+      setNewId(''); setNewName(''); setNewStreet(''); setNewCity('')
+      setNewTimezone('Asia/Jerusalem'); setNewScheduleText(''); setNewSchedule(buildStudioDefaultSchedule())
+      await load()
+      onStudiosChanged()
+    }
+    setFormLoading(false)
+  }
+
+  const startEdit = (s: Studio) => {
+    setEditingId(s.id)
+    setEditName(s.name)
+    setEditStreet(s.street ?? '')
+    setEditCity(s.city)
+    setEditScheduleText(s.schedule_text ?? '')
+    setDeleteTarget(null)
+  }
+
+  const handleEdit = async (e: React.FormEvent) => {
+    e.preventDefault()
+    if (!editingId) return
+    setEditLoading(true)
+    setMessage(null)
+    const res = await apiFetch(`/api/admin/studios/${editingId}`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ name: editName.trim(), street: (editStreet ?? '').trim(), city: editCity.trim(), schedule_text: (editScheduleText ?? '') }),
+    })
+    const data = await res.json() as { error?: { message?: string } }
+    if (!res.ok) {
+      setMessage({ type: 'error', text: data.error?.message ?? 'Ошибка обновления студии' })
+    } else {
+      setMessage({ type: 'success', text: 'Студия обновлена' })
+      setEditingId(null)
+      await load()
+      onStudiosChanged()
+    }
+    setEditLoading(false)
+  }
+
+  const handleDelete = async (studioId: string) => {
+    setDeleting(true)
+    setMessage(null)
+    const res = await apiFetch(`/api/admin/studios/${studioId}`, { method: 'DELETE' })
+    const data = await res.json() as { error?: { message?: string } }
+    if (!res.ok) {
+      setMessage({ type: 'error', text: data.error?.message ?? 'Ошибка удаления студии' })
+      setDeleteTarget(null)
+    } else {
+      setMessage({ type: 'success', text: 'Студия удалена' })
+      setDeleteTarget(null)
+      await load()
+      onStudiosChanged()
+    }
+    setDeleting(false)
+  }
+
+  const handleImageUpload = async (studioId: string, file: File) => {
+    setUploadingImage(true)
+    setImageError(null)
+    try {
+      const form = new FormData()
+      form.append('file', file)
+      // Use raw fetch — apiFetch forces Content-Type: application/json which breaks multipart
+      const res = await fetch(`/api/admin/studios/${studioId}/image`, {
+        method: 'PUT',
+        headers: { 'X-Admin-Secret': secret ?? '' },
+        body: form,
+      })
+      const data = await res.json() as { image_url?: string; error?: { message?: string } }
+      if (!res.ok) {
+        setImageError(data.error?.message ?? 'Ошибка загрузки фото')
+      } else {
+        setImageError(null)
+        await load()
+        onStudiosChanged()
+      }
+    } catch {
+      setImageError('Сетевая ошибка при загрузке фото')
+    }
+    setUploadingImage(false)
+  }
+
+  const handleImageDelete = async (studioId: string) => {
+    setUploadingImage(true)
+    setImageError(null)
+    try {
+      const res = await apiFetch(`/api/admin/studios/${studioId}/image`, { method: 'DELETE' })
+      if (!res.ok) {
+        const data = await res.json() as { error?: { message?: string } }
+        setImageError(data.error?.message ?? 'Ошибка удаления фото')
+      } else {
+        setImageError(null)
+        await load()
+        onStudiosChanged()
+      }
+    } catch {
+      setImageError('Сетевая ошибка при удалении фото')
+    }
+    setUploadingImage(false)
+  }
+
+  return (
+    <div>
+      <div className="flex items-center justify-between mb-6">
+        <h2 className="text-xl font-semibold text-[var(--color-charcoal)]">Студии</h2>
+        <button
+          onClick={() => { setShowCreate(v => !v); setEditingId(null); setDeleteTarget(null) }}
+          className="px-4 py-2 rounded-lg text-sm font-medium bg-[var(--color-rose)] text-white hover:opacity-90 transition-opacity"
+        >
+          {showCreate ? 'Отмена' : '+ Добавить студию'}
+        </button>
+      </div>
+
+      {message && (
+        <div className={`mb-4 text-sm ${message.type === 'error' ? 'text-red-500' : 'text-green-600'}`}>
+          {message.text}
+        </div>
+      )}
+
+      {/* Create form */}
+      {showCreate && (
+        <form onSubmit={handleCreate} className="mb-6 p-4 border border-[var(--color-blush)] rounded-xl space-y-4">
+          <h3 className="text-sm font-semibold text-[var(--color-charcoal)]">Новая студия</h3>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <div>
+              <label className="block text-xs text-gray-500 mb-1">ID (slug) *</label>
+              <input
+                value={newId} onChange={e => setNewId(e.target.value)}
+                placeholder="tel-aviv"
+                required
+                className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm text-[var(--color-charcoal)] focus:outline-none focus:border-[var(--color-rose)]"
+              />
+              <p className="mt-1 text-xs text-gray-400">Строчные буквы, цифры и дефисы</p>
+            </div>
+            <div>
+              <label className="block text-xs text-gray-500 mb-1">Название *</label>
+              <input
+                value={newName} onChange={e => setNewName(e.target.value)}
+                placeholder="Студия маникюра Тель-Авив"
+                required
+                className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm text-[var(--color-charcoal)] focus:outline-none focus:border-[var(--color-rose)]"
+              />
+            </div>
+            <div>
+              <label className="block text-xs text-gray-500 mb-1">Улица</label>
+              <input
+                value={newStreet} onChange={e => setNewStreet(e.target.value)}
+                placeholder="ул. Дизенгоф, 99"
+                className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm text-[var(--color-charcoal)] focus:outline-none focus:border-[var(--color-rose)]"
+              />
+            </div>
+            <div>
+              <label className="block text-xs text-gray-500 mb-1">Город *</label>
+              <input
+                value={newCity} onChange={e => setNewCity(e.target.value)}
+                placeholder="Тель-Авив"
+                required
+                className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm text-[var(--color-charcoal)] focus:outline-none focus:border-[var(--color-rose)]"
+              />
+            </div>
+          </div>
+          <div className="sm:col-span-2">
+            <label className="block text-xs text-gray-500 mb-1">Расписание (текст для сайта)</label>
+            <textarea
+              value={newScheduleText}
+              onChange={e => setNewScheduleText(e.target.value)}
+              placeholder={"Воскресенье — четверг: 9:00–20:00\nПятница: 9:00–15:00\nСуббота: выходной"}
+              rows={3}
+              className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm text-[var(--color-charcoal)] focus:outline-none focus:border-[var(--color-rose)] resize-none"
+            />
+            <p className="mt-1 text-xs text-gray-400">Отображается на главной странице сайта. Каждая строка — отдельная строчка расписания.</p>
+          </div>
+          <div className="sm:col-span-2">
+            <label className="block text-xs text-gray-500 mb-2">Расписание работы</label>
+            <ScheduleEditor rows={newSchedule} onChange={setNewSchedule} disabled={formLoading} />
+          </div>
+          <div className="flex gap-2">
+            <button
+              type="submit"
+              disabled={formLoading}
+              className="px-4 py-2 rounded-lg text-sm font-medium bg-[var(--color-rose)] text-white hover:opacity-90 transition-opacity disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              {formLoading ? 'Сохранение...' : 'Создать студию'}
+            </button>
+            <button
+              type="button"
+              onClick={() => setShowCreate(false)}
+              className="px-4 py-2 rounded-lg text-sm font-medium border border-gray-300 text-[var(--color-charcoal)] hover:bg-gray-50"
+            >
+              Отмена
+            </button>
+          </div>
+          <p className="text-xs text-gray-400">Фото можно добавить после создания студии.</p>
+        </form>
+      )}
+
+      {/* Edit form */}
+      {editingId && (
+        <form onSubmit={handleEdit} className="mb-6 p-4 border border-[var(--color-blush)] rounded-xl space-y-4">
+          <h3 className="text-sm font-semibold text-[var(--color-charcoal)]">Редактировать студию</h3>
+
+          {/* Photo section */}
+          <div className="sm:col-span-2">
+            <label className="block text-xs text-gray-500 mb-2">Фото студии</label>
+            {imageError && (
+              <p className="text-xs text-red-500 mb-2">{imageError}</p>
+            )}
+            {(() => {
+              const currentStudio = studiosList.find(s => s.id === editingId)
+              const hasImage = !!currentStudio?.image_url
+              return hasImage ? (
+                <div className="flex items-center gap-3">
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img
+                    src={currentStudio!.image_url!}
+                    alt="Фото студии"
+                    className="w-24 h-16 object-cover rounded-lg border border-[var(--color-blush)]"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => handleImageDelete(editingId!)}
+                    disabled={uploadingImage}
+                    className="px-3 py-1.5 rounded text-xs border border-red-200 text-red-600 bg-red-50 hover:bg-red-100 disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    {uploadingImage ? 'Удаление...' : 'Удалить фото'}
+                  </button>
+                </div>
+              ) : (
+                <div className="flex items-center gap-3">
+                  <label className={`cursor-pointer flex items-center gap-2 px-3 py-1.5 rounded text-xs border border-gray-300 text-[var(--color-charcoal)] hover:bg-gray-50 ${uploadingImage ? 'opacity-50 pointer-events-none' : ''}`}>
+                    {uploadingImage ? 'Загрузка...' : '+ Загрузить фото'}
+                    <input
+                      type="file"
+                      accept="image/jpeg,image/png,image/webp"
+                      className="hidden"
+                      disabled={uploadingImage}
+                      onChange={e => {
+                        const file = e.target.files?.[0]
+                        if (file && editingId) handleImageUpload(editingId, file)
+                        e.target.value = ''
+                      }}
+                    />
+                  </label>
+                  <span className="text-xs text-gray-400">PNG, JPG, WebP · до 2 МБ</span>
+                </div>
+              )
+            })()}
+          </div>
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <div>
+              <label className="block text-xs text-gray-500 mb-1">Название *</label>
+              <input
+                value={editName} onChange={e => setEditName(e.target.value)}
+                required
+                className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm text-[var(--color-charcoal)] focus:outline-none focus:border-[var(--color-rose)]"
+              />
+            </div>
+            <div>
+              <label className="block text-xs text-gray-500 mb-1">Улица</label>
+              <input
+                value={editStreet} onChange={e => setEditStreet(e.target.value)}
+                className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm text-[var(--color-charcoal)] focus:outline-none focus:border-[var(--color-rose)]"
+              />
+            </div>
+            <div>
+              <label className="block text-xs text-gray-500 mb-1">Город *</label>
+              <input
+                value={editCity} onChange={e => setEditCity(e.target.value)}
+                required
+                className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm text-[var(--color-charcoal)] focus:outline-none focus:border-[var(--color-rose)]"
+              />
+            </div>
+          </div>
+          <div className="sm:col-span-2">
+            <label className="block text-xs text-gray-500 mb-1">Расписание (текст для сайта)</label>
+            <textarea
+              value={editScheduleText}
+              onChange={e => setEditScheduleText(e.target.value)}
+              rows={3}
+              className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm text-[var(--color-charcoal)] focus:outline-none focus:border-[var(--color-rose)] resize-none"
+            />
+            <p className="mt-1 text-xs text-gray-400">Отображается на главной странице сайта. Каждая строка — отдельная строчка расписания.</p>
+          </div>
+          <div className="flex gap-2">
+            <button
+              type="submit"
+              disabled={editLoading}
+              className="px-4 py-2 rounded-lg text-sm font-medium bg-[var(--color-rose)] text-white hover:opacity-90 transition-opacity disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              {editLoading ? 'Сохранение...' : 'Сохранить'}
+            </button>
+            <button
+              type="button"
+              onClick={() => setEditingId(null)}
+              className="px-4 py-2 rounded-lg text-sm font-medium border border-gray-300 text-[var(--color-charcoal)] hover:bg-gray-50"
+            >
+              Отмена
+            </button>
+          </div>
+        </form>
+      )}
+
+      {/* Studios list */}
+      {loading ? (
+        <p className="text-sm text-gray-400">Загрузка студий...</p>
+      ) : studiosList.length === 0 ? (
+        <p className="text-sm text-gray-400">Студии не найдены.</p>
+      ) : (
+        <div className="overflow-x-auto">
+          <table className="w-full text-sm">
+            <thead>
+              <tr className="border-b border-[var(--color-blush)]">
+                <th className="text-left py-2 pr-4 text-xs font-medium text-gray-500">Название</th>
+                <th className="text-left py-2 pr-4 text-xs font-medium text-gray-500">Улица</th>
+                <th className="text-left py-2 pr-4 text-xs font-medium text-gray-500">Город</th>
+                <th className="text-left py-2 pr-4 text-xs font-medium text-gray-500">ID</th>
+                <th className="text-right py-2 text-xs font-medium text-gray-500">Действия</th>
+              </tr>
+            </thead>
+            <tbody>
+              {studiosList.map(s => (
+                <React.Fragment key={s.id}>
+                  <tr className="border-b border-gray-100 hover:bg-gray-50">
+                    <td className="py-3 pr-4 text-[var(--color-charcoal)] font-medium">{s.name}</td>
+                    <td className="py-3 pr-4 text-gray-600">{s.street || '—'}</td>
+                    <td className="py-3 pr-4 text-gray-600">{s.city}</td>
+                    <td className="py-3 pr-4 text-gray-400 font-mono text-xs">{s.id}</td>
+                    <td className="py-3 text-right">
+                      <div className="flex items-center justify-end gap-2">
+                        <button
+                          onClick={() => startEdit(s)}
+                          className="px-3 py-1 rounded text-xs border border-gray-300 text-[var(--color-charcoal)] hover:bg-gray-50"
+                        >
+                          Изменить
+                        </button>
+                        <button
+                          onClick={() => setDeleteTarget(prev => prev === s.id ? null : s.id)}
+                          className="px-3 py-1 rounded text-xs border border-red-200 text-red-600 bg-red-50 hover:bg-red-100"
+                        >
+                          Удалить
+                        </button>
+                      </div>
+                    </td>
+                  </tr>
+                  {deleteTarget === s.id && (
+                    <tr className="bg-red-50">
+                      <td colSpan={5} className="px-4 py-3">
+                        <div className="flex items-center justify-between gap-4">
+                          <p className="text-sm text-red-700">
+                            Удалить студию <strong>{s.name}</strong>? Будут удалены все связанные данные: расписание, слоты, услуги и отменённые записи. Активные записи блокируют удаление.
+                          </p>
+                          <div className="flex gap-2 shrink-0">
+                            <button
+                              onClick={() => handleDelete(s.id)}
+                              disabled={deleting}
+                              className="px-3 py-1 rounded text-xs bg-red-600 text-white hover:bg-red-700 disabled:opacity-50 disabled:cursor-not-allowed"
+                            >
+                              {deleting ? 'Удаление...' : 'Подтвердить'}
+                            </button>
+                            <button
+                              onClick={() => setDeleteTarget(null)}
+                              className="px-3 py-1 rounded text-xs border border-gray-300 text-gray-600 hover:bg-white"
+                            >
+                              Отмена
+                            </button>
+                          </div>
+                        </div>
+                      </td>
+                    </tr>
+                  )}
+                </React.Fragment>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
+    </div>
+  )
+}
+
+// ---------------------------------------------------------------------------
 // Main Admin Page
 // ---------------------------------------------------------------------------
 
 export default function AdminPage() {
   const [secret, setSecret] = useState<string | null>(null)
-  const [studio, setStudio] = useState<Studio>('rishon')
+  const [studio, setStudio] = useState<string>('rishon')
+  const [studios, setStudios] = useState<Studio[]>([])
   const [activeTab, setActiveTab] = useState<AdminTab>('bookings')
 
   // Generate form state
@@ -647,6 +1172,21 @@ export default function AdminPage() {
   }
 
   // ---------------------------------------------------------------------------
+  // Load studios
+  // ---------------------------------------------------------------------------
+
+  const loadStudios = useCallback(async () => {
+    const res = await apiFetch('/api/admin/studios')
+    if (!res.ok) return
+    const data = await res.json() as { studios: Studio[] }
+    setStudios(data.studios)
+    setStudio(prev => {
+      if (data.studios.length === 0) return ''
+      return data.studios.find(s => s.id === prev) ? prev : data.studios[0].id
+    })
+  }, [apiFetch])
+
+  // ---------------------------------------------------------------------------
   // Load slots
   // ---------------------------------------------------------------------------
 
@@ -683,6 +1223,7 @@ export default function AdminPage() {
   // Reload when studio or secret changes
   useEffect(() => {
     if (secret) {
+      loadStudios()
       loadSlots()
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -776,6 +1317,7 @@ export default function AdminPage() {
     { key: 'bookings', label: 'Записи' },
     { key: 'services', label: 'Услуги' },
     { key: 'schedule', label: 'Расписание' },
+    { key: 'studios', label: 'Студии' },
   ]
 
   return (
@@ -799,17 +1341,17 @@ export default function AdminPage() {
 
         {/* Studio switcher */}
         <div className="flex gap-2 mb-6">
-          {(['rishon', 'ashdod'] as Studio[]).map((s) => (
+          {studios.map((s) => (
             <button
-              key={s}
-              onClick={() => setStudio(s)}
+              key={s.id}
+              onClick={() => setStudio(s.id)}
               className={`px-4 py-2 rounded-lg text-sm font-medium border transition-colors ${
-                studio === s
+                studio === s.id
                   ? 'bg-[var(--color-rose)] text-white border-[var(--color-rose)]'
                   : 'bg-white text-[var(--color-charcoal)] border-gray-300 hover:border-[var(--color-rose)]'
               }`}
             >
-              {s === 'rishon' ? 'Ришон-ле-Цион' : 'Ашдод'}
+              {s.name}
             </button>
           ))}
         </div>
@@ -1034,6 +1576,13 @@ export default function AdminPage() {
         {activeTab === 'schedule' && (
           <section className="bg-white border border-[var(--color-blush)] rounded-xl p-6">
             <ScheduleTab studio={studio} apiFetch={apiFetch} onUnauth={handleUnauth} />
+          </section>
+        )}
+
+        {/* Tab: Студии */}
+        {activeTab === 'studios' && (
+          <section className="bg-white border border-[var(--color-blush)] rounded-xl p-6">
+            <StudiosTab apiFetch={apiFetch} onUnauth={handleUnauth} onStudiosChanged={loadStudios} secret={secret} />
           </section>
         )}
       </div>

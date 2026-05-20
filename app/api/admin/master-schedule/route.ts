@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { supabaseAdmin } from '@/lib/supabase'
-import { isValidStudioId } from '@/lib/validation'
+import { isNonEmptyString, studioExists } from '@/lib/validation'
 import type {
   ApiError,
   GetMasterScheduleResponse,
@@ -33,12 +33,12 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
 
   const studioId = request.nextUrl.searchParams.get('studio_id') ?? ''
 
-  if (!isValidStudioId(studioId)) {
+  if (!isNonEmptyString(studioId) || !(await studioExists(studioId))) {
     return NextResponse.json<ApiError>(
       {
         error: {
           code: 'INVALID_PARAMS',
-          message: "Query param 'studio_id' must be 'rishon' or 'ashdod'.",
+          message: "Query param 'studio_id' must be a valid studio ID.",
         },
       },
       { status: 400 },
@@ -92,9 +92,9 @@ export async function PUT(request: NextRequest): Promise<NextResponse> {
 
   const { studio_id, days } = body as Record<string, unknown>
 
-  if (typeof studio_id !== 'string' || !isValidStudioId(studio_id)) {
+  if (!isNonEmptyString(studio_id) || !(await studioExists(studio_id))) {
     return NextResponse.json<ApiError>(
-      { error: { code: 'INVALID_PARAMS', message: "'studio_id' must be 'rishon' or 'ashdod'." } },
+      { error: { code: 'INVALID_PARAMS', message: "'studio_id' must be a valid studio ID." } },
       { status: 400 },
     )
   }
