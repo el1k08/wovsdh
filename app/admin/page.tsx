@@ -67,7 +67,7 @@ function formatLocalDate(isoStr: string): string {
 // Types
 // ---------------------------------------------------------------------------
 
-type AdminTab = 'bookings' | 'schedule'
+type AdminTab = 'bookings' | 'schedule' | 'services'
 
 type SettingsSubTab = 'studios' | 'services'
 
@@ -215,12 +215,6 @@ function ServicesTab({ studio, apiFetch, onUnauth }: ServicesTabProps) {
   const dragOverItem = useRef<number | null>(null)
   const [dragIndex, setDragIndex] = useState<number | null>(null)
 
-  // Studio assignment state
-  const [assignedIds, setAssignedIds] = useState<Set<string>>(new Set())
-  const [assignmentLoading, setAssignmentLoading] = useState(false)
-  const [assignmentSaving, setAssignmentSaving] = useState(false)
-  const [assignmentMessage, setAssignmentMessage] = useState<InlineMessage | null>(null)
-
   const loadServices = useCallback(async () => {
     setLoading(true)
     setMessage(null)
@@ -241,58 +235,9 @@ function ServicesTab({ studio, apiFetch, onUnauth }: ServicesTabProps) {
     }
   }, [studio, apiFetch, onUnauth])
 
-  const loadAssignments = useCallback(async () => {
-    setAssignmentLoading(true)
-    try {
-      const res = await apiFetch(`/api/admin/studio-services?studio_id=${studio}`)
-      if (res.status === 401) { onUnauth(); return }
-      if (res.ok) {
-        const data = await res.json() as { service_ids: string[] }
-        setAssignedIds(new Set(data.service_ids))
-      }
-    } catch {
-      // silently fail — not critical
-    } finally {
-      setAssignmentLoading(false)
-    }
-  }, [studio, apiFetch, onUnauth])
-
   useEffect(() => {
     loadServices()
-    loadAssignments()
-  }, [loadServices, loadAssignments])
-
-  async function handleSaveAssignments() {
-    setAssignmentSaving(true)
-    setAssignmentMessage(null)
-    try {
-      const res = await apiFetch('/api/admin/studio-services', {
-        method: 'PUT',
-        body: JSON.stringify({ studio_id: studio, service_ids: [...assignedIds] }),
-      })
-      if (res.status === 401) { onUnauth(); return }
-      if (!res.ok) {
-        const body = await res.json() as { error?: { message?: string } }
-        setAssignmentMessage({ type: 'error', text: body.error?.message ?? 'Ошибка сохранения' })
-        return
-      }
-      setAssignmentMessage({ type: 'success', text: 'Назначения сохранены' })
-    } catch {
-      setAssignmentMessage({ type: 'error', text: 'Сетевая ошибка при сохранении' })
-    } finally {
-      setAssignmentSaving(false)
-    }
-  }
-
-  function toggleAssignment(serviceId: string) {
-    setAssignedIds((prev) => {
-      const next = new Set(prev)
-      if (next.has(serviceId)) next.delete(serviceId)
-      else next.add(serviceId)
-      return next
-    })
-    setAssignmentMessage(null)
-  }
+  }, [loadServices])
 
   async function handleCreate(e: React.FormEvent) {
     e.preventDefault()
@@ -717,59 +662,177 @@ function ServicesTab({ studio, apiFetch, onUnauth }: ServicesTabProps) {
         </div>
       )}
 
-      {/* Studio assignment section */}
-      <div className="mt-8 pt-6 border-t border-gray-100">
-        <h3 className="text-base font-semibold text-[var(--color-charcoal)] mb-1">
-          Услуги в студии
-        </h3>
-        <p className="text-xs text-gray-400 mb-4">
-          Отметьте услуги, доступные в этой студии. Только они будут отображаться при онлайн-записи.
-        </p>
+    </div>
+  )
+}
 
-        {assignmentLoading ? (
-          <p className="text-sm text-gray-400">Загрузка...</p>
-        ) : services.length === 0 ? (
-          <p className="text-sm text-gray-400">Нет услуг для назначения</p>
-        ) : (
-          <div className="space-y-1">
-            {services.filter((s) => s.is_active).map((svc) => (
-              <label
-                key={svc.id}
-                className="flex items-center gap-3 cursor-pointer rounded-lg px-3 py-2 hover:bg-gray-50 transition-colors"
-              >
-                <input
-                  type="checkbox"
-                  checked={assignedIds.has(svc.id)}
-                  onChange={() => toggleAssignment(svc.id)}
-                  className="w-4 h-4 accent-[var(--color-rose)] shrink-0"
-                />
-                {svc.icon && <span className="text-lg">{svc.icon}</span>}
-                <span className="text-sm text-[var(--color-charcoal)] font-medium flex-1">
-                  {svc.name}
-                </span>
-                <span className="text-xs text-gray-400">
-                  ₪{svc.price} · {formatDuration(svc.duration_minutes)}
-                </span>
-              </label>
-            ))}
-          </div>
-        )}
+// ---------------------------------------------------------------------------
+// Studio Services Assignment Tab
+// ---------------------------------------------------------------------------
 
-        <div className="mt-4 flex items-center gap-4">
-          <button
-            onClick={handleSaveAssignments}
-            disabled={assignmentSaving || assignmentLoading}
-            className="bg-[var(--color-rose)] text-white rounded-lg px-5 py-2 text-sm font-medium hover:opacity-90 transition-opacity disabled:opacity-50"
-          >
-            {assignmentSaving ? 'Сохранение...' : 'Сохранить назначения'}
-          </button>
-          {assignmentMessage && (
-            <p className={`text-sm ${assignmentMessage.type === 'success' ? 'text-green-600' : 'text-red-500'}`}>
-              {assignmentMessage.text}
-            </p>
-          )}
+interface StudioServicesAssignmentTabProps {
+  studio: string
+  apiFetch: (path: string, options?: RequestInit) => Promise<Response>
+  onUnauth: () => void
+}
+
+function StudioServicesAssignmentTab({ studio, apiFetch, onUnauth }: StudioServicesAssignmentTabProps) {
+  const [services, setServices] = useState<AdminServiceDTO[]>([])
+  const [assignedIds, setAssignedIds] = useState<Set<string>>(new Set())
+  const [loading, setLoading] = useState(false)
+  const [savingId, setSavingId] = useState<string | null>(null)
+  const [message, setMessage] = useState<InlineMessage | null>(null)
+
+  const load = useCallback(async () => {
+    setLoading(true)
+    setMessage(null)
+    try {
+      const [svcRes, assignRes] = await Promise.all([
+        apiFetch('/api/admin/services'),
+        apiFetch(`/api/admin/studio-services?studio_id=${studio}`),
+      ])
+      if (svcRes.status === 401 || assignRes.status === 401) { onUnauth(); return }
+      if (!svcRes.ok) {
+        setMessage({ type: 'error', text: 'Ошибка загрузки услуг' })
+        return
+      }
+      const svcData = await svcRes.json() as { services: AdminServiceDTO[] }
+      setServices(svcData.services ?? [])
+      if (assignRes.ok) {
+        const assignData = await assignRes.json() as { service_ids: string[] }
+        setAssignedIds(new Set(assignData.service_ids))
+      }
+    } catch {
+      setMessage({ type: 'error', text: 'Сетевая ошибка' })
+    } finally {
+      setLoading(false)
+    }
+  }, [studio, apiFetch, onUnauth])
+
+  useEffect(() => { load() }, [load])
+
+  async function toggleAssignment(serviceId: string) {
+    const wasAssigned = assignedIds.has(serviceId)
+    const nextIds = new Set(assignedIds)
+    if (wasAssigned) nextIds.delete(serviceId)
+    else nextIds.add(serviceId)
+    setAssignedIds(nextIds)
+    setMessage(null)
+
+    setSavingId(serviceId)
+    try {
+      const res = await apiFetch('/api/admin/studio-services', {
+        method: 'PUT',
+        body: JSON.stringify({ studio_id: studio, service_ids: [...nextIds] }),
+      })
+      if (res.status === 401) { onUnauth(); return }
+      if (!res.ok) {
+        setAssignedIds(assignedIds)
+        setMessage({ type: 'error', text: 'Ошибка сохранения' })
+      }
+    } catch {
+      setAssignedIds(assignedIds)
+      setMessage({ type: 'error', text: 'Сетевая ошибка при сохранении' })
+    } finally {
+      setSavingId(null)
+    }
+  }
+
+  return (
+    <div>
+      <div className="flex items-center justify-between mb-6">
+        <div>
+          <h2 className="text-lg font-semibold text-[var(--color-charcoal)]">Услуги студии</h2>
+          <p className="text-xs text-gray-400 mt-0.5">
+            Отметьте услуги, доступные в этой студии
+          </p>
         </div>
+        {message && (
+          <p className={`text-sm ${message.type === 'success' ? 'text-green-600' : 'text-red-500'}`}>
+            {message.text}
+          </p>
+        )}
       </div>
+
+      {loading ? (
+        <p className="text-sm text-gray-400 py-8 text-center">Загрузка...</p>
+      ) : services.length === 0 ? (
+        <p className="text-sm text-gray-400 py-8 text-center">Услуги не найдены</p>
+      ) : (
+        <ul className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3" role="list">
+          {services.map((svc) => {
+            const isAssigned = assignedIds.has(svc.id)
+            const isSaving = savingId === svc.id
+            return (
+              <li
+                key={svc.id}
+                onClick={() => !isSaving && toggleAssignment(svc.id)}
+                className={`group relative rounded-2xl border p-5 cursor-pointer transition-all duration-200 select-none ${
+                  isAssigned
+                    ? 'border-[var(--color-rose)] bg-white shadow-sm'
+                    : 'border-[var(--color-blush)] bg-white hover:border-[var(--color-rose)] hover:shadow-sm'
+                } ${isSaving ? 'opacity-60 cursor-wait' : ''}`}
+              >
+                {/* Checkbox */}
+                <div className="absolute top-4 right-4">
+                  <div className={`w-5 h-5 rounded border-2 flex items-center justify-center transition-colors ${
+                    isAssigned
+                      ? 'bg-[var(--color-rose)] border-[var(--color-rose)]'
+                      : 'border-gray-300 group-hover:border-[var(--color-rose)]'
+                  }`}>
+                    {isAssigned && (
+                      <svg className="w-3 h-3 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}>
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+                      </svg>
+                    )}
+                  </div>
+                </div>
+
+                {/* Icon */}
+                {svc.icon && (
+                  <div
+                    className="mb-3 flex h-12 w-12 items-center justify-center rounded-full text-xl"
+                    style={{ background: 'var(--color-blush)' }}
+                  >
+                    {svc.icon}
+                  </div>
+                )}
+
+                {/* Name */}
+                <h3
+                  className="font-semibold text-[var(--color-charcoal)] mb-1 pr-7"
+                  style={{ fontFamily: 'var(--font-cormorant), serif', fontSize: '1.2rem' }}
+                >
+                  {svc.name}
+                </h3>
+
+                {/* Description */}
+                {svc.description && (
+                  <p className="text-xs leading-relaxed text-[var(--color-charcoal)] opacity-60 mb-3 line-clamp-2">
+                    {svc.description}
+                  </p>
+                )}
+
+                {/* Price + duration */}
+                <div className="flex items-center justify-between mt-auto">
+                  <span className="text-sm font-semibold" style={{ color: 'var(--color-rose)' }}>
+                    от {svc.price} ₪
+                  </span>
+                  <span className="text-xs text-gray-400">{formatDuration(svc.duration_minutes)}</span>
+                </div>
+
+                {/* Bottom accent line on assigned */}
+                {isAssigned && (
+                  <div
+                    className="absolute bottom-0 left-5 right-5 h-0.5 rounded-full"
+                    style={{ background: 'linear-gradient(to right, var(--color-rose), var(--color-gold))' }}
+                  />
+                )}
+              </li>
+            )
+          })}
+        </ul>
+      )}
     </div>
   )
 }
@@ -1758,6 +1821,7 @@ export default function AdminPage() {
   const TABS: { key: AdminTab; label: string }[] = [
     { key: 'bookings', label: 'Записи' },
     { key: 'schedule', label: 'Расписание' },
+    { key: 'services', label: 'Услуги' },
   ]
 
   return (
@@ -2078,6 +2142,13 @@ export default function AdminPage() {
             {activeTab === 'schedule' && (
               <section className="bg-white border border-[var(--color-blush)] rounded-xl p-6">
                 <ScheduleTab studio={studio} apiFetch={apiFetch} onUnauth={handleUnauth} />
+              </section>
+            )}
+
+            {/* Tab: Услуги */}
+            {activeTab === 'services' && (
+              <section className="bg-white border border-[var(--color-blush)] rounded-xl p-6">
+                <StudioServicesAssignmentTab studio={studio} apiFetch={apiFetch} onUnauth={handleUnauth} />
               </section>
             )}
           </>
