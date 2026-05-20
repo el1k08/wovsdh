@@ -1,6 +1,7 @@
 'use client'
 
 import React, { useState, useEffect, useCallback, useRef } from 'react'
+import { Building2, Settings } from 'lucide-react'
 import { Switch } from '@/components/ui/Switch'
 import type {
   AdminSlotDTO,
@@ -66,7 +67,9 @@ function formatLocalDate(isoStr: string): string {
 // Types
 // ---------------------------------------------------------------------------
 
-type AdminTab = 'bookings' | 'services' | 'schedule' | 'studios'
+type AdminTab = 'bookings' | 'schedule'
+
+type SettingsSubTab = 'studios' | 'services'
 
 interface InlineMessage {
   type: 'success' | 'error'
@@ -1564,6 +1567,8 @@ export default function AdminPage() {
   const [studio, setStudio] = useState<string>('rishon')
   const [studios, setStudios] = useState<Studio[]>([])
   const [activeTab, setActiveTab] = useState<AdminTab>('bookings')
+  const [settingsSubTab, setSettingsSubTab] = useState<SettingsSubTab>('studios')
+  const [topSection, setTopSection] = useState<'studios' | 'settings'>('studios')
 
   // Generate form state
   const [genDateFrom, setGenDateFrom] = useState(todayString())
@@ -1752,9 +1757,7 @@ export default function AdminPage() {
 
   const TABS: { key: AdminTab; label: string }[] = [
     { key: 'bookings', label: 'Записи' },
-    { key: 'services', label: 'Услуги' },
     { key: 'schedule', label: 'Расписание' },
-    { key: 'studios', label: 'Студии' },
   ]
 
   return (
@@ -1765,53 +1768,122 @@ export default function AdminPage() {
           <h1 className="text-2xl font-semibold text-[var(--color-charcoal)]">
             Управление — WOVSDH Nails
           </h1>
+          <div className="flex items-center gap-4 self-start sm:self-auto">
+            <button
+              onClick={() => {
+                localStorage.removeItem('admin_secret')
+                setSecret(null)
+              }}
+              className="text-sm text-gray-500 underline"
+            >
+              Выйти
+            </button>
+          </div>
+        </div>
+
+        {/* Top-level navigation: Студии | Настройки */}
+        <div className="flex gap-1 mb-8 p-1 bg-white border border-gray-200 rounded-xl w-fit">
           <button
-            onClick={() => {
-              localStorage.removeItem('admin_secret')
-              setSecret(null)
-            }}
-            className="text-sm text-gray-500 underline self-start sm:self-auto"
+            onClick={() => setTopSection('studios')}
+            className={`flex items-center gap-2 px-5 py-2.5 rounded-lg text-sm font-medium transition-colors ${
+              topSection === 'studios'
+                ? 'bg-[var(--color-rose)] text-white shadow-sm'
+                : 'text-[var(--color-charcoal)] hover:bg-gray-50'
+            }`}
           >
-            Выйти
+            <Building2 size={16} />
+            Студии
+          </button>
+          <button
+            onClick={() => setTopSection('settings')}
+            className={`flex items-center gap-2 px-5 py-2.5 rounded-lg text-sm font-medium transition-colors ${
+              topSection === 'settings'
+                ? 'bg-[var(--color-rose)] text-white shadow-sm'
+                : 'text-[var(--color-charcoal)] hover:bg-gray-50'
+            }`}
+          >
+            <Settings size={16} />
+            Настройки
           </button>
         </div>
 
-        {/* Studio switcher */}
-        <div className="flex gap-2 mb-6">
-          {studios.map((s) => (
-            <button
-              key={s.id}
-              onClick={() => setStudio(s.id)}
-              className={`px-4 py-2 rounded-lg text-sm font-medium border transition-colors ${
-                studio === s.id
-                  ? 'bg-[var(--color-rose)] text-white border-[var(--color-rose)]'
-                  : 'bg-white text-[var(--color-charcoal)] border-gray-300 hover:border-[var(--color-rose)]'
-              }`}
-            >
-              {s.name}
-            </button>
-          ))}
-        </div>
+        {/* Settings panel */}
+        {topSection === 'settings' && (
+          <div>
+            {/* Settings sub-tab navigation */}
+            <div className="flex gap-2 mb-6 border-b border-gray-100 pb-1">
+              {([
+                { key: 'studios', label: 'Студии' },
+                { key: 'services', label: 'Услуги' },
+              ] as { key: SettingsSubTab; label: string }[]).map((sub) => (
+                <button
+                  key={sub.key}
+                  onClick={() => setSettingsSubTab(sub.key)}
+                  className={`px-4 py-2 rounded-t-lg text-sm font-medium transition-colors border-b-2 -mb-px ${
+                    settingsSubTab === sub.key
+                      ? 'border-[var(--color-rose)] text-[var(--color-rose)]'
+                      : 'border-transparent text-gray-500 hover:text-[var(--color-charcoal)]'
+                  }`}
+                >
+                  {sub.label}
+                </button>
+              ))}
+            </div>
 
-        {/* Tab bar */}
-        <div className="flex gap-1 mb-8 border-b border-gray-200">
-          {TABS.map((tab) => (
-            <button
-              key={tab.key}
-              onClick={() => setActiveTab(tab.key)}
-              className={`px-4 py-2.5 text-sm font-medium transition-colors border-b-2 -mb-px ${
-                activeTab === tab.key
-                  ? 'border-[var(--color-rose)] text-[var(--color-rose)]'
-                  : 'border-transparent text-gray-500 hover:text-[var(--color-charcoal)]'
-              }`}
-            >
-              {tab.label}
-            </button>
-          ))}
-        </div>
+            {/* Settings sub-tab: Студии */}
+            {settingsSubTab === 'studios' && (
+              <section className="bg-white border border-[var(--color-blush)] rounded-xl p-6">
+                <StudiosTab apiFetch={apiFetch} onUnauth={handleUnauth} onStudiosChanged={loadStudios} secret={secret} />
+              </section>
+            )}
 
-        {/* Tab: Записи */}
-        {activeTab === 'bookings' && (
+            {/* Settings sub-tab: Услуги */}
+            {settingsSubTab === 'services' && (
+              <section className="bg-white border border-[var(--color-blush)] rounded-xl p-6">
+                <ServicesTab studio={studio} apiFetch={apiFetch} onUnauth={handleUnauth} />
+              </section>
+            )}
+          </div>
+        )}
+
+        {/* Studio switcher + tabs */}
+        {topSection === 'studios' && (
+          <>
+            <div className="flex gap-2 mb-6">
+              {studios.map((s) => (
+                <button
+                  key={s.id}
+                  onClick={() => setStudio(s.id)}
+                  className={`px-4 py-2 rounded-lg text-sm font-medium border transition-colors ${
+                    studio === s.id
+                      ? 'bg-[var(--color-rose)] text-white border-[var(--color-rose)]'
+                      : 'bg-white text-[var(--color-charcoal)] border-gray-300 hover:border-[var(--color-rose)]'
+                  }`}
+                >
+                  {s.name}
+                </button>
+              ))}
+            </div>
+
+            {/* Tab bar */}
+            <div className="flex gap-1 mb-8 border-b border-gray-200">
+              {TABS.map((tab) => (
+                <button
+                  key={tab.key}
+                  onClick={() => setActiveTab(tab.key)}
+                  className={`px-4 py-2.5 text-sm font-medium transition-colors border-b-2 -mb-px ${
+                    activeTab === tab.key
+                      ? 'border-[var(--color-rose)] text-[var(--color-rose)]'
+                      : 'border-transparent text-gray-500 hover:text-[var(--color-charcoal)]'
+                  }`}
+                >
+                  {tab.label}
+                </button>
+              ))}
+            </div>
+
+            {/* Tab: Записи */}
+            {activeTab === 'bookings' && (
           <>
             {/* Generate slots form */}
             <section className="bg-white border border-[var(--color-blush)] rounded-xl p-6 mb-8">
@@ -2002,25 +2074,13 @@ export default function AdminPage() {
           </>
         )}
 
-        {/* Tab: Услуги */}
-        {activeTab === 'services' && (
-          <section className="bg-white border border-[var(--color-blush)] rounded-xl p-6">
-            <ServicesTab studio={studio} apiFetch={apiFetch} onUnauth={handleUnauth} />
-          </section>
-        )}
-
-        {/* Tab: Расписание */}
-        {activeTab === 'schedule' && (
-          <section className="bg-white border border-[var(--color-blush)] rounded-xl p-6">
-            <ScheduleTab studio={studio} apiFetch={apiFetch} onUnauth={handleUnauth} />
-          </section>
-        )}
-
-        {/* Tab: Студии */}
-        {activeTab === 'studios' && (
-          <section className="bg-white border border-[var(--color-blush)] rounded-xl p-6">
-            <StudiosTab apiFetch={apiFetch} onUnauth={handleUnauth} onStudiosChanged={loadStudios} secret={secret} />
-          </section>
+            {/* Tab: Расписание */}
+            {activeTab === 'schedule' && (
+              <section className="bg-white border border-[var(--color-blush)] rounded-xl p-6">
+                <ScheduleTab studio={studio} apiFetch={apiFetch} onUnauth={handleUnauth} />
+              </section>
+            )}
+          </>
         )}
       </div>
     </main>
