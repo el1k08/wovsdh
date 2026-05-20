@@ -1,29 +1,44 @@
 'use client'
 
 import { MapPin } from 'lucide-react'
+import type { PublicStudioDTO } from '@/lib/types'
 
 interface CitySelectorProps {
-  value: 'rishon' | 'ashdod' | null
-  onChange: (city: 'rishon' | 'ashdod') => void
+  studios: PublicStudioDTO[]
+  value: string | null
+  onChange: (studioId: string) => void
+  loading?: boolean
 }
 
-const CITIES: { id: 'rishon' | 'ashdod'; label: string; subtitle: string }[] = [
-  { id: 'rishon', label: 'Ришон-ле-Цион', subtitle: 'Студия на юге города' },
-  { id: 'ashdod', label: 'Ашдод', subtitle: 'Студия в центре' },
-]
+export default function CitySelector({ studios, value, onChange, loading = false }: CitySelectorProps) {
+  if (loading) {
+    return (
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+        {[0, 1].map(i => (
+          <div
+            key={i}
+            className="flex flex-col items-center gap-3 rounded-2xl border-2 border-gray-200 bg-white px-6 py-8 animate-pulse"
+          >
+            <div className="h-7 w-7 rounded-full bg-gray-200" />
+            <div className="h-5 w-32 rounded bg-gray-200" />
+            <div className="h-4 w-24 rounded bg-gray-200" />
+          </div>
+        ))}
+      </div>
+    )
+  }
 
-export default function CitySelector({ value, onChange }: CitySelectorProps) {
   return (
     <fieldset>
       <legend className="sr-only">Выберите студию</legend>
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-        {CITIES.map((city) => {
-          const isSelected = value === city.id
+        {studios.map((studio) => {
+          const isSelected = value === studio.id
           return (
             <button
-              key={city.id}
+              key={studio.id}
               type="button"
-              onClick={() => onChange(city.id)}
+              onClick={() => onChange(studio.id)}
               aria-pressed={isSelected}
               className={[
                 'flex flex-col items-center gap-3 rounded-2xl border-2 px-6 py-8 text-center transition-all duration-200',
@@ -43,11 +58,13 @@ export default function CitySelector({ value, onChange }: CitySelectorProps) {
                 className="text-lg font-semibold leading-snug"
                 style={{ color: 'var(--color-charcoal)' }}
               >
-                {city.label}
+                {studio.name}
               </span>
-              <span className="text-sm" style={{ color: 'var(--color-charcoal)', opacity: 0.6 }}>
-                {city.subtitle}
-              </span>
+              {studio.street && (
+                <span className="text-sm" style={{ color: 'var(--color-charcoal)', opacity: 0.6 }}>
+                  {studio.street}
+                </span>
+              )}
             </button>
           )
         })}

@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useCallback } from 'react'
+import { useState, useCallback, useEffect } from 'react'
 import CitySelector from './CitySelector'
 import DatePicker from './DatePicker'
 import TimePicker from './TimePicker'
@@ -13,6 +13,8 @@ import type {
   AvailableStartTime,
   BookingCreatedDTO,
   CreateBookingRequest,
+  PublicStudioDTO,
+  GetStudiosResponse,
 } from '@/lib/types'
 import type { ContactFormData } from './ContactForm'
 
@@ -22,10 +24,6 @@ import type { ContactFormData } from './ContactForm'
 
 type Step = 'city' | 'service' | 'datetime' | 'contacts' | 'success'
 
-const STUDIO_NAMES: Record<'rishon' | 'ashdod', string> = {
-  rishon: 'Ришон-ле-Цион',
-  ashdod: 'Ашдод',
-}
 
 const PROGRESS_STEPS: { key: Step; label: string }[] = [
   { key: 'city', label: 'Студия' },
@@ -45,7 +43,7 @@ function getProgressIndex(step: Step): number {
 
 export default function BookingForm() {
   const [step, setStep] = useState<Step>('city')
-  const [selectedCity, setSelectedCity] = useState<'rishon' | 'ashdod' | null>(null)
+  const [selectedCity, setSelectedCity] = useState<string | null>(null)
   const [selectedDate, setSelectedDate] = useState<string | null>(null)
   const [selectedStartAt, setSelectedStartAt] = useState<string | null>(null)
   const [selectedService, setSelectedService] = useState<ServiceDTO | null>(null)
@@ -56,12 +54,22 @@ export default function BookingForm() {
   const [bookingLoading, setBookingLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [completedBooking, setCompletedBooking] = useState<BookingCreatedDTO | null>(null)
+  const [studios, setStudios] = useState<PublicStudioDTO[]>([])
+  const [studiosLoading, setStudiosLoading] = useState(true)
+
+  useEffect(() => {
+    fetch('/api/studios')
+      .then(r => r.json())
+      .then((data: GetStudiosResponse) => setStudios(data.studios ?? []))
+      .catch(() => {/* use empty list */})
+      .finally(() => setStudiosLoading(false))
+  }, [])
 
   // -------------------------------------------------------------------------
   // Fetch services
   // -------------------------------------------------------------------------
 
-  const fetchServices = useCallback(async (city: 'rishon' | 'ashdod') => {
+  const fetchServices = useCallback(async (city: string) => {
     setServicesLoading(true)
     setError(null)
     try {
@@ -107,7 +115,7 @@ export default function BookingForm() {
   // -------------------------------------------------------------------------
 
   const handleCitySelect = useCallback(
-    (city: 'rishon' | 'ashdod') => {
+    (city: string) => {
       setSelectedCity(city)
       setSelectedService(null)
       setSelectedDate(null)
@@ -308,7 +316,12 @@ export default function BookingForm() {
           >
             Выберите студию
           </h3>
-          <CitySelector value={selectedCity} onChange={handleCitySelect} />
+          <CitySelector
+            studios={studios}
+            value={selectedCity}
+            onChange={handleCitySelect}
+            loading={studiosLoading}
+          />
         </section>
       )}
 
@@ -438,7 +451,7 @@ export default function BookingForm() {
       {step === 'success' && completedBooking && selectedCity && (
         <BookingSuccess
           booking={completedBooking}
-          studioName={STUDIO_NAMES[selectedCity]}
+          studioName={studios.find(s => s.id === selectedCity)?.name ?? selectedCity ?? ''}
           onReset={handleReset}
         />
       )}

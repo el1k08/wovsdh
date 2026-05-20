@@ -235,6 +235,17 @@ export interface GetServicesResponse {
   services: ServiceDTO[];
 }
 
+export interface PublicStudioDTO {
+  id: string;
+  name: string;
+  city: string;
+  street: string;
+}
+
+export interface GetStudiosResponse {
+  studios: PublicStudioDTO[];
+}
+
 export interface BookingPublicDTO {
   id: string;
   studio_id: string;
