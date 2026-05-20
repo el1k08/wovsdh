@@ -884,6 +884,50 @@ function ScheduleTab({ studio, apiFetch, onUnauth }: ScheduleTabProps) {
   const [saving, setSaving] = useState(false)
   const [message, setMessage] = useState<InlineMessage | null>(null)
 
+  const todayStr = todayString()
+  const nowDate = new Date()
+
+  const daySliderRef = useRef<HTMLDivElement>(null)
+  const todayBtnRef = useRef<HTMLButtonElement>(null)
+
+  // Slots state — today is always the default selection
+  const [selectedMonth, setSelectedMonth] = useState<Date>(
+    new Date(nowDate.getFullYear(), nowDate.getMonth(), 1)
+  )
+  const [selectedDay, setSelectedDay] = useState<string | null>(todayStr)
+  const [studioSlots, setStudioSlots] = useState<AdminSlotDTO[]>([])
+  const [slotsLoading, setSlotsLoading] = useState(false)
+
+  // Days of the selected month for the horizontal slider
+  const daysInMonth = (() => {
+    const year = selectedMonth.getFullYear()
+    const month = selectedMonth.getMonth()
+    const totalDays = new Date(year, month + 1, 0).getDate()
+    return Array.from({ length: totalDays }, (_, d) => {
+      const day = d + 1
+      const dateStr = `${year}-${String(month + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`
+      return { dateStr, date: new Date(year, month, day, 12, 0, 0) }
+    })
+  })()
+
+  const monthLabel = (() => {
+    const label = selectedMonth.toLocaleDateString('ru-RU', { month: 'long', year: 'numeric' })
+    return label.charAt(0).toUpperCase() + label.slice(1)
+  })()
+
+  function navigateMonth(direction: -1 | 1) {
+    const next = new Date(selectedMonth.getFullYear(), selectedMonth.getMonth() + direction, 1)
+    const nextYYYYMM = `${next.getFullYear()}-${String(next.getMonth() + 1).padStart(2, '0')}`
+    setSelectedMonth(next)
+    setSelectedDay(todayStr.startsWith(nextYYYYMM) ? todayStr : null)
+  }
+
+  const slotsForDay = selectedDay
+    ? studioSlots
+        .filter(slot => new Date(slot.start_at).toLocaleDateString('en-CA', { timeZone: 'Asia/Jerusalem' }) === selectedDay)
+        .sort((a, b) => a.start_at.localeCompare(b.start_at))
+    : []
+
   const loadSchedule = useCallback(async () => {
     setLoading(true)
     setMessage(null)
@@ -904,14 +948,42 @@ function ScheduleTab({ studio, apiFetch, onUnauth }: ScheduleTabProps) {
     }
   }, [studio, apiFetch, onUnauth])
 
+  const loadSlots = useCallback(async () => {
+    setSlotsLoading(true)
+    const year = selectedMonth.getFullYear()
+    const month = selectedMonth.getMonth()
+    const dateFrom = `${year}-${String(month + 1).padStart(2, '0')}-01`
+    const lastDay = new Date(year, month + 1, 0).getDate()
+    const dateTo = `${year}-${String(month + 1).padStart(2, '0')}-${String(lastDay).padStart(2, '0')}`
+    try {
+      const res = await apiFetch(`/api/admin/slots?studio_id=${studio}&date_from=${dateFrom}&date_to=${dateTo}`)
+      if (res.status === 401) { onUnauth(); return }
+      if (res.ok) {
+        const data = await res.json() as GetAdminSlotsResponse
+        setStudioSlots(data.slots ?? [])
+      }
+    } catch {
+      // silently ignore
+    } finally {
+      setSlotsLoading(false)
+    }
+  }, [studio, selectedMonth, apiFetch, onUnauth])
+
+  useEffect(() => { loadSchedule() }, [loadSchedule])
+  useEffect(() => { loadSlots() }, [loadSlots])
+
+  // Center today (or selected day) in the day slider after month change / mount
   useEffect(() => {
-    loadSchedule()
-  }, [loadSchedule])
+    const container = daySliderRef.current
+    const btn = todayBtnRef.current
+    if (!container || !btn) return
+    const cr = container.getBoundingClientRect()
+    const br = btn.getBoundingClientRect()
+    container.scrollLeft += br.left + br.width / 2 - cr.left - cr.width / 2
+  }, [selectedMonth])
 
   function updateRow(dayOfWeek: number, patch: Partial<ScheduleRow>) {
-    setRows((prev) =>
-      prev.map((r) => (r.day_of_week === dayOfWeek ? { ...r, ...patch } : r)),
-    )
+    setRows(prev => prev.map(r => r.day_of_week === dayOfWeek ? { ...r, ...patch } : r))
     setMessage(null)
   }
 
@@ -923,7 +995,7 @@ function ScheduleTab({ studio, apiFetch, onUnauth }: ScheduleTabProps) {
         method: 'PUT',
         body: JSON.stringify({
           studio_id: studio,
-          days: rows.map((r) => ({
+          days: rows.map(r => ({
             day_of_week: r.day_of_week,
             is_working: r.is_working,
             work_start: r.work_start,
@@ -947,80 +1019,166 @@ function ScheduleTab({ studio, apiFetch, onUnauth }: ScheduleTabProps) {
 
   const INPUT_CLS = 'border border-gray-300 rounded-lg px-3 py-1.5 text-sm text-[var(--color-charcoal)] focus:outline-none focus:border-[var(--color-rose)] disabled:opacity-40 disabled:cursor-not-allowed'
 
+  const SLOT_STATUS_CLS: Record<string, string> = {
+    available: 'bg-green-50 border border-green-200 text-green-700',
+    booked: 'bg-red-50 border border-red-200 text-red-700',
+    blocked: 'bg-gray-100 border border-gray-300 text-gray-500',
+  }
+
   return (
-    <div>
-      <h2 className="text-lg font-semibold text-[var(--color-charcoal)] mb-4">
-        Расписание работы
-      </h2>
+    <div className="flex gap-6 items-start">
+      {/* Left: Schedule editor (1/3) */}
+      <div className="w-1/3 shrink-0">
+        <h2 className="text-lg font-semibold text-[var(--color-charcoal)] mb-4">
+          Расписание работы
+        </h2>
 
-      {loading ? (
-        <p className="text-sm text-gray-400 py-4">Загрузка...</p>
-      ) : (
-        <div className="flex flex-col gap-2">
-          {rows.map((row) => (
-            <div
-              key={row.day_of_week}
-              className="flex flex-wrap items-center gap-4 rounded-xl border border-gray-100 bg-white px-4 py-3"
-            >
-              {/* Switch toggle */}
-              <Switch
-                checked={row.is_working}
-                onChange={(checked) => updateRow(row.day_of_week, { is_working: checked })}
-              />
-
-              {/* Day label */}
-              <span
-                className="w-8 text-sm font-semibold text-center shrink-0"
-                style={{ color: 'var(--color-charcoal)' }}
+        {loading ? (
+          <p className="text-sm text-gray-400 py-4">Загрузка...</p>
+        ) : (
+          <div className="flex flex-col gap-2">
+            {rows.map((row) => (
+              <div
+                key={row.day_of_week}
+                className="flex flex-wrap items-center gap-4 rounded-xl border border-gray-100 bg-white px-4 py-3"
               >
-                {DAY_LABELS[row.day_of_week]}
-              </span>
-
-              {/* Time selects */}
-              <div className="flex items-center gap-2">
-                <select
-                  value={row.work_start}
-                  onChange={(e) => updateRow(row.day_of_week, { work_start: e.target.value })}
-                  disabled={!row.is_working}
-                  className={INPUT_CLS}
+                <Switch
+                  checked={row.is_working}
+                  onChange={(checked) => updateRow(row.day_of_week, { is_working: checked })}
+                />
+                <span
+                  className="w-8 text-sm font-semibold text-center shrink-0"
+                  style={{ color: 'var(--color-charcoal)' }}
                 >
-                  {TIME_OPTIONS.map((time) => (
-                    <option key={time} value={time}>
-                      {time}
-                    </option>
-                  ))}
-                </select>
-                <span className="text-sm text-gray-400">—</span>
-                <select
-                  value={row.work_end}
-                  onChange={(e) => updateRow(row.day_of_week, { work_end: e.target.value })}
-                  disabled={!row.is_working}
-                  className={INPUT_CLS}
-                >
-                  {TIME_OPTIONS.map((time) => (
-                    <option key={time} value={time}>
-                      {time}
-                    </option>
-                  ))}
-                </select>
+                  {DAY_LABELS[row.day_of_week]}
+                </span>
+                <div className="flex items-center gap-2">
+                  <select
+                    value={row.work_start}
+                    onChange={(e) => updateRow(row.day_of_week, { work_start: e.target.value })}
+                    disabled={!row.is_working}
+                    className={INPUT_CLS}
+                  >
+                    {TIME_OPTIONS.map((time) => (
+                      <option key={time} value={time}>{time}</option>
+                    ))}
+                  </select>
+                  <span className="text-sm text-gray-400">—</span>
+                  <select
+                    value={row.work_end}
+                    onChange={(e) => updateRow(row.day_of_week, { work_end: e.target.value })}
+                    disabled={!row.is_working}
+                    className={INPUT_CLS}
+                  >
+                    {TIME_OPTIONS.map((time) => (
+                      <option key={time} value={time}>{time}</option>
+                    ))}
+                  </select>
+                </div>
               </div>
-            </div>
-          ))}
-        </div>
-      )}
+            ))}
+          </div>
+        )}
 
-      <div className="mt-6 flex items-center gap-4">
-        <button
-          onClick={handleSave}
-          disabled={saving || loading}
-          className="bg-[var(--color-rose)] text-white rounded-lg px-6 py-2 text-sm font-medium hover:opacity-90 transition-opacity disabled:opacity-50"
-        >
-          {saving ? 'Сохранение...' : 'Сохранить расписание'}
-        </button>
-        {message && (
-          <p className={`text-sm ${message.type === 'success' ? 'text-green-600' : 'text-red-500'}`}>
-            {message.text}
-          </p>
+        <div className="mt-6 flex items-center gap-4">
+          <button
+            onClick={handleSave}
+            disabled={saving || loading}
+            className="bg-[var(--color-rose)] text-white rounded-lg px-6 py-2 text-sm font-medium hover:opacity-90 transition-opacity disabled:opacity-50"
+          >
+            {saving ? 'Сохранение...' : 'Сохранить расписание'}
+          </button>
+          {message && (
+            <p className={`text-sm ${message.type === 'success' ? 'text-green-600' : 'text-red-500'}`}>
+              {message.text}
+            </p>
+          )}
+        </div>
+      </div>
+
+      {/* Vertical divider */}
+      <div className="w-px bg-gray-100 self-stretch shrink-0" />
+
+      {/* Right: Slots panel (2/3) */}
+      <div className="flex-1 min-w-0">
+        <h2 className="text-lg font-semibold text-[var(--color-charcoal)] mb-4">
+          Слоты
+        </h2>
+
+        {/* Month navigation */}
+        <div className="flex items-center justify-between mb-4">
+          <button
+            onClick={() => navigateMonth(-1)}
+            className="w-8 h-8 flex items-center justify-center rounded-lg border border-gray-200 bg-white text-gray-500 hover:border-[var(--color-rose)] hover:text-[var(--color-rose)] transition-colors"
+            aria-label="Предыдущий месяц"
+          >
+            <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+              <path d="M10 12L6 8l4-4" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+            </svg>
+          </button>
+          <span className="text-sm font-semibold text-[var(--color-charcoal)]">{monthLabel}</span>
+          <button
+            onClick={() => navigateMonth(1)}
+            className="w-8 h-8 flex items-center justify-center rounded-lg border border-gray-200 bg-white text-gray-500 hover:border-[var(--color-rose)] hover:text-[var(--color-rose)] transition-colors"
+            aria-label="Следующий месяц"
+          >
+            <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+              <path d="M6 4l4 4-4 4" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+            </svg>
+          </button>
+        </div>
+
+        {/* Day slider */}
+        <div ref={daySliderRef} className="overflow-x-auto scrollbar-hide mb-4 -mx-1 py-1">
+          <div className="flex gap-2 px-1 min-w-max">
+            {daysInMonth.map(({ dateStr, date }) => {
+              const isSelected = selectedDay === dateStr
+              const isToday = dateStr === todayStr
+              const weekday = new Intl.DateTimeFormat('ru-IL', { weekday: 'short', timeZone: 'Asia/Jerusalem' }).format(date)
+              const dayNum = new Intl.DateTimeFormat('ru-IL', { day: 'numeric', timeZone: 'Asia/Jerusalem' }).format(date)
+              const monthShort = new Intl.DateTimeFormat('ru-IL', { month: 'short', timeZone: 'Asia/Jerusalem' }).format(date)
+              return (
+                <button
+                  key={dateStr}
+                  ref={isToday ? todayBtnRef : undefined}
+                  onClick={() => setSelectedDay(dateStr)}
+                  className={[
+                    'flex flex-col items-center justify-center rounded-xl px-3 py-3 min-w-[60px] transition-all duration-200',
+                    isSelected
+                      ? 'text-white shadow-md'
+                      : isToday
+                        ? 'ring-2 ring-[var(--color-rose)] bg-white text-[var(--color-charcoal)]'
+                        : 'bg-white border border-gray-200 hover:border-[var(--color-rose)] text-[var(--color-charcoal)]',
+                  ].join(' ')}
+                  style={isSelected ? { background: 'var(--color-rose)' } : undefined}
+                >
+                  <span className="text-xs font-medium capitalize leading-tight">{weekday}</span>
+                  <span className="text-xl font-bold leading-tight">{dayNum}</span>
+                  <span className="text-xs leading-tight capitalize">{monthShort}</span>
+                </button>
+              )
+            })}
+          </div>
+        </div>
+
+        {/* Slot cubes */}
+        {slotsLoading ? (
+          <p className="text-sm text-gray-400 py-4">Загрузка слотов...</p>
+        ) : !selectedDay ? (
+          <p className="text-sm text-gray-400 py-4 text-center">Выберите день для просмотра слотов</p>
+        ) : slotsForDay.length === 0 ? (
+          <p className="text-sm text-gray-400 py-4">Слоты не найдены</p>
+        ) : (
+          <div className="grid grid-cols-4 sm:grid-cols-6 lg:grid-cols-8 gap-2">
+            {slotsForDay.map((slot) => (
+              <div
+                key={slot.id}
+                className={`rounded-lg px-2 py-2 text-center text-xs font-medium ${SLOT_STATUS_CLS[slot.status] ?? SLOT_STATUS_CLS.blocked}`}
+              >
+                {formatLocalTime(slot.start_at)}
+              </div>
+            ))}
+          </div>
         )}
       </div>
     </div>
