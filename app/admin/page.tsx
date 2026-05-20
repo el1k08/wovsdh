@@ -1,6 +1,6 @@
 'use client'
 
-import React, { useState, useEffect, useCallback } from 'react'
+import React, { useState, useEffect, useCallback, useRef } from 'react'
 import type {
   AdminSlotDTO,
   GenerateSlotsFromTemplateResponse,
@@ -701,6 +701,11 @@ function StudiosTab({ apiFetch, onUnauth, onStudiosChanged, secret }: StudiosTab
   const [uploadingImage, setUploadingImage] = useState(false)
   const [imageError, setImageError] = useState<string | null>(null)
 
+  // Drag-and-drop reorder
+  const dragItem = useRef<number | null>(null)
+  const dragOverItem = useRef<number | null>(null)
+  const [dragIndex, setDragIndex] = useState<number | null>(null)
+
   const load = useCallback(async () => {
     setLoading(true)
     const res = await apiFetch('/api/admin/studios')
@@ -836,6 +841,51 @@ function StudiosTab({ apiFetch, onUnauth, onStudiosChanged, secret }: StudiosTab
       setImageError('Сетевая ошибка при удалении фото')
     }
     setUploadingImage(false)
+  }
+
+  const handleDragStart = (index: number) => {
+    dragItem.current = index
+    setDragIndex(index)
+  }
+
+  const handleDragEnter = (index: number) => {
+    dragOverItem.current = index
+  }
+
+  const handleDragEnd = async () => {
+    if (dragItem.current === null || dragOverItem.current === null) {
+      dragItem.current = null
+      dragOverItem.current = null
+      setDragIndex(null)
+      return
+    }
+    if (dragItem.current === dragOverItem.current) {
+      dragItem.current = null
+      dragOverItem.current = null
+      setDragIndex(null)
+      return
+    }
+
+    // Reorder the local list immediately for instant feedback
+    const reordered = [...studiosList]
+    const dragged = reordered.splice(dragItem.current, 1)[0]
+    reordered.splice(dragOverItem.current, 0, dragged)
+
+    dragItem.current = null
+    dragOverItem.current = null
+    setDragIndex(null)
+
+    // Optimistically update local state
+    setStudiosList(reordered)
+
+    // Persist to server
+    await apiFetch('/api/admin/studios/reorder', {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ ids: reordered.map(s => s.id) }),
+    })
+
+    onStudiosChanged()
   }
 
   return (
@@ -1050,6 +1100,7 @@ function StudiosTab({ apiFetch, onUnauth, onStudiosChanged, secret }: StudiosTab
           <table className="w-full text-sm">
             <thead>
               <tr className="border-b border-[var(--color-blush)]">
+                <th className="py-2 pr-2 w-6"></th>
                 <th className="text-left py-2 pr-4 text-xs font-medium text-gray-500">Название</th>
                 <th className="text-left py-2 pr-4 text-xs font-medium text-gray-500">Улица</th>
                 <th className="text-left py-2 pr-4 text-xs font-medium text-gray-500">Город</th>
@@ -1058,9 +1109,21 @@ function StudiosTab({ apiFetch, onUnauth, onStudiosChanged, secret }: StudiosTab
               </tr>
             </thead>
             <tbody>
-              {studiosList.map(s => (
+              {studiosList.map((s, idx) => (
                 <React.Fragment key={s.id}>
-                  <tr className="border-b border-gray-100 hover:bg-gray-50">
+                  <tr
+                    draggable
+                    onDragStart={() => handleDragStart(idx)}
+                    onDragEnter={() => handleDragEnter(idx)}
+                    onDragEnd={handleDragEnd}
+                    onDragOver={e => e.preventDefault()}
+                    className={`border-b border-gray-100 transition-opacity cursor-default ${
+                      dragIndex === idx ? 'opacity-40' : 'hover:bg-gray-50'
+                    }`}
+                  >
+                    <td className="py-3 pr-2 text-gray-300 cursor-grab active:cursor-grabbing select-none text-lg leading-none">
+                      ⠿
+                    </td>
                     <td className="py-3 pr-4 text-[var(--color-charcoal)] font-medium">{s.name}</td>
                     <td className="py-3 pr-4 text-gray-600">{s.street || '—'}</td>
                     <td className="py-3 pr-4 text-gray-600">{s.city}</td>
@@ -1084,7 +1147,7 @@ function StudiosTab({ apiFetch, onUnauth, onStudiosChanged, secret }: StudiosTab
                   </tr>
                   {deleteTarget === s.id && (
                     <tr className="bg-red-50">
-                      <td colSpan={5} className="px-4 py-3">
+                      <td colSpan={6} className="px-4 py-3">
                         <div className="flex items-center justify-between gap-4">
                           <p className="text-sm text-red-700">
                             Удалить студию <strong>{s.name}</strong>? Будут удалены все связанные данные: расписание, слоты, услуги и отменённые записи. Активные записи блокируют удаление.

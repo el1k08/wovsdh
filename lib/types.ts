@@ -37,6 +37,7 @@ export interface Studio {
   google_calendar_id: string | null;
   timezone: string;                // always 'Asia/Jerusalem'
   schedule_text: string;           // Free-text schedule description for landing page
+  sort_order: number;
   image_url: string | null;
   created_at: string;              // TIMESTAMPTZ as ISO string
 }

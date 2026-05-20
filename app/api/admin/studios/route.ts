@@ -17,7 +17,7 @@ export async function GET(request: NextRequest) {
   const { data: studios, error } = await supabaseAdmin
     .from('studios')
     .select('*')
-    .order('created_at', { ascending: true })
+    .order('sort_order', { ascending: true })
   if (error) {
     return NextResponse.json<ApiError>(
       { error: { code: 'INTERNAL_ERROR', message: 'Failed to fetch studios.' } },

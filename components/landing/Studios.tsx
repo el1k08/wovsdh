@@ -11,8 +11,8 @@ const IMAGE_SEEDS: Record<string, string> = {
 export default async function Studios() {
   const { data: studiosData } = await supabaseAdmin
     .from('studios')
-    .select('id, name, city, street, schedule_text, image_url')
-    .order('created_at', { ascending: true })
+    .select('id, name, city, street, schedule_text, image_url, sort_order')
+    .order('sort_order', { ascending: true })
   const studios = (studiosData ?? []) as Array<Studio & { name: string }>
   return (
     <section
