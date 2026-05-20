@@ -1,6 +1,7 @@
 'use client'
 
 import React, { useState, useEffect, useCallback, useRef } from 'react'
+import { Switch } from '@/components/ui/Switch'
 import type {
   AdminSlotDTO,
   GenerateSlotsFromTemplateResponse,
@@ -19,6 +20,20 @@ interface AdminServiceDTO extends ServiceDTO {
 // ---------------------------------------------------------------------------
 // Helpers
 // ---------------------------------------------------------------------------
+
+function generateTimeOptions(): string[] {
+  const options: string[] = []
+  for (let hour = 0; hour <= 24; hour++) {
+    for (let minute = 0; minute < 60; minute += 15) {
+      if (hour === 24 && minute > 0) break
+      const timeStr = `${hour.toString().padStart(2, '0')}:${minute.toString().padStart(2, '0')}`
+      options.push(timeStr)
+    }
+  }
+  return options
+}
+
+const TIME_OPTIONS = generateTimeOptions()
 
 function todayString(): string {
   return new Date().toLocaleDateString('en-CA', { timeZone: 'Asia/Jerusalem' })
@@ -532,6 +547,12 @@ function ScheduleTab({ studio, apiFetch, onUnauth }: ScheduleTabProps) {
               key={row.day_of_week}
               className="flex flex-wrap items-center gap-4 rounded-xl border border-gray-100 bg-white px-4 py-3"
             >
+              {/* Switch toggle */}
+              <Switch
+                checked={row.is_working}
+                onChange={(checked) => updateRow(row.day_of_week, { is_working: checked })}
+              />
+
               {/* Day label */}
               <span
                 className="w-8 text-sm font-semibold text-center shrink-0"
@@ -540,36 +561,33 @@ function ScheduleTab({ studio, apiFetch, onUnauth }: ScheduleTabProps) {
                 {DAY_LABELS[row.day_of_week]}
               </span>
 
-              {/* Toggle */}
-              <label className="flex items-center gap-2 cursor-pointer select-none">
-                <input
-                  type="checkbox"
-                  checked={row.is_working}
-                  onChange={(e) => updateRow(row.day_of_week, { is_working: e.target.checked })}
-                  className="h-4 w-4 accent-[var(--color-rose)]"
-                />
-                <span className="text-sm" style={{ color: 'var(--color-charcoal)', opacity: 0.8 }}>
-                  {row.is_working ? 'Вкл' : 'Выкл'}
-                </span>
-              </label>
-
-              {/* Time inputs */}
+              {/* Time selects */}
               <div className="flex items-center gap-2">
-                <input
-                  type="time"
+                <select
                   value={row.work_start}
                   onChange={(e) => updateRow(row.day_of_week, { work_start: e.target.value })}
                   disabled={!row.is_working}
                   className={INPUT_CLS}
-                />
+                >
+                  {TIME_OPTIONS.map((time) => (
+                    <option key={time} value={time}>
+                      {time}
+                    </option>
+                  ))}
+                </select>
                 <span className="text-sm text-gray-400">—</span>
-                <input
-                  type="time"
+                <select
                   value={row.work_end}
                   onChange={(e) => updateRow(row.day_of_week, { work_end: e.target.value })}
                   disabled={!row.is_working}
                   className={INPUT_CLS}
-                />
+                >
+                  {TIME_OPTIONS.map((time) => (
+                    <option key={time} value={time}>
+                      {time}
+                    </option>
+                  ))}
+                </select>
               </div>
             </div>
           ))}
@@ -631,35 +649,44 @@ function ScheduleEditor({
     const next = rows.map((r, i) => (i === index ? { ...r, ...patch } : r))
     onChange(next)
   }
+  const SELECT_CLS = 'border border-gray-300 rounded-lg px-2 py-1 text-sm text-[var(--color-charcoal)] focus:outline-none focus:border-[var(--color-rose)] disabled:opacity-40'
   return (
     <div className="space-y-2">
       {rows.map((row, i) => (
         <div key={row.day_of_week} className="flex items-center gap-3">
-          <input
-            type="checkbox"
+          <Switch
             checked={row.is_working}
             disabled={disabled}
-            onChange={e => updateRow(i, { is_working: e.target.checked })}
-            className="w-4 h-4 accent-[var(--color-rose)]"
+            onChange={checked => updateRow(i, { is_working: checked })}
           />
           <span className="w-6 text-sm text-[var(--color-charcoal)] font-medium">
             {STUDIO_DAY_LABELS[row.day_of_week]}
           </span>
-          <input
-            type="time"
+          <select
             value={row.work_start}
             disabled={disabled || !row.is_working}
             onChange={e => updateRow(i, { work_start: e.target.value })}
-            className="border border-gray-300 rounded-lg px-2 py-1 text-sm text-[var(--color-charcoal)] focus:outline-none focus:border-[var(--color-rose)] disabled:opacity-40"
-          />
+            className={SELECT_CLS}
+          >
+            {TIME_OPTIONS.map((time) => (
+              <option key={time} value={time}>
+                {time}
+              </option>
+            ))}
+          </select>
           <span className="text-sm text-gray-400">—</span>
-          <input
-            type="time"
+          <select
             value={row.work_end}
             disabled={disabled || !row.is_working}
             onChange={e => updateRow(i, { work_end: e.target.value })}
-            className="border border-gray-300 rounded-lg px-2 py-1 text-sm text-[var(--color-charcoal)] focus:outline-none focus:border-[var(--color-rose)] disabled:opacity-40"
-          />
+            className={SELECT_CLS}
+          >
+            {TIME_OPTIONS.map((time) => (
+              <option key={time} value={time}>
+                {time}
+              </option>
+            ))}
+          </select>
           {!row.is_working && (
             <span className="text-xs text-gray-400">Выходной</span>
           )}
