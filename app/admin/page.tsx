@@ -76,7 +76,21 @@ interface InlineMessage {
 // Day labels index 0=Sun..6=Sat
 const DAY_LABELS = ['Вс', 'Пн', 'Вт', 'Ср', 'Чт', 'Пт', 'Сб']
 
-const DURATION_OPTIONS = [15, 30, 45, 60, 75, 90, 105, 120]
+function formatDuration(minutes: number): string {
+  if (minutes < 60) return `${minutes} мин`
+  const hours = Math.floor(minutes / 60)
+  const mins = minutes % 60
+  if (mins === 0) return `${hours} ч`
+  return `${hours} ч ${mins} мин`
+}
+
+const DURATION_OPTIONS: { value: number; label: string }[] = Array.from(
+  { length: 300 / 15 },
+  (_, i) => {
+    const value = (i + 1) * 15
+    return { value, label: formatDuration(value) }
+  },
+)
 
 // ---------------------------------------------------------------------------
 // Auth Gate
@@ -171,7 +185,6 @@ function ServicesTab({ studio, apiFetch, onUnauth }: ServicesTabProps) {
   const [loading, setLoading] = useState(false)
   const [message, setMessage] = useState<InlineMessage | null>(null)
   const [showForm, setShowForm] = useState(false)
-  const [togglingId, setTogglingId] = useState<string | null>(null)
 
   // New service form state
   const [newIcon, setNewIcon] = useState('')
@@ -180,6 +193,24 @@ function ServicesTab({ studio, apiFetch, onUnauth }: ServicesTabProps) {
   const [newPrice, setNewPrice] = useState('')
   const [newDuration, setNewDuration] = useState(60)
   const [formLoading, setFormLoading] = useState(false)
+
+  // Edit form state
+  const [editingId, setEditingId] = useState<string | null>(null)
+  const [editIcon, setEditIcon] = useState('')
+  const [editName, setEditName] = useState('')
+  const [editDescription, setEditDescription] = useState('')
+  const [editPrice, setEditPrice] = useState('')
+  const [editDuration, setEditDuration] = useState(60)
+  const [editLoading, setEditLoading] = useState(false)
+
+  // Delete confirmation
+  const [deleteTarget, setDeleteTarget] = useState<string | null>(null)
+  const [deleting, setDeleting] = useState(false)
+
+  // Drag-and-drop
+  const dragItem = useRef<number | null>(null)
+  const dragOverItem = useRef<number | null>(null)
+  const [dragIndex, setDragIndex] = useState<number | null>(null)
 
   const loadServices = useCallback(async () => {
     setLoading(true)
@@ -239,13 +270,32 @@ function ServicesTab({ studio, apiFetch, onUnauth }: ServicesTabProps) {
     }
   }
 
-  async function handleToggle(service: AdminServiceDTO) {
-    setTogglingId(service.id)
+  function startEdit(svc: AdminServiceDTO) {
+    setEditingId(svc.id)
+    setEditIcon(svc.icon ?? '')
+    setEditName(svc.name)
+    setEditDescription(svc.description ?? '')
+    setEditPrice(String(svc.price))
+    setEditDuration(svc.duration_minutes)
+    setDeleteTarget(null)
+    setShowForm(false)
+  }
+
+  async function handleEdit(e: React.FormEvent) {
+    e.preventDefault()
+    if (!editingId) return
+    setEditLoading(true)
     setMessage(null)
     try {
-      const res = await apiFetch(`/api/admin/services/${service.id}`, {
+      const res = await apiFetch(`/api/admin/services/${editingId}`, {
         method: 'PUT',
-        body: JSON.stringify({ is_active: !service.is_active }),
+        body: JSON.stringify({
+          icon: editIcon.trim() || null,
+          name: editName.trim(),
+          description: editDescription.trim() || null,
+          price: Number(editPrice),
+          duration_minutes: editDuration,
+        }),
       })
       if (res.status === 401) { onUnauth(); return }
       if (!res.ok) {
@@ -253,12 +303,73 @@ function ServicesTab({ studio, apiFetch, onUnauth }: ServicesTabProps) {
         setMessage({ type: 'error', text: body.error?.message ?? 'Ошибка обновления услуги' })
         return
       }
+      setMessage({ type: 'success', text: 'Услуга обновлена' })
+      setEditingId(null)
       await loadServices()
     } catch {
       setMessage({ type: 'error', text: 'Сетевая ошибка при обновлении услуги' })
     } finally {
-      setTogglingId(null)
+      setEditLoading(false)
     }
+  }
+
+  async function handleDelete(id: string) {
+    setDeleting(true)
+    setMessage(null)
+    try {
+      const res = await apiFetch(`/api/admin/services/${id}`, { method: 'DELETE' })
+      if (res.status === 401) { onUnauth(); return }
+      if (!res.ok) {
+        const body = await res.json() as { error?: { message?: string } }
+        setMessage({ type: 'error', text: body.error?.message ?? 'Ошибка удаления услуги' })
+        setDeleteTarget(null)
+        return
+      }
+      setMessage({ type: 'success', text: 'Услуга удалена' })
+      setDeleteTarget(null)
+      await loadServices()
+    } catch {
+      setMessage({ type: 'error', text: 'Сетевая ошибка при удалении услуги' })
+    } finally {
+      setDeleting(false)
+    }
+  }
+
+  const handleDragStart = (index: number) => {
+    dragItem.current = index
+    setDragIndex(index)
+  }
+
+  const handleDragEnter = (index: number) => {
+    dragOverItem.current = index
+  }
+
+  const handleDragEnd = async () => {
+    if (
+      dragItem.current === null ||
+      dragOverItem.current === null ||
+      dragItem.current === dragOverItem.current
+    ) {
+      dragItem.current = null
+      dragOverItem.current = null
+      setDragIndex(null)
+      return
+    }
+
+    const reordered = [...services]
+    const dragged = reordered.splice(dragItem.current, 1)[0]
+    reordered.splice(dragOverItem.current, 0, dragged)
+
+    dragItem.current = null
+    dragOverItem.current = null
+    setDragIndex(null)
+
+    setServices(reordered)
+
+    await apiFetch('/api/admin/services/reorder', {
+      method: 'PUT',
+      body: JSON.stringify({ ids: reordered.map((s) => s.id) }),
+    })
   }
 
   const INPUT_CLS = 'border border-gray-300 rounded-lg px-3 py-2 text-sm text-[var(--color-charcoal)] focus:outline-none focus:border-[var(--color-rose)]'
@@ -268,7 +379,7 @@ function ServicesTab({ studio, apiFetch, onUnauth }: ServicesTabProps) {
       <div className="flex items-center justify-between mb-4">
         <h2 className="text-lg font-semibold text-[var(--color-charcoal)]">Услуги</h2>
         <button
-          onClick={() => setShowForm((v) => !v)}
+          onClick={() => { setShowForm((v) => !v); setEditingId(null) }}
           className="bg-[var(--color-rose)] text-white rounded-lg px-4 py-2 text-sm font-medium hover:opacity-90 transition-opacity"
         >
           {showForm ? 'Скрыть форму' : 'Добавить услугу'}
@@ -293,7 +404,7 @@ function ServicesTab({ studio, apiFetch, onUnauth }: ServicesTabProps) {
             />
           </label>
           <label className="flex flex-col gap-1 text-sm text-gray-600">
-            Название <span className="text-red-500">*</span>
+            <span className='flex'>Название <span className="text-red-500">*</span></span>
             <input
               type="text"
               value={newName}
@@ -316,7 +427,7 @@ function ServicesTab({ studio, apiFetch, onUnauth }: ServicesTabProps) {
             />
           </label>
           <label className="flex flex-col gap-1 text-sm text-gray-600">
-            Цена (₪) <span className="text-red-500">*</span>
+            <span className='flex'>Цена (₪) <span className="text-red-500">*</span></span>
             <input
               type="number"
               min={0}
@@ -336,8 +447,8 @@ function ServicesTab({ studio, apiFetch, onUnauth }: ServicesTabProps) {
               className={INPUT_CLS}
               disabled={formLoading}
             >
-              {DURATION_OPTIONS.map((d) => (
-                <option key={d} value={d}>{d} мин</option>
+              {DURATION_OPTIONS.map((opt) => (
+                <option key={opt.value} value={opt.value}>{opt.label}</option>
               ))}
             </select>
           </label>
@@ -352,6 +463,91 @@ function ServicesTab({ studio, apiFetch, onUnauth }: ServicesTabProps) {
             <button
               type="button"
               onClick={() => setShowForm(false)}
+              className="border border-gray-300 text-gray-600 rounded-lg px-4 py-2 text-sm font-medium hover:bg-gray-50 transition-colors"
+            >
+              Отмена
+            </button>
+          </div>
+        </form>
+      )}
+
+      {/* Edit form */}
+      {editingId && (
+        <form
+          onSubmit={handleEdit}
+          className="mb-6 border border-[var(--color-blush)] rounded-xl p-5 bg-white grid grid-cols-1 sm:grid-cols-2 gap-4"
+        >
+          <h3 className="sm:col-span-2 text-sm font-semibold text-[var(--color-charcoal)]">
+            Редактировать услугу
+          </h3>
+          <label className="flex flex-col gap-1 text-sm text-gray-600">
+            Иконка (emoji)
+            <input
+              type="text"
+              value={editIcon}
+              onChange={(e) => setEditIcon(e.target.value)}
+              placeholder="💅"
+              className={INPUT_CLS}
+              disabled={editLoading}
+            />
+          </label>
+          <label className="flex flex-col gap-1 text-sm text-gray-600">
+            <span className='flex'>Название <span className="text-red-500">*</span></span>
+            <input
+              type="text"
+              value={editName}
+              onChange={(e) => setEditName(e.target.value)}
+              required
+              className={INPUT_CLS}
+              disabled={editLoading}
+            />
+          </label>
+          <label className="flex flex-col gap-1 text-sm text-gray-600 sm:col-span-2">
+            Описание
+            <input
+              type="text"
+              value={editDescription}
+              onChange={(e) => setEditDescription(e.target.value)}
+              className={INPUT_CLS}
+              disabled={editLoading}
+            />
+          </label>
+          <label className="flex flex-col gap-1 text-sm text-gray-600">
+            <span className='flex'>Цена (₪) <span className="text-red-500">*</span></span>
+            <input
+              type="number"
+              min={0}
+              value={editPrice}
+              onChange={(e) => setEditPrice(e.target.value)}
+              required
+              className={INPUT_CLS}
+              disabled={editLoading}
+            />
+          </label>
+          <label className="flex flex-col gap-1 text-sm text-gray-600">
+            Длительность
+            <select
+              value={editDuration}
+              onChange={(e) => setEditDuration(Number(e.target.value))}
+              className={INPUT_CLS}
+              disabled={editLoading}
+            >
+              {DURATION_OPTIONS.map((opt) => (
+                <option key={opt.value} value={opt.value}>{opt.label}</option>
+              ))}
+            </select>
+          </label>
+          <div className="sm:col-span-2 flex gap-3">
+            <button
+              type="submit"
+              disabled={editLoading}
+              className="bg-[var(--color-rose)] text-white rounded-lg px-6 py-2 text-sm font-medium hover:opacity-90 transition-opacity disabled:opacity-50"
+            >
+              {editLoading ? 'Сохранение...' : 'Сохранить'}
+            </button>
+            <button
+              type="button"
+              onClick={() => setEditingId(null)}
               className="border border-gray-300 text-gray-600 rounded-lg px-4 py-2 text-sm font-medium hover:bg-gray-50 transition-colors"
             >
               Отмена
@@ -375,44 +571,88 @@ function ServicesTab({ studio, apiFetch, onUnauth }: ServicesTabProps) {
           <table className="w-full text-sm border-collapse">
             <thead>
               <tr className="border-b border-gray-200 text-left text-gray-500">
+                <th className="py-2 pr-2 w-6"></th>
                 <th className="py-2 pr-4 font-medium">Иконка</th>
                 <th className="py-2 pr-4 font-medium">Название</th>
                 <th className="py-2 pr-4 font-medium">Длительность</th>
                 <th className="py-2 pr-4 font-medium">Цена</th>
                 <th className="py-2 pr-4 font-medium">Статус</th>
-                <th className="py-2 font-medium">Действие</th>
+                <th className="py-2 font-medium text-right">Действия</th>
               </tr>
             </thead>
             <tbody>
-              {services.map((svc) => (
-                <tr key={svc.id} className="border-b border-gray-100 hover:bg-gray-50 transition-colors">
-                  <td className="py-2 pr-4 text-xl">{svc.icon ?? '—'}</td>
-                  <td className="py-2 pr-4 text-[var(--color-charcoal)] font-medium">{svc.name}</td>
-                  <td className="py-2 pr-4 text-[var(--color-charcoal)]">{svc.duration_minutes} мин</td>
-                  <td className="py-2 pr-4 text-[var(--color-charcoal)]">₪{svc.price}</td>
-                  <td className="py-2 pr-4">
-                    <span className={`inline-block px-2 py-0.5 rounded text-xs font-medium ${
-                      svc.is_active
-                        ? 'bg-green-50 text-green-700 border border-green-200'
-                        : 'bg-gray-100 text-gray-500 border border-gray-300'
-                    }`}>
-                      {svc.is_active ? 'Активна' : 'Неактивна'}
-                    </span>
-                  </td>
-                  <td className="py-2">
-                    <button
-                      onClick={() => handleToggle(svc)}
-                      disabled={togglingId === svc.id}
-                      className={`px-3 py-1 rounded text-xs font-medium transition-colors disabled:opacity-50 ${
+              {services.map((svc, idx) => (
+                <React.Fragment key={svc.id}>
+                  <tr
+                    draggable
+                    onDragStart={() => handleDragStart(idx)}
+                    onDragEnter={() => handleDragEnter(idx)}
+                    onDragEnd={handleDragEnd}
+                    onDragOver={(e) => e.preventDefault()}
+                    className={`border-b border-gray-100 transition-opacity cursor-default ${
+                      dragIndex === idx ? 'opacity-40' : 'hover:bg-gray-50'
+                    }`}
+                  >
+                    <td className="py-3 pr-2 text-gray-300 cursor-grab active:cursor-grabbing select-none text-lg leading-none">
+                      ⠿
+                    </td>
+                    <td className="py-3 pr-4 text-xl">{svc.icon ?? '—'}</td>
+                    <td className="py-3 pr-4 text-[var(--color-charcoal)] font-medium">{svc.name}</td>
+                    <td className="py-3 pr-4 text-[var(--color-charcoal)]">{formatDuration(svc.duration_minutes)}</td>
+                    <td className="py-3 pr-4 text-[var(--color-charcoal)]">₪{svc.price}</td>
+                    <td className="py-3 pr-4">
+                      <span className={`inline-block px-2 py-0.5 rounded text-xs font-medium ${
                         svc.is_active
-                          ? 'bg-gray-100 text-gray-600 border border-gray-200 hover:bg-gray-200'
-                          : 'bg-green-50 text-green-700 border border-green-200 hover:bg-green-100'
-                      }`}
-                    >
-                      {togglingId === svc.id ? '...' : svc.is_active ? 'Деактивировать' : 'Активировать'}
-                    </button>
-                  </td>
-                </tr>
+                          ? 'bg-green-50 text-green-700 border border-green-200'
+                          : 'bg-gray-100 text-gray-500 border border-gray-300'
+                      }`}>
+                        {svc.is_active ? 'Активна' : 'Неактивна'}
+                      </span>
+                    </td>
+                    <td className="py-3 text-right">
+                      <div className="flex items-center justify-end gap-2">
+                        <button
+                          onClick={() => startEdit(svc)}
+                          className="px-3 py-1 rounded text-xs border border-gray-300 text-[var(--color-charcoal)] hover:bg-gray-50"
+                        >
+                          Изменить
+                        </button>
+                        <button
+                          onClick={() => setDeleteTarget((prev) => prev === svc.id ? null : svc.id)}
+                          className="px-3 py-1 rounded text-xs border border-red-200 text-red-600 bg-red-50 hover:bg-red-100"
+                        >
+                          Удалить
+                        </button>
+                      </div>
+                    </td>
+                  </tr>
+                  {deleteTarget === svc.id && (
+                    <tr className="bg-red-50">
+                      <td colSpan={7} className="px-4 py-3">
+                        <div className="flex items-center justify-between gap-4">
+                          <p className="text-sm text-red-700">
+                            Удалить услугу <strong>{svc.name}</strong>? Если к ней привязаны активные записи, она будет деактивирована.
+                          </p>
+                          <div className="flex gap-2 shrink-0">
+                            <button
+                              onClick={() => handleDelete(svc.id)}
+                              disabled={deleting}
+                              className="px-3 py-1 rounded text-xs bg-red-600 text-white hover:bg-red-700 disabled:opacity-50 disabled:cursor-not-allowed"
+                            >
+                              {deleting ? 'Удаление...' : 'Подтвердить'}
+                            </button>
+                            <button
+                              onClick={() => setDeleteTarget(null)}
+                              className="px-3 py-1 rounded text-xs border border-gray-300 text-gray-600 hover:bg-white"
+                            >
+                              Отмена
+                            </button>
+                          </div>
+                        </div>
+                      </td>
+                    </tr>
+                  )}
+                </React.Fragment>
               ))}
             </tbody>
           </table>
