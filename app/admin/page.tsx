@@ -5,8 +5,10 @@ import { Building2, Settings } from 'lucide-react'
 import { Switch } from '@/components/ui/Switch'
 import type {
   AdminSlotDTO,
+  AdminBookingDTO,
   GenerateSlotsFromTemplateResponse,
   GetAdminSlotsResponse,
+  GetAdminBookingsResponse,
   ServiceDTO,
   Studio,
   StudioScheduleTemplate,
@@ -158,6 +160,38 @@ function StatusBadge({ status }: { status: string }) {
     blocked: {
       label: 'Заблокирован',
       className: 'bg-gray-100 text-gray-600 border border-gray-300',
+    },
+  }
+
+  const { label, className } = config[status] ?? {
+    label: status,
+    className: 'bg-gray-100 text-gray-600 border border-gray-300',
+  }
+
+  return (
+    <span className={`inline-block px-2 py-0.5 rounded text-xs font-medium ${className}`}>
+      {label}
+    </span>
+  )
+}
+
+// ---------------------------------------------------------------------------
+// Booking status badge
+// ---------------------------------------------------------------------------
+
+function BookingStatusBadge({ status }: { status: string }) {
+  const config: Record<string, { label: string; className: string }> = {
+    PENDING: {
+      label: 'Ожидает',
+      className: 'bg-yellow-50 text-yellow-700 border border-yellow-200',
+    },
+    CONFIRMED: {
+      label: 'Подтверждена',
+      className: 'bg-green-50 text-green-700 border border-green-200',
+    },
+    CANCELLED: {
+      label: 'Отменена',
+      className: 'bg-gray-100 text-gray-500 border border-gray-300',
     },
   }
 
@@ -2104,13 +2138,14 @@ export default function AdminPage() {
   const [genMessage, setGenMessage] = useState<InlineMessage | null>(null)
   const [genLoading, setGenLoading] = useState(false)
 
-  // Slots list state
+  // Bookings list state
   const [listDateFrom, setListDateFrom] = useState(todayString())
   const [listDateTo, setListDateTo] = useState(addDays(todayString(), 7))
-  const [slots, setSlots] = useState<AdminSlotDTO[]>([])
-  const [listMessage, setListMessage] = useState<InlineMessage | null>(null)
-  const [listLoading, setListLoading] = useState(false)
-  const [deletingId, setDeletingId] = useState<string | null>(null)
+  const [bookings, setBookings] = useState<AdminBookingDTO[]>([])
+  const [bookingsMessage, setBookingsMessage] = useState<InlineMessage | null>(null)
+  const [bookingsLoading, setBookingsLoading] = useState(false)
+  const [cancellingId, setCancellingId] = useState<string | null>(null)
+  const [editingBooking, setEditingBooking] = useState<AdminBookingDTO | null>(null)
 
   // Bootstrap secret from localStorage on mount
   useEffect(() => {
@@ -2157,35 +2192,35 @@ export default function AdminPage() {
   }, [apiFetch])
 
   // ---------------------------------------------------------------------------
-  // Load slots
+  // Load bookings
   // ---------------------------------------------------------------------------
 
-  const loadSlots = useCallback(async () => {
+  const loadBookings = useCallback(async () => {
     if (!secret) return
-    setListLoading(true)
-    setListMessage(null)
+    setBookingsLoading(true)
+    setBookingsMessage(null)
     try {
       const params = new URLSearchParams({
         studio_id: studio,
         date_from: listDateFrom,
         date_to: listDateTo,
       })
-      const res = await apiFetch(`/api/admin/slots?${params.toString()}`)
+      const res = await apiFetch(`/api/admin/bookings?${params.toString()}`)
       if (res.status === 401) {
         handleUnauth()
         return
       }
       if (!res.ok) {
         const body = await res.json() as { error?: { message?: string } }
-        setListMessage({ type: 'error', text: body.error?.message ?? 'Ошибка загрузки слотов' })
+        setBookingsMessage({ type: 'error', text: body.error?.message ?? 'Ошибка загрузки записей' })
         return
       }
-      const data = await res.json() as GetAdminSlotsResponse
-      setSlots(data.slots)
+      const data = await res.json() as GetAdminBookingsResponse
+      setBookings(data.bookings)
     } catch {
-      setListMessage({ type: 'error', text: 'Сетевая ошибка при загрузке слотов' })
+      setBookingsMessage({ type: 'error', text: 'Сетевая ошибка при загрузке записей' })
     } finally {
-      setListLoading(false)
+      setBookingsLoading(false)
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [secret, studio, listDateFrom, listDateTo, apiFetch])
@@ -2194,7 +2229,7 @@ export default function AdminPage() {
   useEffect(() => {
     if (secret) {
       loadStudios()
-      loadSlots()
+      loadBookings()
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [secret, studio])
@@ -2231,9 +2266,9 @@ export default function AdminPage() {
         type: 'success',
         text: `Создано ${data.created} слотов${data.skipped > 0 ? `, пропущено ${data.skipped} (уже существуют)` : ''}`,
       })
-      // Refresh list if the range overlaps
+      // Refresh bookings list if date ranges overlap
       if (genDateFrom <= listDateTo && genDateTo >= listDateFrom) {
-        await loadSlots()
+        await loadBookings()
       }
     } catch {
       setGenMessage({ type: 'error', text: 'Сетевая ошибка при генерации слотов' })
@@ -2243,29 +2278,34 @@ export default function AdminPage() {
   }
 
   // ---------------------------------------------------------------------------
-  // Delete slot
+  // Cancel booking
   // ---------------------------------------------------------------------------
 
-  async function handleDelete(id: string) {
+  async function handleCancelBooking(id: string) {
     if (!secret) return
-    setDeletingId(id)
-    setListMessage(null)
+    setCancellingId(id)
+    setBookingsMessage(null)
     try {
-      const res = await apiFetch(`/api/admin/slots/${id}`, { method: 'DELETE' })
+      const res = await apiFetch(`/api/admin/bookings/${id}`, {
+        method: 'PUT',
+        body: JSON.stringify({ action: 'cancel' }),
+      })
       if (res.status === 401) {
         handleUnauth()
         return
       }
       if (!res.ok) {
         const body = await res.json() as { error?: { message?: string } }
-        setListMessage({ type: 'error', text: body.error?.message ?? 'Ошибка удаления слота' })
+        setBookingsMessage({ type: 'error', text: body.error?.message ?? 'Ошибка отмены записи' })
         return
       }
-      setSlots((prev) => prev.filter((s) => s.id !== id))
+      setBookings((prev) =>
+        prev.map((b) => b.id === id ? { ...b, status: 'CANCELLED' as AdminBookingDTO['status'] } : b),
+      )
     } catch {
-      setListMessage({ type: 'error', text: 'Сетевая ошибка при удалении слота' })
+      setBookingsMessage({ type: 'error', text: 'Сетевая ошибка при отмене записи' })
     } finally {
-      setDeletingId(null)
+      setCancellingId(null)
     }
   }
 
@@ -2462,10 +2502,10 @@ export default function AdminPage() {
               )}
             </section>
 
-            {/* Slots list */}
+            {/* Bookings list */}
             <section className="bg-white border border-[var(--color-blush)] rounded-xl p-6">
               <h2 className="text-lg font-semibold text-[var(--color-charcoal)] mb-4">
-                Список слотов
+                Список записей
               </h2>
 
               {/* Date range filters */}
@@ -2490,22 +2530,18 @@ export default function AdminPage() {
                 </label>
                 <div className="flex items-end">
                   <button
-                    onClick={loadSlots}
-                    disabled={listLoading}
+                    onClick={loadBookings}
+                    disabled={bookingsLoading}
                     className="border border-[var(--color-rose)] text-[var(--color-rose)] rounded-lg px-4 py-2 text-sm font-medium hover:bg-[var(--color-blush)] transition-colors disabled:opacity-50"
                   >
-                    {listLoading ? 'Загрузка...' : 'Обновить список'}
+                    {bookingsLoading ? 'Загрузка...' : 'Обновить список'}
                   </button>
                 </div>
               </div>
 
-              {listMessage && (
-                <p
-                  className={`mb-4 text-sm ${
-                    listMessage.type === 'success' ? 'text-green-600' : 'text-red-500'
-                  }`}
-                >
-                  {listMessage.text}
+              {bookingsMessage && (
+                <p className={`mb-4 text-sm ${bookingsMessage.type === 'success' ? 'text-green-600' : 'text-red-500'}`}>
+                  {bookingsMessage.text}
                 </p>
               )}
 
@@ -2517,89 +2553,144 @@ export default function AdminPage() {
                       <th className="py-2 pr-4 font-medium">Дата</th>
                       <th className="py-2 pr-4 font-medium">Время</th>
                       <th className="py-2 pr-4 font-medium">Статус</th>
-                      <th className="py-2 pr-4 font-medium">Клиент / Услуга</th>
-                      <th className="py-2 font-medium">Действие</th>
+                      <th className="py-2 pr-4 font-medium">Клиент</th>
+                      <th className="py-2 pr-4 font-medium">Услуга</th>
+                      <th className="py-2 font-medium">Действия</th>
                     </tr>
                   </thead>
                   <tbody>
-                    {slots.length === 0 && !listLoading && (
+                    {bookings.length === 0 && !bookingsLoading && (
                       <tr>
-                        <td colSpan={5} className="py-8 text-center text-gray-400">
-                          Слоты не найдены
+                        <td colSpan={6} className="py-8 text-center text-gray-400">
+                          Записи не найдены
                         </td>
                       </tr>
                     )}
-                    {listLoading && (
+                    {bookingsLoading && (
                       <tr>
-                        <td colSpan={5} className="py-8 text-center text-gray-400">
+                        <td colSpan={6} className="py-8 text-center text-gray-400">
                           Загрузка...
                         </td>
                       </tr>
                     )}
-                    {!listLoading &&
-                      slots.map((slot) => {
-                        const canDelete = slot.status !== 'booked'
-                        const isDeleting = deletingId === slot.id
-                        const endAt = new Date(
-                          new Date(slot.start_at).getTime() + 15 * 60 * 1000,
-                        ).toISOString()
+                    {!bookingsLoading && bookings.map((booking) => {
+                      const serviceName =
+                        typeof (booking.service_snapshot as { name?: string }).name === 'string'
+                          ? (booking.service_snapshot as { name?: string }).name
+                          : '—'
+                      const isCancelling = cancellingId === booking.id
+                      const isCancelled = booking.status === 'CANCELLED'
 
-                        // Show service name from snapshot if available
-                        const serviceName =
-                          slot.booking &&
-                          typeof (slot.booking as { service_snapshot?: { name?: string } }).service_snapshot?.name === 'string'
-                            ? (slot.booking as { service_snapshot?: { name?: string } }).service_snapshot?.name
-                            : null
-
-                        return (
-                          <tr
-                            key={slot.id}
-                            className="border-b border-gray-100 hover:bg-gray-50 transition-colors"
-                          >
-                            <td className="py-2 pr-4 text-[var(--color-charcoal)]">
-                              {formatLocalDate(slot.start_at)}
-                            </td>
-                            <td className="py-2 pr-4 text-[var(--color-charcoal)]">
-                              {formatLocalTime(slot.start_at)}–{formatLocalTime(endAt)}
-                            </td>
-                            <td className="py-2 pr-4">
-                              <StatusBadge status={slot.status} />
-                            </td>
-                            <td className="py-2 pr-4 text-[var(--color-charcoal)]">
-                              {slot.booking ? (
-                                <div>
-                                  <span>{slot.booking.client_first_name} {slot.booking.client_last_name}</span>
-                                  {serviceName && (
-                                    <span className="ml-2 text-xs text-gray-500">({serviceName})</span>
-                                  )}
-                                </div>
-                              ) : '—'}
-                            </td>
-                            <td className="py-2">
+                      return (
+                        <tr
+                          key={booking.id}
+                          className="border-b border-gray-100 hover:bg-gray-50 transition-colors"
+                        >
+                          <td className="py-2 pr-4 text-[var(--color-charcoal)]">
+                            {booking.start_at ? formatLocalDate(booking.start_at) : '—'}
+                          </td>
+                          <td className="py-2 pr-4 text-[var(--color-charcoal)] whitespace-nowrap">
+                            {booking.start_at && booking.end_at
+                              ? `${formatLocalTime(booking.start_at)}–${formatLocalTime(booking.end_at)}`
+                              : '—'}
+                          </td>
+                          <td className="py-2 pr-4">
+                            <BookingStatusBadge status={booking.status} />
+                          </td>
+                          <td className="py-2 pr-4 text-[var(--color-charcoal)]">
+                            {booking.client_first_name} {booking.client_last_name}
+                          </td>
+                          <td className="py-2 pr-4 text-[var(--color-charcoal)]">
+                            {serviceName}
+                          </td>
+                          <td className="py-2">
+                            <div className="flex gap-2">
                               <button
-                                onClick={() => handleDelete(slot.id)}
-                                disabled={!canDelete || isDeleting}
-                                title={
-                                  !canDelete
-                                    ? 'Нельзя удалить слот с активной бронью'
-                                    : 'Удалить слот'
-                                }
+                                onClick={() => setEditingBooking(booking)}
+                                className="px-3 py-1 rounded text-xs font-medium bg-blue-50 text-blue-600 border border-blue-200 hover:bg-blue-100 transition-colors"
+                              >
+                                Изменить
+                              </button>
+                              <button
+                                onClick={() => handleCancelBooking(booking.id)}
+                                disabled={isCancelled || isCancelling}
+                                title={isCancelled ? 'Запись уже отменена' : 'Отменить запись'}
                                 className={`px-3 py-1 rounded text-xs font-medium transition-colors ${
-                                  canDelete && !isDeleting
+                                  !isCancelled && !isCancelling
                                     ? 'bg-red-50 text-red-600 border border-red-200 hover:bg-red-100'
                                     : 'bg-gray-100 text-gray-400 border border-gray-200 cursor-not-allowed'
                                 }`}
                               >
-                                {isDeleting ? '...' : 'Удалить'}
+                                {isCancelling ? '...' : 'Отменить'}
                               </button>
-                            </td>
-                          </tr>
-                        )
-                      })}
+                            </div>
+                          </td>
+                        </tr>
+                      )
+                    })}
                   </tbody>
                 </table>
               </div>
             </section>
+
+            {/* Edit booking modal */}
+            {editingBooking && (
+              <div
+                className="fixed inset-0 bg-black/40 flex items-center justify-center z-50"
+                onClick={() => setEditingBooking(null)}
+              >
+                <div
+                  className="bg-white rounded-xl p-6 max-w-md w-full mx-4 shadow-xl"
+                  onClick={(e) => e.stopPropagation()}
+                >
+                  <h3 className="text-lg font-semibold text-[var(--color-charcoal)] mb-4">
+                    Детали записи
+                  </h3>
+                  <dl className="grid grid-cols-[auto_1fr] gap-x-4 gap-y-2 text-sm mb-6">
+                    <dt className="text-gray-500 self-center">Клиент</dt>
+                    <dd className="text-[var(--color-charcoal)]">
+                      {editingBooking.client_first_name} {editingBooking.client_last_name}
+                    </dd>
+                    <dt className="text-gray-500 self-center">Телефон</dt>
+                    <dd className="text-[var(--color-charcoal)]">{editingBooking.client_phone}</dd>
+                    <dt className="text-gray-500 self-center">Email</dt>
+                    <dd className="text-[var(--color-charcoal)]">{editingBooking.client_email}</dd>
+                    <dt className="text-gray-500 self-center">Дата</dt>
+                    <dd className="text-[var(--color-charcoal)]">
+                      {editingBooking.start_at ? formatLocalDate(editingBooking.start_at) : '—'}
+                    </dd>
+                    <dt className="text-gray-500 self-center">Время</dt>
+                    <dd className="text-[var(--color-charcoal)]">
+                      {editingBooking.start_at && editingBooking.end_at
+                        ? `${formatLocalTime(editingBooking.start_at)}–${formatLocalTime(editingBooking.end_at)}`
+                        : '—'}
+                    </dd>
+                    <dt className="text-gray-500 self-center">Услуга</dt>
+                    <dd className="text-[var(--color-charcoal)]">
+                      {typeof (editingBooking.service_snapshot as { name?: string }).name === 'string'
+                        ? (editingBooking.service_snapshot as { name?: string }).name
+                        : '—'}
+                    </dd>
+                    <dt className="text-gray-500 self-center">Статус</dt>
+                    <dd><BookingStatusBadge status={editingBooking.status} /></dd>
+                    {editingBooking.comment && (
+                      <>
+                        <dt className="text-gray-500 self-start pt-0.5">Комментарий</dt>
+                        <dd className="text-[var(--color-charcoal)]">{editingBooking.comment}</dd>
+                      </>
+                    )}
+                  </dl>
+                  <div className="flex justify-end">
+                    <button
+                      onClick={() => setEditingBooking(null)}
+                      className="px-4 py-2 rounded-lg text-sm border border-gray-300 text-gray-600 hover:bg-gray-50 transition-colors"
+                    >
+                      Закрыть
+                    </button>
+                  </div>
+                </div>
+              </div>
+            )}
           </>
         )}
 

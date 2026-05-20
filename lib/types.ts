@@ -330,6 +330,10 @@ export interface GetAdminSlotsResponse {
   slots: AdminSlotDTO[];
 }
 
+export interface GetAdminBookingsResponse {
+  bookings: AdminBookingDTO[];
+}
+
 export interface DeleteSlotResponse {
   message: string;
   id: string;

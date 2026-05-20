@@ -158,6 +158,10 @@ export async function PUT(
 
   const { action } = body as Record<string, unknown>
 
+  if (action === 'cancel') {
+    return handleCancel(id)
+  }
+
   if (action === 'update_duration') {
     return handleUpdateDuration(id, body as Record<string, unknown>)
   }
@@ -170,11 +174,54 @@ export async function PUT(
     {
       error: {
         code: 'INVALID_PARAMS',
-        message: "'action' must be 'update_duration' or 'reschedule'.",
+        message: "'action' must be 'cancel', 'update_duration', or 'reschedule'.",
       },
     },
     { status: 400 },
   )
+}
+
+// ---------------------------------------------------------------------------
+// cancel action
+// ---------------------------------------------------------------------------
+
+async function handleCancel(bookingId: string): Promise<NextResponse> {
+  const { data: bookingData, error: fetchError } = await supabaseAdmin
+    .from('bookings')
+    .select('id, status')
+    .eq('id', bookingId)
+    .maybeSingle()
+
+  if (fetchError || !bookingData) {
+    return NextResponse.json<ApiError>(
+      { error: { code: 'BOOKING_NOT_FOUND', message: 'Booking not found.' } },
+      { status: 404 },
+    )
+  }
+
+  const booking = bookingData as { id: string; status: string }
+
+  if (booking.status === 'CANCELLED') {
+    return NextResponse.json<ApiError>(
+      { error: { code: 'ALREADY_CANCELLED', message: 'Booking is already cancelled.' } },
+      { status: 409 },
+    )
+  }
+
+  const { error: updateError } = await supabaseAdmin
+    .from('bookings')
+    .update({ status: 'CANCELLED' })
+    .eq('id', bookingId)
+
+  if (updateError) {
+    console.error(`${LOG_PREFIX} DB error cancelling booking`, { booking_id: bookingId, error: updateError })
+    return NextResponse.json<ApiError>(
+      { error: { code: 'INTERNAL_ERROR', message: 'Failed to cancel booking.' } },
+      { status: 500 },
+    )
+  }
+
+  return NextResponse.json({ message: 'Booking cancelled', booking_id: bookingId }, { status: 200 })
 }
 
 // ---------------------------------------------------------------------------
