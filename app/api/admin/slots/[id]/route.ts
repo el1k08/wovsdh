@@ -32,7 +32,6 @@ export async function DELETE(
     )
   }
 
-  // --- Check slot exists --------------------------------------------------
   const { data: slotData, error: slotError } = await supabaseAdmin
     .from('slots')
     .select('id, status')
@@ -56,36 +55,40 @@ export async function DELETE(
 
   const slot = slotData as { id: string; status: string }
 
-  // --- Check for active bookings ------------------------------------------
-  const { data: bookingData, error: bookingError } = await supabaseAdmin
-    .from('bookings')
-    .select('id, status')
+  // Check whether the slot is claimed by an active booking via booking_slots junction
+  const { data: bookingSlotData, error: bookingSlotError } = await supabaseAdmin
+    .from('booking_slots')
+    .select('booking_id, booking:bookings!booking_slots_booking_id_fkey (id, status)')
     .eq('slot_id', id)
-    .neq('status', BookingStatus.Cancelled)
     .limit(1)
     .maybeSingle()
 
-  if (bookingError) {
-    console.error(`${LOG_PREFIX} DB error checking bookings`, { id, bookingError })
+  if (bookingSlotError) {
+    console.error(`${LOG_PREFIX} DB error checking booking_slots`, { id, bookingSlotError })
     return NextResponse.json<ApiError>(
       { error: { code: 'INTERNAL_ERROR', message: 'Failed to verify slot bookings.' } },
       { status: 500 },
     )
   }
 
-  if (bookingData) {
-    return NextResponse.json<ApiError>(
-      {
-        error: {
-          code: 'SLOT_HAS_ACTIVE_BOOKING',
-          message: 'Нельзя удалить слот с активной бронью.',
+  if (bookingSlotData) {
+    const bs = bookingSlotData as unknown as {
+      booking_id: string
+      booking: { id: string; status: string } | null
+    }
+    if (bs.booking && bs.booking.status !== BookingStatus.Cancelled) {
+      return NextResponse.json<ApiError>(
+        {
+          error: {
+            code: 'SLOT_HAS_ACTIVE_BOOKING',
+            message: 'Нельзя удалить слот с активной бронью.',
+          },
         },
-      },
-      { status: 409 },
-    )
+        { status: 409 },
+      )
+    }
   }
 
-  // --- Delete slot --------------------------------------------------------
   const { error: deleteError } = await supabaseAdmin
     .from('slots')
     .delete()

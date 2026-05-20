@@ -1,53 +1,17 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { supabaseAdmin } from '@/lib/supabase'
-import { isValidStudioId, isValidDateString } from '@/lib/validation'
-import type { ApiError, GetSlotsResponse, SlotDTO } from '@/lib/types'
+import { isValidStudioId, isValidDateString, isValidUUID } from '@/lib/validation'
+import type { ApiError, GetAvailableSlotsResponse, AvailableStartTime } from '@/lib/types'
 
 const LOG_PREFIX = '[api/slots]'
 
-/**
- * Converts a calendar date string (YYYY-MM-DD) expressed in a given IANA
- * timezone into the equivalent UTC start and end boundary for that day.
- *
- * Strategy: construct a temporary Date that treats the local midnight as if
- * it were UTC, then measure the timezone offset at that instant via
- * toLocaleString, and apply the inverse correction to arrive at the true UTC
- * time.  This handles both summer (UTC+3) and winter (UTC+2) for
- * Asia/Jerusalem without requiring any external library.
- */
-function localDayToUTCRange(
-  dateStr: string,
-  tz = 'Asia/Jerusalem',
-): { start: Date; end: Date } {
-  const toUTC = (localISOLike: string): Date => {
-    // Step 1: parse as if the local time were UTC (just a numeric anchor).
-    const anchor = new Date(localISOLike + 'Z')
-
-    // Step 2: ask the engine what wall-clock time it shows in `tz` for that anchor.
-    const wallClock = new Date(
-      anchor.toLocaleString('en-US', { timeZone: tz }),
-    )
-
-    // Step 3: the difference is the tz offset at that instant.
-    const offsetMs = anchor.getTime() - wallClock.getTime()
-
-    // Step 4: the real UTC moment for `localISOLike` in `tz`.
-    return new Date(anchor.getTime() + offsetMs)
-  }
-
-  return {
-    start: toUTC(`${dateStr}T00:00:00`),
-    end: toUTC(`${dateStr}T23:59:59`),
-  }
-}
-
-// GET /api/slots?studio_id=&date=
+// GET /api/slots?studio_id=rishon&date=2025-05-25&service_id=<uuid>
 export async function GET(request: NextRequest): Promise<NextResponse> {
   const { searchParams } = request.nextUrl
   const studioId = searchParams.get('studio_id') ?? ''
   const date = searchParams.get('date') ?? ''
+  const serviceId = searchParams.get('service_id') ?? ''
 
-  // --- Validation -------------------------------------------------------
   if (!isValidStudioId(studioId)) {
     return NextResponse.json<ApiError>(
       {
@@ -73,38 +37,62 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
     )
   }
 
-  // --- UTC range for the requested local day ----------------------------
-  const { start, end } = localDayToUTCRange(date)
-
-  // --- Database query ---------------------------------------------------
-  const { data, error } = await supabaseAdmin
-    .from('slots')
-    .select('id, studio_id, start_at, end_at, status')
-    .eq('studio_id', studioId)
-    .eq('status', 'available')
-    .gte('start_at', start.toISOString())
-    .lt('start_at', end.toISOString())
-    .order('start_at', { ascending: true })
-
-  if (error) {
-    console.error(`${LOG_PREFIX} DB error fetching slots`, {
-      studio_id: studioId,
-      date,
-      error,
-    })
+  if (!isValidUUID(serviceId)) {
     return NextResponse.json<ApiError>(
-      { error: { code: 'INTERNAL_ERROR', message: 'Failed to fetch slots.' } },
+      {
+        error: {
+          code: 'INVALID_PARAMS',
+          message: "Query param 'service_id' must be a valid UUID.",
+        },
+      },
+      { status: 400 },
+    )
+  }
+
+  const { data: service, error: serviceError } = await supabaseAdmin
+    .from('services')
+    .select('duration_minutes')
+    .eq('id', serviceId)
+    .eq('is_active', true)
+    .maybeSingle()
+
+  if (serviceError) {
+    console.error(`${LOG_PREFIX} DB error fetching service`, { service_id: serviceId, error: serviceError })
+    return NextResponse.json<ApiError>(
+      { error: { code: 'INTERNAL_ERROR', message: 'Failed to fetch service.' } },
       { status: 500 },
     )
   }
 
-  const slots: SlotDTO[] = (data ?? []).map((row) => ({
-    id: row.id as string,
-    studio_id: row.studio_id as string,
-    start_at: row.start_at as string,
-    end_at: row.end_at as string,
-    status: row.status as SlotDTO['status'],
-  }))
+  if (!service) {
+    return NextResponse.json<ApiError>(
+      { error: { code: 'SERVICE_NOT_FOUND', message: 'Service not found or inactive.' } },
+      { status: 404 },
+    )
+  }
 
-  return NextResponse.json<GetSlotsResponse>({ slots })
+  const { data, error } = await supabaseAdmin.client.rpc('find_available_start_times', {
+    p_studio_id: studioId,
+    p_date: date,
+    p_duration_minutes: (service as { duration_minutes: number }).duration_minutes,
+  })
+
+  if (error) {
+    console.error(`${LOG_PREFIX} RPC error find_available_start_times`, {
+      studio_id: studioId,
+      date,
+      service_id: serviceId,
+      error,
+    })
+    return NextResponse.json<ApiError>(
+      { error: { code: 'INTERNAL_ERROR', message: 'Failed to fetch available slots.' } },
+      { status: 500 },
+    )
+  }
+
+  const available_start_times: AvailableStartTime[] = (data ?? []).map(
+    (row: { start_at: string }) => ({ start_at: row.start_at }),
+  )
+
+  return NextResponse.json<GetAvailableSlotsResponse>({ available_start_times })
 }

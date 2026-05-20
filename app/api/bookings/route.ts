@@ -11,18 +11,15 @@ import type {
   ApiError,
   CreateBookingResponse,
   BookingCreatedDTO,
-  BookingStatus,
-  SlotStatus,
 } from '@/lib/types'
+import { BookingStatus } from '@/lib/types'
 
 const LOG_PREFIX = '[api/bookings]'
 
-/** PostgreSQL unique_violation error code. */
 const PG_UNIQUE_VIOLATION = '23505'
 
 // POST /api/bookings
 export async function POST(request: NextRequest): Promise<NextResponse> {
-  // --- Parse body -------------------------------------------------------
   let body: unknown
   try {
     body = await request.json()
@@ -41,22 +38,27 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
   }
 
   const {
-    slot_id,
     studio_id,
+    service_id,
+    start_at,
     client_first_name,
     client_last_name,
     client_phone,
     client_email,
+    comment,
+    marketing_consent,
   } = body as Record<string, unknown>
 
-  // --- Validation -------------------------------------------------------
   const validationErrors: string[] = []
 
-  if (!isNonEmptyString(slot_id) || !isValidUUID(slot_id)) {
-    validationErrors.push("'slot_id' must be a valid UUID.")
-  }
   if (!isNonEmptyString(studio_id) || !isValidStudioId(studio_id)) {
     validationErrors.push("'studio_id' must be 'rishon' or 'ashdod'.")
+  }
+  if (!isNonEmptyString(service_id) || !isValidUUID(service_id)) {
+    validationErrors.push("'service_id' must be a valid UUID.")
+  }
+  if (!isNonEmptyString(start_at)) {
+    validationErrors.push("'start_at' is required.")
   }
   if (!isNonEmptyString(client_first_name)) {
     validationErrors.push("'client_first_name' is required.")
@@ -70,107 +72,90 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
   if (!isNonEmptyString(client_email) || !isValidEmail(client_email)) {
     validationErrors.push("'client_email' must be a valid email address.")
   }
+  if (typeof marketing_consent !== 'boolean') {
+    validationErrors.push("'marketing_consent' must be a boolean.")
+  }
 
   if (validationErrors.length > 0) {
     return NextResponse.json<ApiError>(
-      {
-        error: {
-          code: 'INVALID_PARAMS',
-          message: validationErrors.join(' '),
-        },
-      },
+      { error: { code: 'INVALID_PARAMS', message: validationErrors.join(' ') } },
       { status: 400 },
     )
   }
 
-  // At this point TypeScript does not yet narrow the types for us, so we
-  // assert them explicitly after the guard above has confirmed the shapes.
-  const validSlotId = slot_id as string
   const validStudioId = studio_id as string
+  const validServiceId = service_id as string
+  const validStartAt = (start_at as string).trim()
   const validFirstName = (client_first_name as string).trim()
   const validLastName = (client_last_name as string).trim()
   const validPhone = (client_phone as string).trim()
   const validEmail = (client_email as string).trim()
+  const validComment = typeof comment === 'string' && comment.trim() ? comment.trim() : null
+  const validConsent = marketing_consent as boolean
 
-  // --- Check slot exists and is available --------------------------------
-  const { data: slotData, error: slotError } = await supabaseAdmin
-    .from('slots')
-    .select('id, studio_id, start_at, end_at, status')
-    .eq('id', validSlotId)
+  // Fetch service to verify it's active and build the snapshot
+  const { data: serviceData, error: serviceError } = await supabaseAdmin
+    .from('services')
+    .select('id, name, description, price, duration_minutes, icon')
+    .eq('id', validServiceId)
+    .eq('is_active', true)
     .maybeSingle()
 
-  if (slotError) {
-    console.error(`${LOG_PREFIX} DB error fetching slot`, {
-      slot_id: validSlotId,
-      error: slotError,
-    })
+  if (serviceError) {
+    console.error(`${LOG_PREFIX} DB error fetching service`, { service_id: validServiceId, error: serviceError })
     return NextResponse.json<ApiError>(
-      { error: { code: 'INTERNAL_ERROR', message: 'Failed to verify slot.' } },
+      { error: { code: 'INTERNAL_ERROR', message: 'Failed to verify service.' } },
       { status: 500 },
     )
   }
 
-  if (!slotData) {
+  if (!serviceData) {
     return NextResponse.json<ApiError>(
-      { error: { code: 'SLOT_NOT_FOUND', message: 'The requested slot does not exist.' } },
+      { error: { code: 'SERVICE_NOT_FOUND', message: 'Service not found or inactive.' } },
       { status: 404 },
     )
   }
 
-  const slot = slotData as {
+  const service = serviceData as {
     id: string
-    studio_id: string
-    start_at: string
-    end_at: string
-    status: SlotStatus
+    name: string
+    description: string | null
+    price: number
+    duration_minutes: number
+    icon: string | null
   }
 
-  if (slot.status !== 'available') {
-    return NextResponse.json<ApiError>(
-      {
-        error: {
-          code: 'SLOT_UNAVAILABLE',
-          message: 'This slot is no longer available.',
-        },
-      },
-      { status: 409 },
-    )
+  const serviceSnapshot = {
+    id: service.id,
+    name: service.name,
+    description: service.description,
+    price: service.price,
+    duration_minutes: service.duration_minutes,
+    icon: service.icon,
   }
 
-  // --- Insert booking ---------------------------------------------------
+  // Insert the booking as PENDING first
   const { data: bookingData, error: insertError } = await supabaseAdmin
     .from('bookings')
     .insert({
-      slot_id: validSlotId,
       studio_id: validStudioId,
+      service_id: validServiceId,
+      service_snapshot: serviceSnapshot,
       client_first_name: validFirstName,
       client_last_name: validLastName,
       client_phone: validPhone,
       client_email: validEmail,
-      status: 'PENDING',
+      comment: validComment,
+      marketing_consent: validConsent,
+      status: BookingStatus.Pending,
     })
-    .select('id, slot_id, studio_id, status, created_at, cancellation_token')
+    .select('id, studio_id, service_id, status, created_at')
     .single()
 
   if (insertError) {
-    // Race condition: another request booked the same slot between our check
-    // and our insert.  The partial unique index (uq_bookings_slot_active)
-    // guarantees exactly one winner; the loser receives a 409.
-    if (insertError.code === PG_UNIQUE_VIOLATION) {
-      return NextResponse.json<ApiError>(
-        {
-          error: {
-            code: 'SLOT_UNAVAILABLE',
-            message: 'This slot was just booked by someone else.',
-          },
-        },
-        { status: 409 },
-      )
-    }
-
     console.error(`${LOG_PREFIX} DB error inserting booking`, {
-      slot_id: validSlotId,
       studio_id: validStudioId,
+      service_id: validServiceId,
       error: insertError,
     })
     return NextResponse.json<ApiError>(
@@ -181,48 +166,72 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
 
   const booking = bookingData as {
     id: string
-    slot_id: string
     studio_id: string
+    service_id: string
     status: BookingStatus
     created_at: string
-    cancellation_token: string
   }
 
-  // --- Update slot status to 'booked' ------------------------------------
-  // Non-critical: the partial unique index already prevents a second booking.
-  // If this update fails the slot will remain as 'available' in the UI but
-  // any subsequent insert will be blocked by the index — log and continue.
-  const { error: slotUpdateError } = await supabaseAdmin
-    .from('slots')
-    .update({ status: 'booked' })
-    .eq('id', validSlotId)
+  // Lock the atomic slots via PL/pgSQL. The function uses SELECT FOR UPDATE SKIP LOCKED
+  // internally, so concurrent requests for the same window are serialized without
+  // application-level locking.
+  const { error: lockError } = await supabaseAdmin.client.rpc('lock_booking_slots', {
+    p_booking_id: booking.id,
+    p_studio_id: validStudioId,
+    p_start_at: validStartAt,
+    p_duration_minutes: service.duration_minutes,
+  })
 
-  if (slotUpdateError) {
-    console.error(
-      `${LOG_PREFIX} Failed to mark slot as booked after successful booking insert`,
-      { slot_id: validSlotId, booking_id: booking.id, error: slotUpdateError },
+  if (lockError) {
+    // Mark booking CANCELLED before returning 409 — keeps the bookings table consistent.
+    await supabaseAdmin
+      .from('bookings')
+      .update({ status: BookingStatus.Cancelled, cancelled_at: new Date().toISOString() })
+      .eq('id', booking.id)
+
+    const isConflict =
+      lockError.code === PG_UNIQUE_VIOLATION ||
+      (lockError.message ?? '').includes('SLOT_UNAVAILABLE')
+
+    if (isConflict) {
+      return NextResponse.json<ApiError>(
+        {
+          error: {
+            code: 'SLOT_UNAVAILABLE',
+            message: 'One or more requested time slots are no longer available.',
+          },
+        },
+        { status: 409 },
+      )
+    }
+
+    console.error(`${LOG_PREFIX} RPC error lock_booking_slots`, {
+      booking_id: booking.id,
+      error: lockError,
+    })
+    return NextResponse.json<ApiError>(
+      { error: { code: 'INTERNAL_ERROR', message: 'Failed to reserve time slots.' } },
+      { status: 500 },
     )
   }
 
-  // --- Build response ---------------------------------------------------
+  const durationMs = service.duration_minutes * 60 * 1000
+  const endAt = new Date(new Date(validStartAt).getTime() + durationMs).toISOString()
+
   const responseBooking: BookingCreatedDTO = {
     id: booking.id,
-    slot_id: booking.slot_id,
     studio_id: booking.studio_id,
+    service_id: booking.service_id,
     status: booking.status,
-    start_at: slot.start_at,
-    end_at: slot.end_at,
+    start_at: validStartAt,
+    end_at: endAt,
     created_at: booking.created_at,
   }
 
-  // --- Notify staff via Telegram (fire-and-forget) ----------------------
-  // Do NOT await: Telegram latency must not block the client response.
+  // Fire-and-forget: Telegram notification must not block the client response
   notifyStaffNewBooking(booking.id).catch((err: unknown) =>
     console.error(`${LOG_PREFIX} Telegram notify failed`, { booking_id: booking.id, err }),
   )
 
-  return NextResponse.json<CreateBookingResponse>(
-    { booking: responseBooking },
-    { status: 201 },
-  )
+  return NextResponse.json<CreateBookingResponse>({ booking: responseBooking }, { status: 201 })
 }

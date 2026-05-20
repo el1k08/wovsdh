@@ -42,25 +42,54 @@ export interface Slot {
   id: string;                      // UUID
   studio_id: string;               // FK → studios.id
   start_at: string;                // TIMESTAMPTZ as ISO string (UTC)
-  end_at: string;                  // TIMESTAMPTZ as ISO string (UTC)
   status: SlotStatus;
   created_at: string;
 }
 
+export interface Service {
+  id: string;
+  studio_id: string | null;
+  icon: string | null;
+  name: string;
+  description: string | null;
+  price: number;
+  duration_minutes: number;
+  is_active: boolean;
+  sort_order: number;
+  created_at: string;
+}
+
+export interface StudioScheduleTemplate {
+  id: string;
+  studio_id: string;
+  day_of_week: number;  // 0=Sun..6=Sat
+  is_working: boolean;
+  work_start: string;   // 'HH:mm:ss'
+  work_end: string;     // 'HH:mm:ss'
+}
+
+export interface BookingSlot {
+  booking_id: string;
+  slot_id: string;
+}
+
 export interface Booking {
-  id: string;                         // UUID
-  slot_id: string;                    // UUID FK → slots.id
-  studio_id: string;                  // TEXT FK → studios.id (denormalized)
+  id: string;
+  studio_id: string;
+  service_id: string | null;
+  service_snapshot: Record<string, unknown>;
   client_first_name: string;
   client_last_name: string;
   client_phone: string;
   client_email: string;
+  comment: string | null;
+  marketing_consent: boolean;
   status: BookingStatus;
-  cancellation_token: string;         // UUID — embedded in cancellation email link
+  cancellation_token: string;
   google_calendar_event_id: string | null;
-  telegram_message_id: number | null; // BIGINT
-  confirmed_at: string | null;        // TIMESTAMPTZ or null
-  cancelled_at: string | null;        // TIMESTAMPTZ or null
+  telegram_message_id: number | null;
+  confirmed_at: string | null;
+  cancelled_at: string | null;
   created_at: string;
   updated_at: string;
 }
@@ -87,56 +116,100 @@ export interface EmailLog {
 // ---------------------------------------------------------------------------
 
 export interface GetSlotsRequest {
-  studio_id: string;   // 'rishon' | 'ashdod'
-  date: string;        // 'YYYY-MM-DD' in local Asia/Jerusalem time
+  studio_id: string;
+  date: string;       // 'YYYY-MM-DD'
+  service_id: string; // UUID — to determine duration for sliding window
 }
 
 export interface CreateBookingRequest {
-  slot_id: string;
   studio_id: string;
+  service_id: string;      // UUID
+  start_at: string;        // ISO UTC timestamp — chosen from available start times
   client_first_name: string;
   client_last_name: string;
   client_phone: string;
   client_email: string;
+  comment?: string;
+  marketing_consent: boolean;
 }
 
 export interface CancelBookingRequest {
   token: string;       // cancellation_token UUID from the email link
 }
 
-export interface GenerateSlotsRequest {
+export interface UpsertMasterScheduleRequest {
   studio_id: string;
-  date: string;               // 'YYYY-MM-DD'
-  slot_duration_minutes: number;
-  start_time: string;         // 'HH:mm' in Asia/Jerusalem local time
-  end_time: string;           // 'HH:mm' in Asia/Jerusalem local time
+  days: Array<{
+    day_of_week: number;
+    is_working: boolean;
+    work_start: string;  // 'HH:mm'
+    work_end: string;    // 'HH:mm'
+  }>;
 }
 
-export interface GetAdminSlotsRequest {
+export interface GenerateSlotsFromTemplateRequest {
   studio_id: string;
-  date_from: string;   // 'YYYY-MM-DD'
-  date_to: string;     // 'YYYY-MM-DD'
+  date_from: string;  // 'YYYY-MM-DD'
+  date_to: string;    // 'YYYY-MM-DD'
+}
+
+export interface UpdateBookingDurationRequest {
+  new_duration_minutes: number;
+}
+
+export interface RescheduleBookingRequest {
+  new_start_at: string;
+  new_duration_minutes?: number;
+}
+
+export interface CreateServiceRequest {
+  studio_id?: string | null;
+  icon?: string;
+  name: string;
+  description?: string;
+  price: number;
+  duration_minutes: number;
+  sort_order?: number;
+}
+
+export interface UpdateServiceRequest extends Partial<CreateServiceRequest> {
+  is_active?: boolean;
 }
 
 // ---------------------------------------------------------------------------
 // API Response Types
 // ---------------------------------------------------------------------------
 
-/**
- * A slot as returned to the client (no internal fields like created_at).
- */
 export interface SlotDTO {
   id: string;
   studio_id: string;
-  start_at: string;    // ISO 8601 with timezone offset
-  end_at: string;      // ISO 8601 with timezone offset
+  start_at: string;
   status: SlotStatus;
 }
 
-/**
- * A booking as returned to the client (sensitive fields omitted).
- * Used in GET /api/bookings/[token] — does not expose email, phone, or last name.
- */
+export interface AvailableStartTime {
+  start_at: string;  // ISO UTC
+}
+
+export interface GetAvailableSlotsResponse {
+  available_start_times: AvailableStartTime[];
+}
+
+export interface ServiceDTO {
+  id: string;
+  studio_id: string | null;
+  icon: string | null;
+  name: string;
+  description: string | null;
+  price: number;
+  duration_minutes: number;
+  sort_order: number;
+}
+
+export interface GetServicesResponse {
+  services: ServiceDTO[];
+}
+
 export interface BookingPublicDTO {
   id: string;
   studio_id: string;
@@ -147,22 +220,36 @@ export interface BookingPublicDTO {
   end_at: string;
 }
 
-/**
- * The minimal booking data returned after a successful POST /api/bookings.
- */
 export interface BookingCreatedDTO {
   id: string;
-  slot_id: string;
   studio_id: string;
+  service_id: string;
   status: BookingStatus;
   start_at: string;
-  end_at: string;
+  end_at: string;  // computed: start_at + duration_minutes
   created_at: string;
 }
 
-/**
- * A slot entry in the admin list response, optionally with an active booking.
- */
+export interface AdminBookingDTO {
+  id: string;
+  studio_id: string;
+  service_id: string | null;
+  service_snapshot: Record<string, unknown>;
+  client_first_name: string;
+  client_last_name: string;
+  client_phone: string;
+  client_email: string;
+  comment: string | null;
+  marketing_consent: boolean;
+  status: BookingStatus;
+  cancellation_token: string;
+  slots: Array<{ slot_id: string; start_at: string }>;
+  start_at: string;
+  end_at: string;
+  created_at: string;
+  updated_at: string;
+}
+
 export interface AdminSlotDTO extends SlotDTO {
   booking?: {
     id: string;
@@ -172,13 +259,18 @@ export interface AdminSlotDTO extends SlotDTO {
   };
 }
 
+export interface GetMasterScheduleResponse {
+  schedule: StudioScheduleTemplate[];
+}
+
+export interface GenerateSlotsFromTemplateResponse {
+  created: number;
+  skipped: number;
+}
+
 // ---------------------------------------------------------------------------
 // API Response Envelopes
 // ---------------------------------------------------------------------------
-
-export interface GetSlotsResponse {
-  slots: SlotDTO[];
-}
 
 export interface CreateBookingResponse {
   booking: BookingCreatedDTO;
@@ -195,12 +287,6 @@ export interface CancelBookingResponse {
     status: BookingStatus.Cancelled;
     cancelled_at: string;
   };
-}
-
-export interface GenerateSlotsResponse {
-  created: number;
-  skipped: number;
-  slots: SlotDTO[];
 }
 
 export interface GetAdminSlotsResponse {
@@ -223,6 +309,7 @@ export type ApiErrorCode =
   | 'SLOT_HAS_ACTIVE_BOOKING'
   | 'BOOKING_NOT_FOUND'
   | 'ALREADY_CANCELLED'
+  | 'SERVICE_NOT_FOUND'
   | 'UNAUTHORIZED'
   | 'VALIDATION_ERROR'
   | 'INTERNAL_ERROR';
@@ -238,9 +325,6 @@ export interface ApiError {
 // Telegram Types
 // ---------------------------------------------------------------------------
 
-/**
- * Parsed callback_query.data values from Telegram inline keyboard buttons.
- */
 export type TelegramCallbackAction =
   | { type: 'confirm'; booking_id: string }
   | { type: 'cancel'; booking_id: string };

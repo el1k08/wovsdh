@@ -1,24 +1,22 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { supabaseAdmin } from '@/lib/supabase'
 import { createCalendarEvent } from '@/lib/google-calendar'
+import { sendWhatsAppMessage } from '@/lib/whatsapp'
 
 const LOG_PREFIX = '[api/internal/confirm-booking]'
 
-// ---------------------------------------------------------------------------
+const TZ = 'Asia/Jerusalem'
+
 // POST /api/internal/confirm-booking
 // Internal endpoint — must only be called from the Telegram webhook handler.
 // Protected by X-Internal-Secret header.
-// ---------------------------------------------------------------------------
-
 export async function POST(request: NextRequest): Promise<NextResponse> {
-  // 1. Verify internal secret
   const internalSecret = request.headers.get('X-Internal-Secret')
   if (internalSecret !== process.env.ADMIN_SECRET_KEY) {
     console.error(`${LOG_PREFIX} Unauthorized request — invalid internal secret`)
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
   }
 
-  // 2. Parse body
   let body: unknown
   try {
     body = await request.json()
@@ -36,7 +34,6 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
     return NextResponse.json({ error: "'booking_id' is required." }, { status: 400 })
   }
 
-  // 3. Fetch booking with slot times and studio info
   const { data: bookingData, error: fetchError } = await supabaseAdmin
     .from('bookings')
     .select(
@@ -48,10 +45,12 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
       client_phone,
       client_email,
       status,
+      cancellation_token,
       google_calendar_event_id,
-      slot:slots!bookings_slot_id_fkey (
-        start_at,
-        end_at
+      service_snapshot,
+      studio:studios!bookings_studio_id_fkey (name),
+      booking_slots (
+        slot:slots!booking_slots_slot_id_fkey (start_at)
       )
     `,
     )
@@ -59,10 +58,7 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
     .maybeSingle()
 
   if (fetchError) {
-    console.error(`${LOG_PREFIX} DB error fetching booking`, {
-      booking_id,
-      error: fetchError,
-    })
+    console.error(`${LOG_PREFIX} DB error fetching booking`, { booking_id, error: fetchError })
     return NextResponse.json({ error: 'Failed to fetch booking.' }, { status: 500 })
   }
 
@@ -78,11 +74,13 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
     client_phone: string
     client_email: string
     status: string
+    cancellation_token: string
     google_calendar_event_id: string | null
-    slot: { start_at: string; end_at: string } | null
+    service_snapshot: Record<string, unknown>
+    studio: { name: string } | null
+    booking_slots: Array<{ slot: { start_at: string } | null }>
   }
 
-  // 4. Guard: booking must be CONFIRMED
   if (raw.status !== 'CONFIRMED') {
     return NextResponse.json(
       { error: `Booking is not in CONFIRMED state (current: ${raw.status}).` },
@@ -90,12 +88,24 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
     )
   }
 
-  if (!raw.slot) {
-    console.error(`${LOG_PREFIX} Booking has no linked slot`, { booking_id })
-    return NextResponse.json({ error: 'Booking has no linked slot.' }, { status: 500 })
+  const slotRows = raw.booking_slots ?? []
+  const startAts = slotRows
+    .map((bs) => bs.slot?.start_at)
+    .filter((s): s is string => typeof s === 'string')
+    .sort()
+
+  const startAt = startAts[0] ?? null
+
+  if (!startAt) {
+    console.error(`${LOG_PREFIX} Booking has no linked slots`, { booking_id })
+    return NextResponse.json({ error: 'Booking has no linked slots.' }, { status: 500 })
   }
 
-  // 5. Idempotency: skip if Google Calendar event already created
+  const snapshot = raw.service_snapshot
+  const durationMs = (snapshot.duration_minutes as number) * 60 * 1000
+  const endAt = new Date(new Date(startAt).getTime() + durationMs).toISOString()
+
+  // Idempotency: skip if Google Calendar event already created
   if (raw.google_calendar_event_id) {
     return NextResponse.json(
       { success: true, event_id: raw.google_calendar_event_id },
@@ -103,7 +113,6 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
     )
   }
 
-  // 6. Create Google Calendar event
   let eventId: string
   try {
     eventId = await createCalendarEvent({
@@ -114,23 +123,16 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
         client_last_name: raw.client_last_name,
         client_phone: raw.client_phone,
         client_email: raw.client_email,
-        start_at: raw.slot.start_at,
-        end_at: raw.slot.end_at,
+        start_at: startAt,
+        end_at: endAt,
       },
     })
   } catch (calendarErr) {
     // Calendar failure must NOT roll back the booking confirmation
-    console.error(`${LOG_PREFIX} Google Calendar API error`, {
-      booking_id,
-      error: calendarErr,
-    })
-    return NextResponse.json(
-      { error: 'Failed to create Google Calendar event.' },
-      { status: 500 },
-    )
+    console.error(`${LOG_PREFIX} Google Calendar API error`, { booking_id, error: calendarErr })
+    return NextResponse.json({ error: 'Failed to create Google Calendar event.' }, { status: 500 })
   }
 
-  // 7. Persist the calendar event ID
   const { error: updateError } = await supabaseAdmin
     .from('bookings')
     .update({ google_calendar_event_id: eventId })
@@ -142,9 +144,52 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
       event_id: eventId,
       error: updateError,
     })
-    // Return success anyway — the event was created and booking is confirmed.
-    // The missing event_id will be visible in logs for manual reconciliation.
+    // Return success — event was created and booking is confirmed.
+    // Missing event_id visible in logs for manual reconciliation.
   }
+
+  // Send WhatsApp confirmation (fire-and-forget)
+  const studioName = raw.studio?.name ?? raw.studio_id
+  const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? 'http://localhost:3000'
+
+  const dateFormatter = new Intl.DateTimeFormat('ru-IL', {
+    timeZone: TZ,
+    day: 'numeric',
+    month: 'long',
+    year: 'numeric',
+  })
+  const timeFormatter = new Intl.DateTimeFormat('ru-IL', {
+    timeZone: TZ,
+    hour: '2-digit',
+    minute: '2-digit',
+  })
+
+  const startDate = new Date(startAt)
+  const dateStr = dateFormatter.format(startDate)
+  const timeStr = timeFormatter.format(startDate)
+
+  const whatsAppMessage =
+    `✅ Ваша запись подтверждена!\n` +
+    `Студия: ${studioName}\n` +
+    `Дата: ${dateStr} ${timeStr}\n` +
+    `До встречи!\n` +
+    `Отменить запись: ${appUrl}/cancel?token=${raw.cancellation_token}`
+
+  sendWhatsAppMessage({ to: raw.client_phone, body: whatsAppMessage }).catch((err: unknown) =>
+    console.error(`${LOG_PREFIX} WhatsApp confirmation failed`, { booking_id, error: err }),
+  )
+
+  // Trigger confirmation email (fire-and-forget via internal endpoint)
+  fetch(`${appUrl}/api/internal/send-confirmation-email`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'X-Internal-Secret': process.env.ADMIN_SECRET_KEY ?? '',
+    },
+    body: JSON.stringify({ booking_id }),
+  }).catch((err: unknown) =>
+    console.error(`${LOG_PREFIX} send-confirmation-email call failed`, { booking_id, err }),
+  )
 
   return NextResponse.json({ success: true, event_id: eventId }, { status: 200 })
 }

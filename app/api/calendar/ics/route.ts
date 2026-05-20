@@ -4,10 +4,6 @@ import { BookingStatus } from '@/lib/types'
 
 const LOG_PREFIX = '[api/calendar/ics]'
 
-// ---------------------------------------------------------------------------
-// Date formatter: YYYYMMDDTHHmmssZ (UTC basic format for iCalendar)
-// ---------------------------------------------------------------------------
-
 function toIcsDate(isoUtc: string): string {
   return new Date(isoUtc)
     .toISOString()
@@ -15,10 +11,7 @@ function toIcsDate(isoUtc: string): string {
     .replace(/\.\d{3}/, '')
 }
 
-// ---------------------------------------------------------------------------
 // GET /api/calendar/ics?booking_id={uuid}
-// ---------------------------------------------------------------------------
-
 export async function GET(request: NextRequest): Promise<NextResponse> {
   const bookingId = request.nextUrl.searchParams.get('booking_id')
 
@@ -29,20 +22,16 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
     )
   }
 
-  // 1. Fetch booking with slot and studio data
   const { data, error } = await supabaseAdmin
     .from('bookings')
     .select(
       `
       id,
       status,
-      slot:slots!bookings_slot_id_fkey (
-        start_at,
-        end_at
-      ),
-      studio:studios!bookings_studio_id_fkey (
-        name,
-        city
+      service_snapshot,
+      studio:studios!bookings_studio_id_fkey (name, city),
+      booking_slots (
+        slot:slots!booking_slots_slot_id_fkey (start_at)
       )
     `,
     )
@@ -50,10 +39,7 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
     .maybeSingle()
 
   if (error) {
-    console.error(`${LOG_PREFIX} DB error fetching booking`, {
-      booking_id: bookingId,
-      error,
-    })
+    console.error(`${LOG_PREFIX} DB error fetching booking`, { booking_id: bookingId, error })
     return NextResponse.json(
       { error: { code: 'INTERNAL_ERROR', message: 'Failed to fetch booking.' } },
       { status: 500 },
@@ -67,15 +53,14 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
     )
   }
 
-  // 2. Type-cast joined rows
   const raw = data as unknown as {
     id: string
     status: BookingStatus
-    slot: { start_at: string; end_at: string } | null
+    service_snapshot: Record<string, unknown>
     studio: { name: string; city: string } | null
+    booking_slots: Array<{ slot: { start_at: string } | null }>
   }
 
-  // 3. Only allow confirmed bookings to download .ics
   if (raw.status !== BookingStatus.Confirmed) {
     return NextResponse.json(
       { error: { code: 'BOOKING_NOT_FOUND', message: 'Booking not found or not confirmed.' } },
@@ -83,18 +68,37 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
     )
   }
 
-  if (!raw.slot || !raw.studio) {
-    console.error(`${LOG_PREFIX} Booking has no linked slot or studio`, { booking_id: bookingId })
+  if (!raw.studio) {
+    console.error(`${LOG_PREFIX} Booking has no linked studio`, { booking_id: bookingId })
     return NextResponse.json(
       { error: { code: 'INTERNAL_ERROR', message: 'Booking data incomplete.' } },
       { status: 500 },
     )
   }
 
-  // 4. Build .ics content
+  const slotRows = raw.booking_slots ?? []
+  const startAts = slotRows
+    .map((bs) => bs.slot?.start_at)
+    .filter((s): s is string => typeof s === 'string')
+    .sort()
+
+  const startAt = startAts[0] ?? null
+
+  if (!startAt) {
+    console.error(`${LOG_PREFIX} Booking has no linked slots`, { booking_id: bookingId })
+    return NextResponse.json(
+      { error: { code: 'INTERNAL_ERROR', message: 'Booking data incomplete.' } },
+      { status: 500 },
+    )
+  }
+
+  const snapshot = raw.service_snapshot
+  const durationMs = (snapshot.duration_minutes as number) * 60 * 1000
+  const endAt = new Date(new Date(startAt).getTime() + durationMs).toISOString()
+
   const nowUtc = toIcsDate(new Date().toISOString())
-  const startUtc = toIcsDate(raw.slot.start_at)
-  const endUtc = toIcsDate(raw.slot.end_at)
+  const startUtc = toIcsDate(startAt)
+  const endUtc = toIcsDate(endAt)
 
   const icsContent = [
     'BEGIN:VCALENDAR',
@@ -112,7 +116,6 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
     'END:VCALENDAR',
   ].join('\r\n')
 
-  // 5. Return with calendar headers
   return new NextResponse(icsContent, {
     status: 200,
     headers: {

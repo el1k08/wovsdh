@@ -18,16 +18,14 @@ const LOG_PREFIX = '[notify]'
 // ---------------------------------------------------------------------------
 
 /**
- * Fetches the full booking record (joining slot and studio), sends a Telegram
- * notification to all active staff members, and stores the last successful
- * telegram_message_id back onto the booking row.
+ * Fetches the full booking record (joining booking_slots → slots and studio),
+ * sends a Telegram notification to all active staff members, and stores the
+ * last successful telegram_message_id back onto the booking row.
  *
- * This function must never throw — call it fire-and-forget from the POST
- * /api/bookings handler.
+ * This function must never throw — call it fire-and-forget from API handlers.
  */
 export async function notifyStaffNewBooking(bookingId: string): Promise<void> {
   try {
-    // 1. Fetch booking with slot and studio data
     const { data: bookingData, error: bookingError } = await supabaseAdmin
       .from('bookings')
       .select(
@@ -36,12 +34,10 @@ export async function notifyStaffNewBooking(bookingId: string): Promise<void> {
         client_first_name,
         client_last_name,
         client_phone,
-        slot:slots!bookings_slot_id_fkey (
-          start_at,
-          end_at
-        ),
-        studio:studios!bookings_studio_id_fkey (
-          name
+        service_snapshot,
+        studio:studios!bookings_studio_id_fkey (name),
+        booking_slots (
+          slot:slots!booking_slots_slot_id_fkey (start_at)
         )
       `,
       )
@@ -56,37 +52,55 @@ export async function notifyStaffNewBooking(bookingId: string): Promise<void> {
       return
     }
 
-    // Supabase generic client types joined rows as arrays; cast via unknown.
     const raw = bookingData as unknown as {
       id: string
       client_first_name: string
       client_last_name: string
       client_phone: string
-      slot: { start_at: string; end_at: string } | null
+      service_snapshot: Record<string, unknown>
       studio: { name: string } | null
+      booking_slots: Array<{ slot: { start_at: string } | null }>
     }
 
-    if (!raw.slot || !raw.studio) {
-      console.error(`${LOG_PREFIX} Booking has no linked slot or studio`, {
-        booking_id: bookingId,
-      })
+    if (!raw.studio) {
+      console.error(`${LOG_PREFIX} Booking has no linked studio`, { booking_id: bookingId })
       return
     }
 
-    // 2. Build message and keyboard
+    const slotRows = raw.booking_slots ?? []
+    if (slotRows.length === 0) {
+      console.error(`${LOG_PREFIX} Booking has no linked slots`, { booking_id: bookingId })
+      return
+    }
+
+    // Pick the earliest slot as the booking start
+    const startAts = slotRows
+      .map((bs) => bs.slot?.start_at)
+      .filter((s): s is string => typeof s === 'string')
+      .sort()
+
+    const startAt = startAts[0]
+    if (!startAt) {
+      console.error(`${LOG_PREFIX} Could not resolve start_at from slots`, { booking_id: bookingId })
+      return
+    }
+
+    const snapshot = raw.service_snapshot
+    const durationMs = (snapshot.duration_minutes as number) * 60 * 1000
+    const endAt = new Date(new Date(startAt).getTime() + durationMs).toISOString()
+
     const text = buildNewBookingMessage({
       id: raw.id,
       client_first_name: raw.client_first_name,
       client_last_name: raw.client_last_name,
       client_phone: raw.client_phone,
       studio_name: raw.studio.name,
-      start_at: raw.slot.start_at,
-      end_at: raw.slot.end_at,
+      start_at: startAt,
+      end_at: endAt,
     })
 
     const reply_markup = buildConfirmKeyboard(raw.id)
 
-    // 3. Fetch all active staff
     const { data: staffData, error: staffError } = await supabaseAdmin
       .from('allowed_users')
       .select('telegram_chat_id')
@@ -102,7 +116,6 @@ export async function notifyStaffNewBooking(bookingId: string): Promise<void> {
       return
     }
 
-    // 4. Send message to each staff member; collect last successful message_id
     let lastMessageId: number | null = null
 
     for (const member of staffData as Array<{ telegram_chat_id: number }>) {
@@ -131,7 +144,6 @@ export async function notifyStaffNewBooking(bookingId: string): Promise<void> {
       }
     }
 
-    // 5. Persist the last telegram_message_id so the webhook handler can edit it later
     if (lastMessageId !== null) {
       const { error: updateError } = await supabaseAdmin
         .from('bookings')

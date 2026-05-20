@@ -3,11 +3,13 @@
 import { useState, useCallback } from 'react'
 import Button from '@/components/ui/Button'
 
-interface ContactFormData {
+export interface ContactFormData {
   firstName: string
   lastName: string
   phone: string
   email: string
+  comment?: string
+  marketing_consent: boolean
 }
 
 interface FieldErrors {
@@ -15,6 +17,8 @@ interface FieldErrors {
   lastName?: string
   phone?: string
   email?: string
+  comment?: string
+  marketing_consent?: string
 }
 
 interface ContactFormProps {
@@ -42,6 +46,9 @@ function validateData(data: ContactFormData): FieldErrors {
   } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(data.email.trim())) {
     errors.email = 'Введите корректный email'
   }
+  if (!data.marketing_consent) {
+    errors.marketing_consent = 'Необходимо согласие на обработку данных'
+  }
 
   return errors
 }
@@ -50,6 +57,11 @@ const INPUT_BASE =
   'w-full rounded-xl border px-4 py-3 text-sm transition-colors duration-150 bg-white ' +
   'placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-offset-1 ' +
   'focus:ring-[var(--color-rose)] disabled:opacity-50 disabled:cursor-not-allowed'
+
+const TEXTAREA_BASE =
+  'w-full rounded-xl border px-4 py-3 text-sm transition-colors duration-150 bg-white ' +
+  'placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-offset-1 ' +
+  'focus:ring-[var(--color-rose)] disabled:opacity-50 disabled:cursor-not-allowed resize-none'
 
 const INPUT_NORMAL = 'border-gray-200 text-[var(--color-charcoal)]'
 const INPUT_ERROR = 'border-red-400 text-[var(--color-charcoal)]'
@@ -60,24 +72,27 @@ export default function ContactForm({ onSubmit, loading, disabled = false }: Con
     lastName: '',
     phone: '',
     email: '',
+    comment: '',
+    marketing_consent: false,
   })
   const [errors, setErrors] = useState<FieldErrors>({})
   const [touched, setTouched] = useState<Partial<Record<keyof ContactFormData, boolean>>>({})
 
   const handleChange = useCallback(
-    (field: keyof ContactFormData) => (e: React.ChangeEvent<HTMLInputElement>) => {
-      const next = { ...form, [field]: e.target.value }
-      setForm(next)
-      if (touched[field]) {
-        const newErrors = validateData(next)
-        setErrors((prev) => ({ ...prev, [field]: newErrors[field] }))
-      }
-    },
+    (field: keyof Pick<ContactFormData, 'firstName' | 'lastName' | 'phone' | 'email' | 'comment'>) =>
+      (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
+        const next = { ...form, [field]: e.target.value }
+        setForm(next)
+        if (touched[field]) {
+          const newErrors = validateData(next)
+          setErrors((prev) => ({ ...prev, [field]: newErrors[field] }))
+        }
+      },
     [form, touched],
   )
 
   const handleBlur = useCallback(
-    (field: keyof ContactFormData) => () => {
+    (field: keyof Pick<ContactFormData, 'firstName' | 'lastName' | 'phone' | 'email'>) => () => {
       setTouched((prev) => ({ ...prev, [field]: true }))
       const newErrors = validateData(form)
       setErrors((prev) => ({ ...prev, [field]: newErrors[field] }))
@@ -85,11 +100,29 @@ export default function ContactForm({ onSubmit, loading, disabled = false }: Con
     [form],
   )
 
+  const handleConsentChange = useCallback(
+    (e: React.ChangeEvent<HTMLInputElement>) => {
+      const next = { ...form, marketing_consent: e.target.checked }
+      setForm(next)
+      if (touched.marketing_consent) {
+        const newErrors = validateData(next)
+        setErrors((prev) => ({ ...prev, marketing_consent: newErrors.marketing_consent }))
+      }
+    },
+    [form, touched],
+  )
+
   const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault()
     const allErrors = validateData(form)
     setErrors(allErrors)
-    setTouched({ firstName: true, lastName: true, phone: true, email: true })
+    setTouched({
+      firstName: true,
+      lastName: true,
+      phone: true,
+      email: true,
+      marketing_consent: true,
+    })
 
     if (Object.keys(allErrors).length === 0) {
       onSubmit({
@@ -97,6 +130,8 @@ export default function ContactForm({ onSubmit, loading, disabled = false }: Con
         lastName: form.lastName.trim(),
         phone: form.phone.trim(),
         email: form.email.trim(),
+        comment: form.comment?.trim() || undefined,
+        marketing_consent: form.marketing_consent,
       })
     }
   }
@@ -232,6 +267,55 @@ export default function ContactForm({ onSubmit, loading, disabled = false }: Con
           {errors.email && (
             <p id="error-email" role="alert" className="mt-1 text-xs text-red-500">
               {errors.email}
+            </p>
+          )}
+        </div>
+
+        {/* Комментарий (необязательно) */}
+        <div>
+          <label
+            htmlFor="contact-comment"
+            className="mb-1.5 block text-sm font-medium"
+            style={{ color: 'var(--color-charcoal)' }}
+          >
+            Комментарий
+          </label>
+          <textarea
+            id="contact-comment"
+            value={form.comment ?? ''}
+            onChange={handleChange('comment')}
+            disabled={isDisabled}
+            rows={3}
+            placeholder="Комментарий к записи (необязательно)"
+            className={`${TEXTAREA_BASE} ${INPUT_NORMAL}`}
+          />
+        </div>
+
+        {/* Согласие на обработку данных */}
+        <div>
+          <label className="flex cursor-pointer items-start gap-3">
+            <input
+              type="checkbox"
+              id="contact-consent"
+              checked={form.marketing_consent}
+              onChange={handleConsentChange}
+              disabled={isDisabled}
+              aria-invalid={!!errors.marketing_consent}
+              aria-describedby={errors.marketing_consent ? 'error-consent' : undefined}
+              className="mt-0.5 h-4 w-4 shrink-0 cursor-pointer accent-[var(--color-rose)] disabled:cursor-not-allowed"
+            />
+            <span
+              className="text-sm leading-relaxed"
+              style={{ color: 'var(--color-charcoal)' }}
+            >
+              Я согласен(а) с обработкой персональных данных и получением уведомлений
+              о статусе записи на указанный телефон/email
+              <span aria-hidden="true" className="ml-1 text-red-500">*</span>
+            </span>
+          </label>
+          {errors.marketing_consent && (
+            <p id="error-consent" role="alert" className="mt-1 text-xs text-red-500">
+              {errors.marketing_consent}
             </p>
           )}
         </div>

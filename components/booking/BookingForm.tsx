@@ -4,31 +4,38 @@ import { useState, useCallback } from 'react'
 import CitySelector from './CitySelector'
 import DatePicker from './DatePicker'
 import TimePicker from './TimePicker'
+import ServicePicker from './ServicePicker'
 import ContactForm from './ContactForm'
 import BookingSuccess from './BookingSuccess'
 import Button from '@/components/ui/Button'
-import type { SlotDTO, BookingCreatedDTO, CreateBookingRequest } from '@/lib/types'
+import type {
+  ServiceDTO,
+  AvailableStartTime,
+  BookingCreatedDTO,
+  CreateBookingRequest,
+} from '@/lib/types'
+import type { ContactFormData } from './ContactForm'
 
 // ---------------------------------------------------------------------------
 // Types
 // ---------------------------------------------------------------------------
 
-type Step = 'city' | 'datetime' | 'contacts' | 'success'
+type Step = 'city' | 'service' | 'datetime' | 'contacts' | 'success'
 
 const STUDIO_NAMES: Record<'rishon' | 'ashdod', string> = {
   rishon: 'Ришон-ле-Цион',
   ashdod: 'Ашдод',
 }
 
-// Progress bar only covers the first 3 user-facing steps
 const PROGRESS_STEPS: { key: Step; label: string }[] = [
   { key: 'city', label: 'Студия' },
+  { key: 'service', label: 'Услуга' },
   { key: 'datetime', label: 'Дата и время' },
   { key: 'contacts', label: 'Контакты' },
 ]
 
 function getProgressIndex(step: Step): number {
-  if (step === 'success') return 3
+  if (step === 'success') return PROGRESS_STEPS.length
   return PROGRESS_STEPS.findIndex((s) => s.key === step)
 }
 
@@ -40,36 +47,60 @@ export default function BookingForm() {
   const [step, setStep] = useState<Step>('city')
   const [selectedCity, setSelectedCity] = useState<'rishon' | 'ashdod' | null>(null)
   const [selectedDate, setSelectedDate] = useState<string | null>(null)
-  const [selectedSlotId, setSelectedSlotId] = useState<string | null>(null)
-  const [slots, setSlots] = useState<SlotDTO[]>([])
+  const [selectedStartAt, setSelectedStartAt] = useState<string | null>(null)
+  const [selectedService, setSelectedService] = useState<ServiceDTO | null>(null)
+  const [services, setServices] = useState<ServiceDTO[]>([])
+  const [servicesLoading, setServicesLoading] = useState(false)
+  const [availableStartTimes, setAvailableStartTimes] = useState<AvailableStartTime[]>([])
   const [slotsLoading, setSlotsLoading] = useState(false)
   const [bookingLoading, setBookingLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [completedBooking, setCompletedBooking] = useState<BookingCreatedDTO | null>(null)
 
   // -------------------------------------------------------------------------
-  // Fetch slots
+  // Fetch services
   // -------------------------------------------------------------------------
 
-  const fetchSlots = useCallback(async (city: 'rishon' | 'ashdod', date: string) => {
-    setSlotsLoading(true)
+  const fetchServices = useCallback(async (city: 'rishon' | 'ashdod') => {
+    setServicesLoading(true)
     setError(null)
     try {
-      const res = await fetch(
-        `/api/slots?studio_id=${encodeURIComponent(city)}&date=${encodeURIComponent(date)}`,
-      )
-      if (!res.ok) {
-        throw new Error(`HTTP ${res.status}`)
-      }
-      const json = (await res.json()) as { slots: SlotDTO[] }
-      setSlots(json.slots)
+      const res = await fetch(`/api/services?studio_id=${encodeURIComponent(city)}`)
+      if (!res.ok) throw new Error(`HTTP ${res.status}`)
+      const json = (await res.json()) as { services: ServiceDTO[] }
+      setServices(json.services ?? [])
     } catch {
-      setError('Произошла ошибка при загрузке слотов. Попробуйте ещё раз.')
-      setSlots([])
+      setError('Произошла ошибка при загрузке услуг. Попробуйте ещё раз.')
+      setServices([])
     } finally {
-      setSlotsLoading(false)
+      setServicesLoading(false)
     }
   }, [])
+
+  // -------------------------------------------------------------------------
+  // Fetch available start times
+  // -------------------------------------------------------------------------
+
+  const fetchAvailableSlots = useCallback(
+    async (city: string, date: string, serviceId: string) => {
+      setSlotsLoading(true)
+      setError(null)
+      try {
+        const res = await fetch(
+          `/api/slots?studio_id=${encodeURIComponent(city)}&date=${encodeURIComponent(date)}&service_id=${encodeURIComponent(serviceId)}`,
+        )
+        if (!res.ok) throw new Error(`HTTP ${res.status}`)
+        const json = (await res.json()) as { available_start_times: AvailableStartTime[] }
+        setAvailableStartTimes(json.available_start_times ?? [])
+      } catch {
+        setError('Произошла ошибка при загрузке доступного времени. Попробуйте ещё раз.')
+        setAvailableStartTimes([])
+      } finally {
+        setSlotsLoading(false)
+      }
+    },
+    [],
+  )
 
   // -------------------------------------------------------------------------
   // Handlers
@@ -78,28 +109,38 @@ export default function BookingForm() {
   const handleCitySelect = useCallback(
     (city: 'rishon' | 'ashdod') => {
       setSelectedCity(city)
+      setSelectedService(null)
       setSelectedDate(null)
-      setSelectedSlotId(null)
-      setSlots([])
+      setSelectedStartAt(null)
+      setServices([])
+      setAvailableStartTimes([])
       setError(null)
-      setStep('datetime')
+      fetchServices(city)
+      setStep('service')
     },
-    [],
+    [fetchServices],
   )
+
+  const handleServiceChange = useCallback((id: string, svc: ServiceDTO) => {
+    setSelectedService(svc)
+    setSelectedStartAt(null)
+    setAvailableStartTimes([])
+    setStep('datetime')
+  }, [])
 
   const handleDateChange = useCallback(
     (date: string) => {
       setSelectedDate(date)
-      setSelectedSlotId(null)
-      if (selectedCity) {
-        fetchSlots(selectedCity, date)
+      setSelectedStartAt(null)
+      if (selectedCity && selectedService) {
+        fetchAvailableSlots(selectedCity, date, selectedService.id)
       }
     },
-    [selectedCity, fetchSlots],
+    [selectedCity, selectedService, fetchAvailableSlots],
   )
 
-  const handleSlotChange = useCallback((slotId: string) => {
-    setSelectedSlotId(slotId)
+  const handleStartAtChange = useCallback((startAt: string) => {
+    setSelectedStartAt(startAt)
     setError(null)
   }, [])
 
@@ -114,24 +155,22 @@ export default function BookingForm() {
   }, [])
 
   const handleContactSubmit = useCallback(
-    async (data: {
-      firstName: string
-      lastName: string
-      phone: string
-      email: string
-    }) => {
-      if (!selectedCity || !selectedSlotId) return
+    async (data: ContactFormData) => {
+      if (!selectedCity || !selectedService || !selectedStartAt) return
 
       setBookingLoading(true)
       setError(null)
 
       const payload: CreateBookingRequest = {
-        slot_id: selectedSlotId,
         studio_id: selectedCity,
+        service_id: selectedService.id,
+        start_at: selectedStartAt,
         client_first_name: data.firstName,
         client_last_name: data.lastName,
         client_phone: data.phone,
         client_email: data.email,
+        comment: data.comment || undefined,
+        marketing_consent: data.marketing_consent,
       }
 
       try {
@@ -144,14 +183,11 @@ export default function BookingForm() {
         if (res.status === 409) {
           const json = (await res.json()) as { error: { code: string } }
           if (json.error?.code === 'SLOT_UNAVAILABLE') {
-            setError(
-              'К сожалению, этот слот уже занят. Пожалуйста, выберите другое время.',
-            )
+            setError('К сожалению, это время уже занято. Пожалуйста, выберите другое время.')
             setStep('datetime')
-            setSelectedSlotId(null)
-            // Refresh slots for current city/date
-            if (selectedCity && selectedDate) {
-              fetchSlots(selectedCity, selectedDate)
+            setSelectedStartAt(null)
+            if (selectedCity && selectedDate && selectedService) {
+              fetchAvailableSlots(selectedCity, selectedDate, selectedService.id)
             }
             return
           }
@@ -166,18 +202,20 @@ export default function BookingForm() {
 
         // GTM/GA4 conversion event
         if (typeof window !== 'undefined') {
-          if ((window as any).dataLayer) {
-            ;(window as any).dataLayer.push({
+          const winWithDL = window as unknown as { dataLayer?: unknown[] }
+          if (winWithDL.dataLayer) {
+            winWithDL.dataLayer.push({
               event: 'booking_completed',
               studio_id: selectedCity,
-              slot_id: selectedSlotId,
+              service_id: selectedService.id,
               value: 1,
               currency: 'ILS',
             })
           }
           // Google Ads conversion (fires only when gtag is loaded directly without GTM)
-          if (typeof (window as any).gtag === 'function' && process.env.NEXT_PUBLIC_GOOGLE_ADS_CONVERSION_ID) {
-            ;(window as any).gtag('event', 'conversion', {
+          const w = window as { gtag?: (...args: unknown[]) => void }
+          if (typeof w.gtag === 'function' && process.env.NEXT_PUBLIC_GOOGLE_ADS_CONVERSION_ID) {
+            w.gtag('event', 'conversion', {
               send_to: process.env.NEXT_PUBLIC_GOOGLE_ADS_CONVERSION_ID,
             })
           }
@@ -190,15 +228,17 @@ export default function BookingForm() {
         setBookingLoading(false)
       }
     },
-    [selectedCity, selectedSlotId, selectedDate, fetchSlots],
+    [selectedCity, selectedService, selectedStartAt, selectedDate, fetchAvailableSlots],
   )
 
   const handleReset = useCallback(() => {
     setStep('city')
     setSelectedCity(null)
     setSelectedDate(null)
-    setSelectedSlotId(null)
-    setSlots([])
+    setSelectedStartAt(null)
+    setSelectedService(null)
+    setServices([])
+    setAvailableStartTimes([])
     setError(null)
     setCompletedBooking(null)
   }, [])
@@ -224,9 +264,7 @@ export default function BookingForm() {
                   <div
                     className={[
                       'h-1.5 w-full rounded-full transition-all duration-300',
-                      isDone || isCurrent
-                        ? 'bg-[var(--color-rose)]'
-                        : 'bg-gray-200',
+                      isDone || isCurrent ? 'bg-[var(--color-rose)]' : 'bg-gray-200',
                     ].join(' ')}
                     aria-hidden="true"
                   />
@@ -236,8 +274,8 @@ export default function BookingForm() {
                       isCurrent
                         ? 'text-[var(--color-rose)]'
                         : isDone
-                        ? 'text-[var(--color-charcoal)] opacity-70'
-                        : 'text-gray-400',
+                          ? 'text-[var(--color-charcoal)] opacity-70'
+                          : 'text-gray-400',
                     ].join(' ')}
                     aria-current={isCurrent ? 'step' : undefined}
                   >
@@ -260,7 +298,7 @@ export default function BookingForm() {
         </div>
       )}
 
-      {/* Steps */}
+      {/* Step: city */}
       {step === 'city' && (
         <section aria-labelledby="step-city-heading">
           <h3
@@ -274,15 +312,53 @@ export default function BookingForm() {
         </section>
       )}
 
-      {step === 'datetime' && (
-        <section aria-labelledby="step-datetime-heading">
+      {/* Step: service */}
+      {step === 'service' && (
+        <section aria-labelledby="step-service-heading">
           <h3
-            id="step-datetime-heading"
+            id="step-service-heading"
             className="mb-4 text-base font-semibold"
             style={{ color: 'var(--color-charcoal)' }}
           >
-            Выберите дату
+            Выберите услугу
           </h3>
+          <ServicePicker
+            services={services}
+            value={selectedService?.id ?? null}
+            onChange={handleServiceChange}
+            loading={servicesLoading}
+          />
+          <div className="mt-6">
+            <Button
+              variant="ghost"
+              size="md"
+              onClick={() => {
+                setError(null)
+                setStep('city')
+              }}
+            >
+              Назад
+            </Button>
+          </div>
+        </section>
+      )}
+
+      {/* Step: datetime */}
+      {step === 'datetime' && selectedService && (
+        <section aria-labelledby="step-datetime-heading">
+          <h3
+            id="step-datetime-heading"
+            className="mb-1 text-base font-semibold"
+            style={{ color: 'var(--color-charcoal)' }}
+          >
+            Дата и время
+          </h3>
+          <p
+            className="mb-4 text-sm"
+            style={{ color: 'var(--color-charcoal)', opacity: 0.6 }}
+          >
+            {selectedService.name}
+          </p>
           <DatePicker
             value={selectedDate}
             onChange={handleDateChange}
@@ -298,9 +374,9 @@ export default function BookingForm() {
                 Выберите время
               </h3>
               <TimePicker
-                slots={slots}
-                value={selectedSlotId}
-                onChange={handleSlotChange}
+                startTimes={availableStartTimes}
+                value={selectedStartAt}
+                onChange={handleStartAtChange}
                 loading={slotsLoading}
               />
             </div>
@@ -311,13 +387,13 @@ export default function BookingForm() {
               variant="ghost"
               size="md"
               onClick={() => {
-                setStep('city')
                 setError(null)
+                setStep('service')
               }}
             >
               Назад
             </Button>
-            {selectedSlotId && (
+            {selectedStartAt && (
               <Button
                 variant="primary"
                 size="md"
@@ -331,6 +407,7 @@ export default function BookingForm() {
         </section>
       )}
 
+      {/* Step: contacts */}
       {step === 'contacts' && (
         <section aria-labelledby="step-contacts-heading">
           <h3
@@ -357,6 +434,7 @@ export default function BookingForm() {
         </section>
       )}
 
+      {/* Step: success */}
       {step === 'success' && completedBooking && selectedCity && (
         <BookingSuccess
           booking={completedBooking}

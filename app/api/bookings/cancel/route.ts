@@ -2,17 +2,16 @@ import { NextRequest, NextResponse } from 'next/server'
 import { supabaseAdmin } from '@/lib/supabase'
 import { deleteCalendarEvent } from '@/lib/google-calendar'
 import { notifyAllStaffCancellation } from '@/lib/telegram'
+import { sendWhatsAppMessage } from '@/lib/whatsapp'
 import { BookingStatus } from '@/lib/types'
 import type { ApiError, CancelBookingResponse } from '@/lib/types'
 
 const LOG_PREFIX = '[api/bookings/cancel]'
 
-// ---------------------------------------------------------------------------
-// POST /api/bookings/cancel
-// ---------------------------------------------------------------------------
+const TZ = 'Asia/Jerusalem'
 
+// POST /api/bookings/cancel
 export async function POST(request: NextRequest): Promise<NextResponse> {
-  // 1. Parse body
   let body: unknown
   try {
     body = await request.json()
@@ -39,24 +38,20 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
     )
   }
 
-  // 2. Find booking by cancellation token (join slot and studio for notification message)
   const { data: bookingData, error: fetchError } = await supabaseAdmin
     .from('bookings')
     .select(
       `
       id,
-      slot_id,
       studio_id,
       client_first_name,
       client_last_name,
+      client_phone,
       status,
       google_calendar_event_id,
-      slot:slots!bookings_slot_id_fkey (
-        start_at,
-        end_at
-      ),
-      studio:studios!bookings_studio_id_fkey (
-        name
+      studio:studios!bookings_studio_id_fkey (name),
+      booking_slots (
+        slot:slots!booking_slots_slot_id_fkey (start_at)
       )
     `,
     )
@@ -73,7 +68,6 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
     )
   }
 
-  // 3. Not found
   if (!bookingData) {
     return NextResponse.json<ApiError>(
       { error: { code: 'BOOKING_NOT_FOUND', message: 'Booking not found.' } },
@@ -83,17 +77,16 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
 
   const raw = bookingData as unknown as {
     id: string
-    slot_id: string
     studio_id: string
     client_first_name: string
     client_last_name: string
+    client_phone: string
     status: string
     google_calendar_event_id: string | null
-    slot: { start_at: string; end_at: string } | null
     studio: { name: string } | null
+    booking_slots: Array<{ slot: { start_at: string } | null }>
   }
 
-  // 4. Already cancelled
   if (raw.status === 'CANCELLED') {
     return NextResponse.json<ApiError>(
       { error: { code: 'ALREADY_CANCELLED', message: 'This booking has already been cancelled.' } },
@@ -101,7 +94,6 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
     )
   }
 
-  // 5. Delete Google Calendar event if one was created
   if (raw.google_calendar_event_id) {
     try {
       await deleteCalendarEvent({
@@ -114,12 +106,10 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
         event_id: raw.google_calendar_event_id,
         error: calendarErr,
       })
-      // Do not abort the cancellation — the booking must still be cancelled
-      // even if the calendar event deletion fails.
+      // Cancellation must proceed even if the calendar event deletion fails
     }
   }
 
-  // 6. Mark booking as CANCELLED
   const cancelledAt = new Date().toISOString()
 
   const { error: cancelError } = await supabaseAdmin
@@ -138,27 +128,30 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
     )
   }
 
-  // 7. Free up the slot
-  const { error: slotError } = await supabaseAdmin
-    .from('slots')
-    .update({ status: 'available' })
-    .eq('id', raw.slot_id)
+  // Release all atomic slots back to 'available'
+  const { error: releaseError } = await supabaseAdmin.client.rpc('release_booking_slots', {
+    p_booking_id: raw.id,
+  })
 
-  if (slotError) {
-    console.error(`${LOG_PREFIX} Failed to restore slot to available`, {
+  if (releaseError) {
+    console.error(`${LOG_PREFIX} RPC error release_booking_slots`, {
       booking_id: raw.id,
-      slot_id: raw.slot_id,
-      error: slotError,
+      error: releaseError,
     })
-    // Non-critical: slot will remain 'booked' but the unique index prevents
-    // double-booking. Log for manual reconciliation and continue.
+    // Non-critical: slots will remain booked but no new booking can reference them
+    // after the booking record is CANCELLED. Log for manual reconciliation.
   }
 
-  // 8. Notify staff via Telegram (fire-and-forget)
-  const tz = 'Asia/Jerusalem'
+  const slotRows = raw.booking_slots ?? []
+  const startAts = slotRows
+    .map((bs) => bs.slot?.start_at)
+    .filter((s): s is string => typeof s === 'string')
+    .sort()
+
+  const startAt = startAts[0] ?? null
 
   const dateTimeFormatter = new Intl.DateTimeFormat('ru-IL', {
-    timeZone: tz,
+    timeZone: TZ,
     day: 'numeric',
     month: 'long',
     year: 'numeric',
@@ -166,26 +159,39 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
     minute: '2-digit',
   })
 
-  const startFormatted =
-    raw.slot ? dateTimeFormatter.format(new Date(raw.slot.start_at)) : 'неизвестно'
+  const startFormatted = startAt
+    ? dateTimeFormatter.format(new Date(startAt))
+    : 'неизвестно'
 
   const studioName = raw.studio?.name ?? raw.studio_id
   const clientName = `${raw.client_first_name} ${raw.client_last_name}`
 
-  const cancellationMessage =
+  const telegramMessage =
     `⚠️ Запись отменена клиентом!\n\n` +
     `👤 ${clientName}\n` +
     `📅 ${startFormatted}\n` +
     `🏢 ${studioName}`
 
-  notifyAllStaffCancellation(cancellationMessage).catch((err: unknown) =>
+  notifyAllStaffCancellation(telegramMessage).catch((err: unknown) =>
     console.error(`${LOG_PREFIX} Failed to notify staff of cancellation`, {
       booking_id: raw.id,
       error: err,
     }),
   )
 
-  // 9. Return response
+  const whatsAppMessage =
+    `⚠️ Ваша запись отменена.\n` +
+    `Клиент: ${clientName}\n` +
+    `Дата: ${startFormatted}\n` +
+    `Студия: ${studioName}`
+
+  sendWhatsAppMessage({ to: raw.client_phone, body: whatsAppMessage }).catch((err: unknown) =>
+    console.error(`${LOG_PREFIX} WhatsApp notification failed`, {
+      booking_id: raw.id,
+      error: err,
+    }),
+  )
+
   return NextResponse.json<CancelBookingResponse>({
     message: 'Бронирование отменено',
     booking: {

@@ -175,7 +175,7 @@ export default async function CancelPage({
   // Find booking by cancellation token
   const { data: booking, error: fetchError } = await supabaseAdmin
     .from('bookings')
-    .select('id, status, client_first_name, studio_id, slot_id')
+    .select('id, status, client_first_name, studio_id')
     .eq('cancellation_token', token)
     .single()
 
@@ -188,7 +188,6 @@ export default async function CancelPage({
     status: BookingStatus
     client_first_name: string
     studio_id: string
-    slot_id: string
   }
 
   if (typedBooking.status === BookingStatus.Cancelled) {

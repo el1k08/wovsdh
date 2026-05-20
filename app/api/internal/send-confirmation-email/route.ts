@@ -5,23 +5,18 @@ import { BookingStatus } from '@/lib/types'
 
 const LOG_PREFIX = '[api/internal/send-confirmation-email]'
 
-// ---------------------------------------------------------------------------
 // POST /api/internal/send-confirmation-email
 // Internal endpoint — called from confirm-booking after Google Calendar event
 // creation. Protected by X-Internal-Secret header.
 //
 // Request body: { booking_id: string }
-// ---------------------------------------------------------------------------
-
 export async function POST(request: NextRequest): Promise<NextResponse> {
-  // 1. Verify internal secret
   const internalSecret = request.headers.get('X-Internal-Secret')
   if (internalSecret !== process.env.ADMIN_SECRET_KEY) {
     console.error(`${LOG_PREFIX} Unauthorized request — invalid internal secret`)
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
   }
 
-  // 2. Parse body
   let body: unknown
   try {
     body = await request.json()
@@ -39,7 +34,6 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
     return NextResponse.json({ error: "'booking_id' is required." }, { status: 400 })
   }
 
-  // 3. Fetch booking with slot and studio data
   const { data: bookingData, error: fetchError } = await supabaseAdmin
     .from('bookings')
     .select(
@@ -49,12 +43,10 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
       client_first_name,
       client_email,
       cancellation_token,
-      slot:slots!bookings_slot_id_fkey (
-        start_at,
-        end_at
-      ),
-      studio:studios!bookings_studio_id_fkey (
-        name
+      service_snapshot,
+      studio:studios!bookings_studio_id_fkey (name),
+      booking_slots (
+        slot:slots!booking_slots_slot_id_fkey (start_at)
       )
     `,
     )
@@ -62,10 +54,7 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
     .maybeSingle()
 
   if (fetchError) {
-    console.error(`${LOG_PREFIX} DB error fetching booking`, {
-      booking_id,
-      error: fetchError,
-    })
+    console.error(`${LOG_PREFIX} DB error fetching booking`, { booking_id, error: fetchError })
     return NextResponse.json({ error: 'Failed to fetch booking.' }, { status: 500 })
   }
 
@@ -79,11 +68,11 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
     client_first_name: string
     client_email: string
     cancellation_token: string
-    slot: { start_at: string; end_at: string } | null
+    service_snapshot: Record<string, unknown>
     studio: { name: string } | null
+    booking_slots: Array<{ slot: { start_at: string } | null }>
   }
 
-  // 4. Guard: must be CONFIRMED
   if (raw.status !== BookingStatus.Confirmed) {
     return NextResponse.json(
       { error: `Booking is not in CONFIRMED state (current: ${raw.status}).` },
@@ -91,25 +80,40 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
     )
   }
 
-  if (!raw.slot || !raw.studio) {
-    console.error(`${LOG_PREFIX} Booking has no linked slot or studio`, { booking_id })
+  if (!raw.studio) {
+    console.error(`${LOG_PREFIX} Booking has no linked studio`, { booking_id })
     return NextResponse.json({ error: 'Booking data incomplete.' }, { status: 500 })
   }
 
-  // 5. Send confirmation email
+  const slotRows = raw.booking_slots ?? []
+  const startAts = slotRows
+    .map((bs) => bs.slot?.start_at)
+    .filter((s): s is string => typeof s === 'string')
+    .sort()
+
+  const startAt = startAts[0] ?? null
+
+  if (!startAt) {
+    console.error(`${LOG_PREFIX} Booking has no linked slots`, { booking_id })
+    return NextResponse.json({ error: 'Booking data incomplete.' }, { status: 500 })
+  }
+
+  const snapshot = raw.service_snapshot
+  const durationMs = (snapshot.duration_minutes as number) * 60 * 1000
+  const endAt = new Date(new Date(startAt).getTime() + durationMs).toISOString()
+
   try {
     await sendBookingConfirmation({
       to: raw.client_email,
       clientName: raw.client_first_name,
       studioName: raw.studio.name,
-      startAt: raw.slot.start_at,
-      endAt: raw.slot.end_at,
+      startAt,
+      endAt,
       cancellationToken: raw.cancellation_token,
       bookingId: raw.id,
     })
   } catch (emailErr) {
     // Error is already logged and persisted to email_logs inside sendBookingConfirmation.
-    // We still return an error status so callers can retry or alert.
     console.error(`${LOG_PREFIX} Email send failed`, { booking_id })
     return NextResponse.json({ error: 'Failed to send confirmation email.' }, { status: 500 })
   }

@@ -1,11 +1,11 @@
 'use client'
 
-import type { SlotDTO } from '@/lib/types'
+import type { AvailableStartTime } from '@/lib/types'
 
 interface TimePickerProps {
-  slots: SlotDTO[]
-  value: string | null
-  onChange: (slotId: string) => void
+  startTimes: AvailableStartTime[]
+  value: string | null       // ISO UTC string of selected start_at
+  onChange: (startAt: string) => void
   loading: boolean
   disabled?: boolean
 }
@@ -23,7 +23,7 @@ function SkeletonBlock() {
 }
 
 export default function TimePicker({
-  slots,
+  startTimes,
   value,
   onChange,
   loading,
@@ -44,7 +44,7 @@ export default function TimePicker({
     )
   }
 
-  if (slots.length === 0) {
+  if (startTimes.length === 0) {
     return (
       <p className="text-sm py-2" style={{ color: 'var(--color-charcoal)', opacity: 0.6 }}>
         На выбранную дату свободных окон нет
@@ -58,15 +58,15 @@ export default function TimePicker({
       aria-label="Выберите время"
       className="flex flex-wrap gap-3 pt-1"
     >
-      {slots.map((slot) => {
-        const isSelected = value === slot.id
-        const timeLabel = TIME_FORMATTER.format(new Date(slot.start_at))
+      {startTimes.map((item) => {
+        const isSelected = value === item.start_at
+        const timeLabel = TIME_FORMATTER.format(new Date(item.start_at))
 
         return (
           <button
-            key={slot.id}
+            key={item.start_at}
             type="button"
-            onClick={() => !disabled && onChange(slot.id)}
+            onClick={() => !disabled && onChange(item.start_at)}
             disabled={disabled}
             aria-pressed={isSelected}
             aria-label={`Время ${timeLabel}`}
