@@ -170,10 +170,25 @@ export default function BookingForm() {
       setBookingLoading(true)
       setError(null)
 
-      // Resolve the client ID: use the one from the lookup, or create a new client record
+      // Resolve the client ID: update existing client or create a new one
       let resolvedClientId: string | undefined = data.existingClientId
 
-      if (!resolvedClientId) {
+      if (resolvedClientId) {
+        try {
+          await fetch(`/api/clients/${resolvedClientId}`, {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              firstName: data.firstName,
+              lastName: data.lastName,
+              email: data.email || undefined,
+              consent: true,
+            }),
+          })
+        } catch {
+          // Network error — proceed with existing resolvedClientId, booking still works
+        }
+      } else {
         try {
           const clientRes = await fetch('/api/clients', {
             method: 'POST',
@@ -191,8 +206,6 @@ export default function BookingForm() {
             const clientJson = (await clientRes.json()) as { client: Client }
             resolvedClientId = clientJson.client.id
           }
-          // If client creation fails (e.g. race condition with PHONE_ALREADY_EXISTS),
-          // proceed without client_id — booking will still succeed.
         } catch {
           // Network error during client creation — proceed without client_id
         }

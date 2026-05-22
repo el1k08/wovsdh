@@ -1,7 +1,6 @@
 'use client'
 
 import { useState, useCallback, useRef } from 'react'
-import { Pencil } from 'lucide-react'
 import Button from '@/components/ui/Button'
 import { normalizePhone } from '@/lib/phone-utils'
 import type { ClientLookupResponse } from '@/lib/types'
@@ -36,13 +35,6 @@ export interface ContactFormProps {
     phone?: string
     existingClientId?: string
   }
-}
-
-interface FoundClient {
-  firstName: string
-  lastName: string
-  email?: string
-  phone: string
 }
 
 function validateData(data: ContactFormData): FieldErrors {
@@ -105,10 +97,6 @@ export default function ContactForm({ onSubmit, loading, disabled = false, prefi
   const [lookupState, setLookupState] = useState<LookupState>('idle')
   // Secondary fields are revealed after the first completed phone lookup
   const [fieldsRevealed, setFieldsRevealed] = useState<boolean>(!!prefillData?.phone)
-  // Stores the found client's display data for the info card
-  const [foundClient, setFoundClient] = useState<FoundClient | null>(null)
-  // When true, show the full edit form instead of the client card
-  const [isEditMode, setIsEditMode] = useState(false)
 
   // Tracks the last phone that was successfully looked up so we don't re-fetch on re-blur
   const lastLookedUpPhone = useRef<string>('')
@@ -137,33 +125,9 @@ export default function ContactForm({ onSubmit, loading, disabled = false, prefi
       if (lookup.found) {
         setLookupState('found')
         lookedUpClientId.current = lookup.client.id
-        setFoundClient({
-          firstName: lookup.client.firstName,
-          lastName: lookup.client.lastName,
-          email: lookup.client.email,
-          phone: normalized,
-        })
-        setIsEditMode(false)
-        setForm((prev) => ({
-          ...prev,
-          firstName: lookup.client.firstName,
-          lastName: lookup.client.lastName,
-          email: lookup.client.email ?? prev.email,
-        }))
-        // Clear validation errors on pre-filled fields
-        setErrors((prev) => ({ ...prev, firstName: undefined, lastName: undefined, email: undefined }))
       } else {
         setLookupState('not-found')
         lookedUpClientId.current = undefined
-        setFoundClient(null)
-        setIsEditMode(false)
-        // Clear pre-filled data from a prior successful lookup when a different phone is entered
-        setForm((prev) => ({
-          ...prev,
-          firstName: '',
-          lastName: '',
-          email: '',
-        }))
       }
       setFieldsRevealed(true)
     } catch {
@@ -258,9 +222,6 @@ export default function ContactForm({ onSubmit, loading, disabled = false, prefi
 
   const isDisabled = loading || disabled
 
-  // True when a client was found and the user has not entered edit mode
-  const showClientCard = !!lookedUpClientId.current && !!foundClient && !isEditMode
-
   return (
     <form onSubmit={handleSubmit} noValidate aria-label="Контактные данные">
       <div className="flex flex-col gap-5">
@@ -325,6 +286,10 @@ export default function ContactForm({ onSubmit, loading, disabled = false, prefi
             <p className="mt-1 text-xs" style={{ color: 'var(--color-charcoal)', opacity: 0.55 }}>
               Новый клиент
             </p>
+          ) : lookupState === 'found' ? (
+            <p className="mt-1 text-xs" style={{ color: 'var(--color-charcoal)', opacity: 0.55 }}>
+              Клиент найден — данные будут обновлены
+            </p>
           ) : (
             <p
               id="hint-phone"
@@ -346,104 +311,7 @@ export default function ContactForm({ onSubmit, loading, disabled = false, prefi
               : 'max-h-0 opacity-0 pointer-events-none',
           ].join(' ')}
         >
-          {showClientCard ? (
-            /* ── Case A: existing client card ── */
-            <>
-              {/* Client info card */}
-              <div className="relative rounded-xl border border-gray-200 bg-gray-50 px-4 py-3">
-                <button
-                  type="button"
-                  onClick={() => setIsEditMode(true)}
-                  disabled={isDisabled}
-                  aria-label="Редактировать данные клиента"
-                  className="absolute right-3 top-3 rounded p-0.5 text-gray-400 transition-colors hover:text-[var(--color-rose)] focus:outline-none focus:ring-2 focus:ring-[var(--color-rose)] focus:ring-offset-1 disabled:cursor-not-allowed disabled:opacity-50"
-                >
-                  <Pencil size={16} aria-hidden="true" />
-                </button>
-                <p
-                  className="pr-7 text-sm font-semibold leading-snug"
-                  style={{ color: 'var(--color-charcoal)' }}
-                >
-                  {foundClient.firstName} {foundClient.lastName}
-                </p>
-                {foundClient.email && (
-                  <p
-                    className="mt-0.5 text-sm"
-                    style={{ color: 'var(--color-charcoal)', opacity: 0.7 }}
-                  >
-                    {foundClient.email}
-                  </p>
-                )}
-                <p
-                  className="mt-0.5 text-sm"
-                  style={{ color: 'var(--color-charcoal)', opacity: 0.7 }}
-                >
-                  {foundClient.phone}
-                </p>
-              </div>
-
-              {/* Comment */}
-              <div>
-                <label
-                  htmlFor="contact-comment"
-                  className="mb-1.5 block text-sm font-medium"
-                  style={{ color: 'var(--color-charcoal)' }}
-                >
-                  Комментарий
-                </label>
-                <textarea
-                  id="contact-comment"
-                  value={form.comment ?? ''}
-                  onChange={handleChange('comment')}
-                  disabled={isDisabled}
-                  rows={3}
-                  placeholder="Комментарий к записи (необязательно)"
-                  className={`${TEXTAREA_BASE} ${INPUT_NORMAL}`}
-                />
-              </div>
-
-              {/* Consent */}
-              <div>
-                <label className="flex cursor-pointer items-start gap-3">
-                  <input
-                    type="checkbox"
-                    id="contact-consent"
-                    checked={form.marketing_consent}
-                    onChange={handleConsentChange}
-                    disabled={isDisabled}
-                    aria-invalid={!!errors.marketing_consent}
-                    aria-describedby={errors.marketing_consent ? 'error-consent' : undefined}
-                    className="mt-0.5 h-4 w-4 shrink-0 cursor-pointer accent-[var(--color-rose)] disabled:cursor-not-allowed"
-                  />
-                  <span
-                    className="text-sm leading-relaxed"
-                    style={{ color: 'var(--color-charcoal)' }}
-                  >
-                    Я согласен(а) с обработкой персональных данных и получением уведомлений
-                    о статусе записи на указанный телефон/email
-                    <span aria-hidden="true" className="ml-1 text-red-500">*</span>
-                  </span>
-                </label>
-                {errors.marketing_consent && (
-                  <p id="error-consent" role="alert" className="mt-1 text-xs text-red-500">
-                    {errors.marketing_consent}
-                  </p>
-                )}
-              </div>
-
-              <Button
-                type="submit"
-                variant="primary"
-                size="lg"
-                disabled={isDisabled}
-                className="mt-2 w-full"
-              >
-                {loading ? 'Бронирование...' : 'Забронировать'}
-              </Button>
-            </>
-          ) : (
-            /* ── Case B: new client or edit mode — full form ── */
-            <>
+          <>
               {/* Имя */}
               <div>
                 <label
@@ -595,7 +463,6 @@ export default function ContactForm({ onSubmit, loading, disabled = false, prefi
                 {loading ? 'Бронирование...' : 'Забронировать'}
               </Button>
             </>
-          )}
         </div>
       </div>
     </form>
