@@ -67,7 +67,7 @@ async function handleCallbackQuery(update: TelegramUpdate): Promise<void> {
   if (!allowed) {
     await answerCallbackQuery({
       callback_query_id: callbackQueryId,
-      text: '⛔ У вас нет прав',
+      text: '⛔ У вас немає прав',
       show_alert: true,
     })
     return
@@ -87,7 +87,7 @@ async function handleCallbackQuery(update: TelegramUpdate): Promise<void> {
     console.error(`${LOG_PREFIX} Invalid booking UUID in callback_data`, { data })
     await answerCallbackQuery({
       callback_query_id: callbackQueryId,
-      text: 'Некорректный идентификатор заявки',
+      text: 'Некоректний ідентифікатор запису',
       show_alert: true,
     })
     return
@@ -126,7 +126,7 @@ async function handleConfirmAction(params: {
     })
     await answerCallbackQuery({
       callback_query_id: callbackQueryId,
-      text: 'Ошибка при обработке заявки',
+      text: 'Помилка при обробці запису',
       show_alert: true,
     })
     return
@@ -135,7 +135,7 @@ async function handleConfirmAction(params: {
   if (!bookingData) {
     await answerCallbackQuery({
       callback_query_id: callbackQueryId,
-      text: 'Заявка не найдена',
+      text: 'Запис не знайдено',
       show_alert: true,
     })
     return
@@ -153,7 +153,7 @@ async function handleConfirmAction(params: {
   if (booking.status !== 'PENDING') {
     await answerCallbackQuery({
       callback_query_id: callbackQueryId,
-      text: 'Заявка уже обработана',
+      text: 'Запис вже оброблено',
       show_alert: true,
     })
     return
@@ -172,7 +172,7 @@ async function handleConfirmAction(params: {
     })
     await answerCallbackQuery({
       callback_query_id: callbackQueryId,
-      text: 'Ошибка при подтверждении заявки',
+      text: 'Помилка при підтвердженні запису',
       show_alert: true,
     })
     return
@@ -181,9 +181,9 @@ async function handleConfirmAction(params: {
   // d. Edit the Telegram message: remove buttons, show confirmation
   const staffName = from.first_name ?? from.username ?? String(from.id)
   const confirmedText =
-    `✅ <b>Заявка подтверждена!</b>\n\n` +
-    `👤 <b>Клиент:</b> ${booking.client_first_name} ${booking.client_last_name}\n` +
-    `✅ <b>Подтверждено:</b> ${staffName}`
+    `✅ <b>Запис підтверджено!</b>\n\n` +
+    `👤 <b>Клієнт:</b> ${booking.client_first_name} ${booking.client_last_name}\n` +
+    `✅ <b>Підтверджено:</b> ${staffName}`
 
   try {
     await editMessageText({
@@ -203,7 +203,7 @@ async function handleConfirmAction(params: {
   // e. Acknowledge the callback (removes the loading spinner)
   await answerCallbackQuery({
     callback_query_id: callbackQueryId,
-    text: '✅ Заявка подтверждена!',
+    text: '✅ Запис підтверджено!',
   })
 
   // f. Trigger Google Calendar event creation (fire-and-forget)
@@ -244,7 +244,7 @@ async function handleMessage(update: TelegramUpdate): Promise<void> {
     case '/start':
       await sendMessage({
         chat_id: chatId,
-        text: 'Привет! Я бот для управления записями. Используйте /help для списка команд.',
+        text: 'Вітаємо! Я бот для управління записами. Використовуйте /help для списку команд.',
       })
       break
 
@@ -252,11 +252,11 @@ async function handleMessage(update: TelegramUpdate): Promise<void> {
       await sendMessage({
         chat_id: chatId,
         text:
-          '<b>Доступные команды:</b>\n\n' +
-          '/start — приветствие\n' +
+          '<b>Доступні команди:</b>\n\n' +
+          '/start — вітання\n' +
           '/help — список команд\n' +
-          '/adduser {telegram_id} {Имя} — добавить сотрудника\n' +
-          '/removeuser {telegram_id} — деактивировать сотрудника',
+          '/adduser {telegram_id} {Ім\'я} — додати співробітника\n' +
+          '/removeuser {telegram_id} — деактивувати співробітника',
         parse_mode: 'HTML',
       })
       break
@@ -284,21 +284,21 @@ async function handleAddUser(params: { chatId: number; args: string[] }): Promis
 
   const allowed = await isAllowedUser(chatId)
   if (!allowed) {
-    await sendMessage({ chat_id: chatId, text: '⛔ У вас нет прав для этой команды.' })
+    await sendMessage({ chat_id: chatId, text: '⛔ У вас немає прав для цієї команди.' })
     return
   }
 
   if (args.length < 2) {
     await sendMessage({
       chat_id: chatId,
-      text: 'Использование: /adduser {telegram_id} {Имя}',
+      text: 'Використання: /adduser {telegram_id} {Ім\'я}',
     })
     return
   }
 
   const newTelegramId = Number(args[0])
   if (!Number.isInteger(newTelegramId) || newTelegramId <= 0) {
-    await sendMessage({ chat_id: chatId, text: 'Некорректный telegram_id.' })
+    await sendMessage({ chat_id: chatId, text: 'Некоректний telegram_id.' })
     return
   }
 
@@ -314,13 +314,13 @@ async function handleAddUser(params: { chatId: number; args: string[] }): Promis
 
   if (error) {
     console.error('[api/telegram/webhook] /adduser DB error', { error })
-    await sendMessage({ chat_id: chatId, text: 'Ошибка при добавлении пользователя.' })
+    await sendMessage({ chat_id: chatId, text: 'Помилка при додаванні користувача.' })
     return
   }
 
   await sendMessage({
     chat_id: chatId,
-    text: `✅ Пользователь <b>${name}</b> (${newTelegramId}) добавлен.`,
+    text: `✅ Користувач <b>${name}</b> (${newTelegramId}) додано.`,
     parse_mode: 'HTML',
   })
 }
@@ -334,21 +334,21 @@ async function handleRemoveUser(params: { chatId: number; args: string[] }): Pro
 
   const allowed = await isAllowedUser(chatId)
   if (!allowed) {
-    await sendMessage({ chat_id: chatId, text: '⛔ У вас нет прав для этой команды.' })
+    await sendMessage({ chat_id: chatId, text: '⛔ У вас немає прав для цієї команди.' })
     return
   }
 
   if (args.length < 1) {
     await sendMessage({
       chat_id: chatId,
-      text: 'Использование: /removeuser {telegram_id}',
+      text: 'Використання: /removeuser {telegram_id}',
     })
     return
   }
 
   const targetId = Number(args[0])
   if (!Number.isInteger(targetId) || targetId <= 0) {
-    await sendMessage({ chat_id: chatId, text: 'Некорректный telegram_id.' })
+    await sendMessage({ chat_id: chatId, text: 'Некоректний telegram_id.' })
     return
   }
 
@@ -359,12 +359,12 @@ async function handleRemoveUser(params: { chatId: number; args: string[] }): Pro
 
   if (error) {
     console.error('[api/telegram/webhook] /removeuser DB error', { error })
-    await sendMessage({ chat_id: chatId, text: 'Ошибка при деактивации пользователя.' })
+    await sendMessage({ chat_id: chatId, text: 'Помилка при деактивації користувача.' })
     return
   }
 
   await sendMessage({
     chat_id: chatId,
-    text: `✅ Пользователь ${targetId} деактивирован.`,
+    text: `✅ Користувач ${targetId} деактивовано.`,
   })
 }

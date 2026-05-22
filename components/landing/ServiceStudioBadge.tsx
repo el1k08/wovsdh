@@ -35,7 +35,7 @@ export function ServiceStudioBadge({ studios }: Props) {
       <button
         type="button"
         onClick={() => setOpen((v) => !v)}
-        aria-label={`Доступно в ${studios.length} студ${studios.length === 1 ? 'ии' : 'иях'}`}
+        aria-label={`Доступно в ${studios.length} студ${studios.length === 1 ? 'ії' : 'іях'}`}
         aria-expanded={open}
         className="flex items-center justify-center w-6 h-6 rounded-full text-[var(--color-rose)] opacity-60 hover:opacity-100 hover:bg-[var(--color-blush)] transition-all"
       >

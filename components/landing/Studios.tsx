@@ -25,7 +25,7 @@ export default async function Studios() {
         {/* Section header */}
         <div className="mb-14 text-center">
           <p className="mb-3 text-sm font-medium uppercase tracking-[0.2em] text-[var(--color-rose)]">
-            Два города — одно качество
+            Два міста — одна якість
           </p>
           <h2
             id="studios-heading"
@@ -35,10 +35,10 @@ export default async function Studios() {
               fontSize: 'clamp(2rem, 5vw, 3.5rem)',
             }}
           >
-            Наши студии
+            Наші студії
           </h2>
           <p className="mx-auto max-w-xl text-base text-[var(--color-charcoal)] opacity-70 leading-relaxed">
-            Уютные студии в центре города с комфортной атмосферой и профессиональными мастерами
+            Затишні студії в центрі міста з комфортною атмосферою та професійними майстрами
           </p>
         </div>
 
@@ -46,12 +46,12 @@ export default async function Studios() {
         <div className="grid grid-cols-1 gap-8 lg:grid-cols-2">
           {studios.map((studio) => {
             const imageSeed = IMAGE_SEEDS[studio.id] ?? studio.id
-            const imageAlt = `Интерьер студии WOVSDH Nails в ${studio.city}`
+            const imageAlt = `Інтер'єр студії WOVSDH Nails у ${studio.city}`
             return (
               <article
                 key={studio.id}
                 className="overflow-hidden rounded-2xl border border-[var(--color-blush)] bg-white shadow-sm"
-                aria-label={`Студия в ${studio.city}`}
+                aria-label={`Студія у ${studio.city}`}
               >
                 {/* Studio photo */}
                 <div className="relative h-56 w-full sm:h-64">
@@ -99,7 +99,7 @@ export default async function Studios() {
                         {studio.street}
                       </p>
                       <p className="text-sm text-[var(--color-charcoal)] opacity-60">
-                        {studio.city}, Израиль
+                        {studio.city}, Ізраїль
                       </p>
                     </div>
                   </div>
@@ -113,13 +113,13 @@ export default async function Studios() {
                     />
                     <ul
                       className="text-sm text-[var(--color-charcoal)] opacity-70 space-y-0.5"
-                      aria-label="Часы работы"
+                      aria-label="Години роботи"
                     >
                       {studio.schedule_text
                         ? studio.schedule_text.split('\n').map((line, i) => (
                             <li key={i}>{line}</li>
                           ))
-                        : <li className="text-gray-400">Расписание не указано</li>
+                        : <li className="text-gray-400">Розклад не вказано</li>
                       }
                     </ul>
                   </div>
@@ -129,9 +129,9 @@ export default async function Studios() {
                     href={`#booking`}
                     data-studio={studio.id}
                     className="inline-flex w-full items-center justify-center gap-2 rounded-full border border-[var(--color-rose)] px-6 py-3 text-sm font-medium text-[var(--color-rose)] transition-all duration-200 hover:bg-gradient-to-r hover:from-[var(--color-rose)] hover:to-[var(--color-gold)] hover:text-white hover:border-transparent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-rose)] focus-visible:ring-offset-2"
-                    aria-label={`Записаться в студию ${studio.city}`}
+                    aria-label={`Записатись до студії ${studio.city}`}
                   >
-                    Записаться в эту студию
+                    Записатись до цієї студії
                   </a>
                 </div>
               </article>

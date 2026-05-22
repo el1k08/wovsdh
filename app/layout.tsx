@@ -21,18 +21,18 @@ const gaId = process.env.NEXT_PUBLIC_GA_MEASUREMENT_ID
 export const metadata: Metadata = {
   metadataBase: new URL(appUrl),
   title: {
-    default: 'WOVSDH Nails — Маникюр и педикюр в Израиле',
+    default: 'WOVSDH Nails — Манікюр та педикюр в Ізраїлі',
     template: '%s | WOVSDH Nails',
   },
   description:
-    'Профессиональный маникюр, педикюр и нейл-арт в Израиле. Студии в Ришон-ле-Цион и Ашдоде. Онлайн запись, доступные цены, опытные мастера.',
+    'Професійний манікюр, педикюр та нейл-арт в Ізраїлі. Студії у Рішон-ле-Ціон та Ашдоді. Онлайн запис, доступні ціни, досвідчені майстри.',
   keywords: [
-    'маникюр Ришон-ле-Цион',
+    'манікюр Рішон-ле-Ціон',
     'педикюр Ашдод',
-    'маникюр Израиль',
-    'нейл студия Израиль',
-    'гель-лак Ришон',
-    'записаться на маникюр',
+    'манікюр Ізраїль',
+    'нейл студія Ізраїль',
+    'гель-лак Рішон',
+    'записатись на манікюр',
     'nail studio Israel',
     'מניקור ראשון לציון',
     'מניקור אשדוד',
@@ -41,13 +41,13 @@ export const metadata: Metadata = {
   creator: 'WOVSDH Nails',
   openGraph: {
     type: 'website',
-    locale: 'ru_IL',
+    locale: 'uk_UA',
     alternateLocale: ['he_IL', 'en_US'],
     url: '/',
     siteName: 'WOVSDH Nails',
-    title: 'WOVSDH Nails — Маникюр и педикюр в Израиле',
+    title: 'WOVSDH Nails — Манікюр та педикюр в Ізраїлі',
     description:
-      'Профессиональный маникюр, педикюр и нейл-арт. Студии в Ришон-ле-Цион и Ашдоде. Онлайн запись.',
+      'Професійний манікюр, педикюр та нейл-арт. Студії у Рішон-ле-Ціон та Ашдоді. Онлайн запис.',
     images: [
       {
         url: '/og-placeholder.svg',
@@ -59,8 +59,8 @@ export const metadata: Metadata = {
   },
   twitter: {
     card: 'summary_large_image',
-    title: 'WOVSDH Nails — Маникюр и педикюр в Израиле',
-    description: 'Студии маникюра в Ришон-ле-Цион и Ашдоде. Онлайн запись.',
+    title: 'WOVSDH Nails — Манікюр та педикюр в Ізраїлі',
+    description: 'Студії манікюру у Рішон-ле-Ціон та Ашдоді. Онлайн запис.',
     images: ['/og-placeholder.svg'],
   },
   robots: {
@@ -86,7 +86,7 @@ export default function RootLayout({
 }>) {
   return (
     <html
-      lang="ru"
+      lang="uk"
       className={`${inter.variable} ${cormorantGaramond.variable} h-full antialiased`}
     >
       <head>

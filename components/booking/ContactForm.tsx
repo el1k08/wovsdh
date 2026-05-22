@@ -41,23 +41,23 @@ function validateData(data: ContactFormData): FieldErrors {
   const errors: FieldErrors = {}
 
   if (!data.firstName.trim() || data.firstName.trim().length < 2) {
-    errors.firstName = 'Имя должно содержать не менее 2 символов'
+    errors.firstName = "Ім'я має містити не менше 2 символів"
   }
   if (!data.lastName.trim() || data.lastName.trim().length < 2) {
-    errors.lastName = 'Фамилия должна содержать не менее 2 символов'
+    errors.lastName = 'Прізвище має містити не менше 2 символів'
   }
   if (!data.phone.trim()) {
-    errors.phone = 'Введите номер телефона'
+    errors.phone = 'Введіть номер телефону'
   } else if (!/^\+[\d+]{9,}$/.test(data.phone.trim())) {
-    errors.phone = 'Телефон должен начинаться с + и содержать не менее 10 символов'
+    errors.phone = 'Телефон має починатися з + і містити не менше 10 символів'
   }
   if (!data.email.trim()) {
-    errors.email = 'Введите email'
+    errors.email = 'Введіть email'
   } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(data.email.trim())) {
-    errors.email = 'Введите корректный email'
+    errors.email = 'Введіть коректний email'
   }
   if (!data.marketing_consent) {
-    errors.marketing_consent = 'Необходимо согласие на обработку данных'
+    errors.marketing_consent = 'Необхідна згода на обробку даних'
   }
 
   return errors
@@ -223,7 +223,7 @@ export default function ContactForm({ onSubmit, loading, disabled = false, prefi
   const isDisabled = loading || disabled
 
   return (
-    <form onSubmit={handleSubmit} noValidate aria-label="Контактные данные">
+    <form onSubmit={handleSubmit} noValidate aria-label="Контактні дані">
       <div className="flex flex-col gap-5">
         {/* Телефон — first for client lookup */}
         <div>
@@ -251,7 +251,7 @@ export default function ContactForm({ onSubmit, loading, disabled = false, prefi
             />
             {lookupState === 'loading' && (
               <span
-                aria-label="Поиск клиента..."
+                aria-label="Пошук клієнта..."
                 className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2"
               >
                 <svg
@@ -284,11 +284,11 @@ export default function ContactForm({ onSubmit, loading, disabled = false, prefi
             </p>
           ) : lookupState === 'not-found' ? (
             <p className="mt-1 text-xs" style={{ color: 'var(--color-charcoal)', opacity: 0.55 }}>
-              Новый клиент
+              Новий клієнт
             </p>
           ) : lookupState === 'found' ? (
             <p className="mt-1 text-xs" style={{ color: 'var(--color-charcoal)', opacity: 0.55 }}>
-              Клиент найден — данные будут обновлены
+              Клієнта знайдено — дані буде оновлено
             </p>
           ) : (
             <p
@@ -296,7 +296,7 @@ export default function ContactForm({ onSubmit, loading, disabled = false, prefi
               className="mt-1 text-xs"
               style={{ color: 'var(--color-charcoal)', opacity: 0.5 }}
             >
-              Начинается с +, например +972501234567
+              Починається з +, наприклад +972501234567
             </p>
           )}
         </div>
@@ -319,7 +319,7 @@ export default function ContactForm({ onSubmit, loading, disabled = false, prefi
                   className="mb-1.5 block text-sm font-medium"
                   style={{ color: 'var(--color-charcoal)' }}
                 >
-                  Имя <span aria-hidden="true" className="text-red-500">*</span>
+                  Ім'я <span aria-hidden="true" className="text-red-500">*</span>
                 </label>
                 <input
                   id="contact-first-name"
@@ -350,7 +350,7 @@ export default function ContactForm({ onSubmit, loading, disabled = false, prefi
                   className="mb-1.5 block text-sm font-medium"
                   style={{ color: 'var(--color-charcoal)' }}
                 >
-                  Фамилия <span aria-hidden="true" className="text-red-500">*</span>
+                  Прізвище <span aria-hidden="true" className="text-red-500">*</span>
                 </label>
                 <input
                   id="contact-last-name"
@@ -362,7 +362,7 @@ export default function ContactForm({ onSubmit, loading, disabled = false, prefi
                   disabled={isDisabled}
                   required
                   minLength={2}
-                  placeholder="Иванова"
+                  placeholder="Іваненко"
                   aria-invalid={!!errors.lastName}
                   aria-describedby={errors.lastName ? 'error-last-name' : undefined}
                   className={`${INPUT_BASE} ${errors.lastName ? INPUT_ERROR : INPUT_NORMAL}`}
@@ -411,7 +411,7 @@ export default function ContactForm({ onSubmit, loading, disabled = false, prefi
                   className="mb-1.5 block text-sm font-medium"
                   style={{ color: 'var(--color-charcoal)' }}
                 >
-                  Комментарий
+                  Коментар
                 </label>
                 <textarea
                   id="contact-comment"
@@ -419,7 +419,7 @@ export default function ContactForm({ onSubmit, loading, disabled = false, prefi
                   onChange={handleChange('comment')}
                   disabled={isDisabled}
                   rows={3}
-                  placeholder="Комментарий к записи (необязательно)"
+                  placeholder="Коментар до запису (необов'язково)"
                   className={`${TEXTAREA_BASE} ${INPUT_NORMAL}`}
                 />
               </div>
@@ -441,8 +441,8 @@ export default function ContactForm({ onSubmit, loading, disabled = false, prefi
                     className="text-sm leading-relaxed"
                     style={{ color: 'var(--color-charcoal)' }}
                   >
-                    Я согласен(а) с обработкой персональных данных и получением уведомлений
-                    о статусе записи на указанный телефон/email
+                    Я погоджуюся з обробкою персональних даних та отриманням сповіщень
+                    про статус запису на вказаний телефон/email
                     <span aria-hidden="true" className="ml-1 text-red-500">*</span>
                   </span>
                 </label>
@@ -460,7 +460,7 @@ export default function ContactForm({ onSubmit, loading, disabled = false, prefi
                 disabled={isDisabled}
                 className="mt-2 w-full"
               >
-                {loading ? 'Бронирование...' : 'Забронировать'}
+                {loading ? 'Бронювання...' : 'Забронювати'}
               </Button>
             </>
         </div>

@@ -150,7 +150,7 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
 
   const startAt = startAts[0] ?? null
 
-  const dateTimeFormatter = new Intl.DateTimeFormat('ru-IL', {
+  const dateTimeFormatter = new Intl.DateTimeFormat('uk-IL', {
     timeZone: TZ,
     day: 'numeric',
     month: 'long',
@@ -161,13 +161,13 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
 
   const startFormatted = startAt
     ? dateTimeFormatter.format(new Date(startAt))
-    : 'неизвестно'
+    : 'невідомо'
 
   const studioName = raw.studio?.name ?? raw.studio_id
   const clientName = `${raw.client_first_name} ${raw.client_last_name}`
 
   const telegramMessage =
-    `⚠️ Запись отменена клиентом!\n\n` +
+    `⚠️ Запис скасовано клієнтом!\n\n` +
     `👤 ${clientName}\n` +
     `📅 ${startFormatted}\n` +
     `🏢 ${studioName}`
@@ -180,10 +180,10 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
   )
 
   const whatsAppMessage =
-    `⚠️ Ваша запись отменена.\n` +
-    `Клиент: ${clientName}\n` +
+    `⚠️ Ваш запис скасовано.\n` +
+    `Клієнт: ${clientName}\n` +
     `Дата: ${startFormatted}\n` +
-    `Студия: ${studioName}`
+    `Студія: ${studioName}`
 
   sendWhatsAppMessage({ to: raw.client_phone, body: whatsAppMessage }).catch((err: unknown) =>
     console.error(`${LOG_PREFIX} WhatsApp notification failed`, {
@@ -193,7 +193,7 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
   )
 
   return NextResponse.json<CancelBookingResponse>({
-    message: 'Бронирование отменено',
+    message: 'Запис скасовано',
     booking: {
       id: raw.id,
       status: BookingStatus.Cancelled,

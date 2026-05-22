@@ -27,10 +27,10 @@ type Step = 'city' | 'service' | 'datetime' | 'contacts' | 'success'
 
 
 const PROGRESS_STEPS: { key: Step; label: string }[] = [
-  { key: 'city', label: 'Студия' },
-  { key: 'service', label: 'Услуга' },
-  { key: 'datetime', label: 'Дата и время' },
-  { key: 'contacts', label: 'Контакты' },
+  { key: 'city', label: 'Студія' },
+  { key: 'service', label: 'Послуга' },
+  { key: 'datetime', label: 'Дата і час' },
+  { key: 'contacts', label: 'Контакти' },
 ]
 
 function getProgressIndex(step: Step): number {
@@ -79,7 +79,7 @@ export default function BookingForm() {
       const json = (await res.json()) as { services: ServiceDTO[] }
       setServices(json.services ?? [])
     } catch {
-      setError('Произошла ошибка при загрузке услуг. Попробуйте ещё раз.')
+      setError('Сталася помилка під час завантаження послуг. Спробуйте ще раз.')
       setServices([])
     } finally {
       setServicesLoading(false)
@@ -102,7 +102,7 @@ export default function BookingForm() {
         const json = (await res.json()) as { available_start_times: AvailableStartTime[] }
         setAvailableStartTimes(json.available_start_times ?? [])
       } catch {
-        setError('Произошла ошибка при загрузке доступного времени. Попробуйте ещё раз.')
+        setError('Сталася помилка під час завантаження доступного часу. Спробуйте ще раз.')
         setAvailableStartTimes([])
       } finally {
         setSlotsLoading(false)
@@ -234,7 +234,7 @@ export default function BookingForm() {
         if (res.status === 409) {
           const json = (await res.json()) as { error: { code: string } }
           if (json.error?.code === 'SLOT_UNAVAILABLE') {
-            setError('К сожалению, это время уже занято. Пожалуйста, выберите другое время.')
+            setError('На жаль, цей час вже зайнятий. Будь ласка, виберіть інший час.')
             setStep('datetime')
             setSelectedStartAt(null)
             if (selectedCity && selectedDate && selectedService) {
@@ -274,7 +274,7 @@ export default function BookingForm() {
 
         setStep('success')
       } catch {
-        setError('Произошла ошибка. Попробуйте ещё раз.')
+        setError('Сталася помилка. Спробуйте ще раз.')
       } finally {
         setBookingLoading(false)
       }
@@ -305,7 +305,7 @@ export default function BookingForm() {
     <div className="flex flex-col gap-6">
       {/* Progress bar */}
       {showProgress && (
-        <nav aria-label="Прогресс бронирования">
+        <nav aria-label="Прогрес бронювання">
           <ol className="flex items-center justify-between gap-2">
             {PROGRESS_STEPS.map((s, idx) => {
               const isDone = idx < progressIndex
@@ -357,7 +357,7 @@ export default function BookingForm() {
             className="mb-4 text-base font-semibold"
             style={{ color: 'var(--color-charcoal)' }}
           >
-            Выберите студию
+            Виберіть студію
           </h3>
           <CitySelector
             studios={studios}
@@ -376,7 +376,7 @@ export default function BookingForm() {
             className="mb-4 text-base font-semibold"
             style={{ color: 'var(--color-charcoal)' }}
           >
-            Выберите услугу
+            Виберіть послугу
           </h3>
           <ServicePicker
             services={services}
@@ -407,7 +407,7 @@ export default function BookingForm() {
             className="mb-1 text-base font-semibold"
             style={{ color: 'var(--color-charcoal)' }}
           >
-            Дата и время
+            Дата і час
           </h3>
           <p
             className="mb-4 text-sm"
@@ -427,7 +427,7 @@ export default function BookingForm() {
                 className="mb-3 text-base font-semibold"
                 style={{ color: 'var(--color-charcoal)' }}
               >
-                Выберите время
+                Виберіть час
               </h3>
               <TimePicker
                 startTimes={availableStartTimes}
@@ -456,7 +456,7 @@ export default function BookingForm() {
                 onClick={handleGoToContacts}
                 className="flex-1"
               >
-                Далее — Ввести контакты
+                Далі — Ввести контакти
               </Button>
             )}
           </div>
@@ -471,7 +471,7 @@ export default function BookingForm() {
             className="mb-4 text-base font-semibold"
             style={{ color: 'var(--color-charcoal)' }}
           >
-            Ваши контакты
+            Ваші контакти
           </h3>
           <ContactForm
             onSubmit={handleContactSubmit}

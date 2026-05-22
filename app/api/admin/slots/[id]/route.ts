@@ -81,7 +81,7 @@ export async function DELETE(
         {
           error: {
             code: 'SLOT_HAS_ACTIVE_BOOKING',
-            message: 'Нельзя удалить слот с активной бронью.',
+            message: 'Не можна видалити слот з активним записом.',
           },
         },
         { status: 409 },
@@ -103,7 +103,7 @@ export async function DELETE(
   }
 
   return NextResponse.json<DeleteSlotResponse>(
-    { message: 'Слот удалён', id: slot.id },
+    { message: 'Слот видалено', id: slot.id },
     { status: 200 },
   )
 }

@@ -14,7 +14,7 @@ export default function BookingSection() {
         {/* Section header */}
         <div className="mb-10 text-center">
           <p className="mb-3 text-sm font-medium uppercase tracking-[0.2em] text-[var(--color-rose)]">
-            Онлайн запись
+            Онлайн запис
           </p>
           <h2
             id="booking-heading"
@@ -24,10 +24,10 @@ export default function BookingSection() {
               fontSize: 'clamp(2rem, 5vw, 3.5rem)',
             }}
           >
-            Запись онлайн
+            Запис онлайн
           </h2>
           <p className="mx-auto max-w-lg text-base text-[var(--color-charcoal)] opacity-70 leading-relaxed">
-            Выберите студию, удобное время и оставьте контакты
+            Оберіть студію, зручний час та залиште контакти
           </p>
         </div>
 
@@ -36,12 +36,12 @@ export default function BookingSection() {
           id="booking-form"
           className="rounded-2xl border border-[var(--color-rose)] border-opacity-30 bg-white p-6 sm:p-8 shadow-sm"
           role="region"
-          aria-label="Форма записи на приём"
+          aria-label="Форма запису на прийом"
         >
           {/* No-JS fallback */}
           <noscript>
             <p className="rounded-xl bg-amber-50 border border-amber-200 px-4 py-3 text-sm text-amber-800 mb-6">
-              Для работы формы необходимо включить JavaScript. Позвоните нам или напишите в WhatsApp для записи.
+              Для роботи форми необхідно увімкнути JavaScript. Зателефонуйте нам або напишіть у WhatsApp для запису.
             </p>
           </noscript>
 
@@ -50,11 +50,11 @@ export default function BookingSection() {
 
         {/* Trust indicators */}
         <div className="mt-8 flex flex-col items-center gap-3 sm:flex-row sm:justify-center sm:gap-8 text-sm text-[var(--color-charcoal)] opacity-60">
-          <span>Подтверждение по Email</span>
+          <span>Підтвердження на Email</span>
           <span className="hidden sm:block h-3 w-px bg-current" aria-hidden="true" />
-          <span>Бесплатная отмена</span>
+          <span>Безкоштовне скасування</span>
           <span className="hidden sm:block h-3 w-px bg-current" aria-hidden="true" />
-          <span>Запись доступна 24/7</span>
+          <span>Запис доступний 24/7</span>
         </div>
       </div>
     </section>

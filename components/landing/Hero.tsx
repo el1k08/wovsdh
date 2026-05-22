@@ -8,7 +8,7 @@ export default function Hero() {
         background:
           'linear-gradient(135deg, var(--color-cream) 0%, var(--color-blush) 50%, #EDD9D5 100%)',
       }}
-      aria-label="Главный баннер"
+      aria-label="Головний банер"
     >
       {/* Decorative SVG — top-right petal cluster */}
       <svg
@@ -62,14 +62,14 @@ export default function Hero() {
         {/* Eyebrow */}
         <p
           className="mb-4 inline-flex items-center gap-2 text-sm font-medium uppercase tracking-[0.2em] text-[var(--color-rose)]"
-          aria-label="Профессиональный уход за ногтями"
+          aria-label="Професійний догляд за нігтями"
         >
           <span
             className="h-px w-8 inline-block"
             style={{ background: 'var(--color-rose)' }}
             aria-hidden="true"
           />
-          Профессиональный уход
+          Професійний догляд
           <span
             className="h-px w-8 inline-block"
             style={{ background: 'var(--color-rose)' }}
@@ -86,23 +86,23 @@ export default function Hero() {
             letterSpacing: '0.02em',
           }}
         >
-          Идеальные ногти
+          Ідеальні нігті
           <br />
-          <span style={{ color: 'var(--color-rose)' }}>в Израиле</span>
+          <span style={{ color: 'var(--color-rose)' }}>в Ізраїлі</span>
         </h1>
 
         {/* Subheading */}
         <p className="mx-auto mb-10 max-w-2xl text-lg leading-relaxed text-[var(--color-charcoal)] opacity-80 sm:text-xl">
-          Студии маникюра в Ришон-ле-Цион и Ашдоде —<br className="hidden sm:block" /> забота о каждой детали
+          Студії манікюру в Рішон-ле-Ціон та Ашдоді —<br className="hidden sm:block" /> турбота про кожну деталь
         </p>
 
         {/* CTA buttons */}
         <div className="flex flex-col items-center gap-4 sm:flex-row sm:justify-center">
           <Button as="a" href="#booking" variant="primary" size="lg">
-            Записаться онлайн
+            Записатись онлайн
           </Button>
           <Button as="a" href="#gallery" variant="secondary" size="lg">
-            Смотреть работы
+            Дивитись роботи
           </Button>
         </div>
 
@@ -110,15 +110,15 @@ export default function Hero() {
         <div className="mt-14 flex flex-col items-center gap-2 sm:flex-row sm:justify-center sm:gap-8">
           <div className="flex items-center gap-1.5 text-sm text-[var(--color-charcoal)] opacity-70">
             <span aria-hidden="true">★★★★★</span>
-            <span>Более 500 довольных клиенток</span>
+            <span>Понад 500 задоволених клієнток</span>
           </div>
           <span className="hidden sm:block h-4 w-px bg-[var(--color-rose)] opacity-40" aria-hidden="true" />
           <div className="text-sm text-[var(--color-charcoal)] opacity-70">
-            Две студии — Ришон и Ашдод
+            Дві студії — Рішон і Ашдод
           </div>
           <span className="hidden sm:block h-4 w-px bg-[var(--color-rose)] opacity-40" aria-hidden="true" />
           <div className="text-sm text-[var(--color-charcoal)] opacity-70">
-            Онлайн-запись 24/7
+            Онлайн-запис 24/7
           </div>
         </div>
       </div>
@@ -128,7 +128,7 @@ export default function Hero() {
         className="absolute bottom-8 left-1/2 -translate-x-1/2 flex flex-col items-center gap-1 opacity-40"
         aria-hidden="true"
       >
-        <span className="text-xs tracking-widest uppercase text-[var(--color-charcoal)]">Листать</span>
+        <span className="text-xs tracking-widest uppercase text-[var(--color-charcoal)]">Гортати</span>
         <svg width="20" height="28" viewBox="0 0 20 28" fill="none">
           <rect x="1" y="1" width="18" height="26" rx="9" stroke="var(--color-rose)" strokeWidth="1.5" />
           <circle cx="10" cy="8" r="3" fill="var(--color-rose)">

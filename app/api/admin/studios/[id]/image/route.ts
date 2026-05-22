@@ -61,13 +61,13 @@ export async function PUT(
   }
   if (!ALLOWED_TYPES.includes(file.type)) {
     return NextResponse.json<ApiError>(
-      { error: { code: 'INVALID_PARAMS', message: 'Разрешены только JPEG, PNG и WebP.' } },
+      { error: { code: 'INVALID_PARAMS', message: 'Дозволені лише JPEG, PNG та WebP.' } },
       { status: 400 },
     )
   }
   if (file.size > MAX_BYTES) {
     return NextResponse.json<ApiError>(
-      { error: { code: 'INVALID_PARAMS', message: 'Размер файла не должен превышать 2 МБ.' } },
+      { error: { code: 'INVALID_PARAMS', message: 'Розмір файлу не повинен перевищувати 2 МБ.' } },
       { status: 400 },
     )
   }
@@ -137,5 +137,5 @@ export async function DELETE(
 
   await supabaseAdmin.from('studios').update({ image_url: null }).eq('id', id)
 
-  return NextResponse.json({ message: 'Фото удалено.', id })
+  return NextResponse.json({ message: 'Фото видалено.', id })
 }

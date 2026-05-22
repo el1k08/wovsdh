@@ -97,14 +97,14 @@ export function buildNewBookingMessage(booking: {
 }): string {
   const tz = 'Asia/Jerusalem'
 
-  const dateFormatter = new Intl.DateTimeFormat('ru-IL', {
+  const dateFormatter = new Intl.DateTimeFormat('uk-IL', {
     timeZone: tz,
     day: 'numeric',
     month: 'long',
     year: 'numeric',
   })
 
-  const timeFormatter = new Intl.DateTimeFormat('ru-IL', {
+  const timeFormatter = new Intl.DateTimeFormat('uk-IL', {
     timeZone: tz,
     hour: '2-digit',
     minute: '2-digit',
@@ -119,13 +119,13 @@ export function buildNewBookingMessage(booking: {
   const fullName = `${booking.client_first_name} ${booking.client_last_name}`
 
   return (
-    `🔔 <b>Новая заявка!</b>\n\n` +
-    `👤 <b>Клиент:</b> ${fullName}\n` +
+    `🔔 <b>Новий запис!</b>\n\n` +
+    `👤 <b>Клієнт:</b> ${fullName}\n` +
     `📞 <b>Телефон:</b> ${booking.client_phone}\n` +
-    `🏢 <b>Студия:</b> ${booking.studio_name}\n` +
+    `🏢 <b>Студія:</b> ${booking.studio_name}\n` +
     `📅 <b>Дата:</b> ${dateStr}\n` +
-    `⏰ <b>Время:</b> ${timeStr}\n\n` +
-    `Статус: ожидает подтверждения`
+    `⏰ <b>Час:</b> ${timeStr}\n\n` +
+    `Статус: очікує підтвердження`
   )
 }
 
@@ -136,7 +136,7 @@ export function buildNewBookingMessage(booking: {
 export function buildConfirmKeyboard(booking_id: string): InlineKeyboardMarkup {
   return {
     inline_keyboard: [
-      [{ text: '✅ Подтвердить', callback_data: `confirm:${booking_id}` }],
+      [{ text: '✅ Підтвердити', callback_data: `confirm:${booking_id}` }],
     ],
   }
 }

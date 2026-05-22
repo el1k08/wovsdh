@@ -13,7 +13,7 @@ interface BookingSuccessProps {
 }
 
 
-const DATE_FORMATTER = new Intl.DateTimeFormat('ru-IL', {
+const DATE_FORMATTER = new Intl.DateTimeFormat('uk-IL', {
   weekday: 'long',
   day: 'numeric',
   month: 'long',
@@ -21,7 +21,7 @@ const DATE_FORMATTER = new Intl.DateTimeFormat('ru-IL', {
   timeZone: 'Asia/Jerusalem',
 })
 
-const TIME_FORMATTER = new Intl.DateTimeFormat('ru-IL', {
+const TIME_FORMATTER = new Intl.DateTimeFormat('uk-IL', {
   hour: '2-digit',
   minute: '2-digit',
   timeZone: 'Asia/Jerusalem',
@@ -39,7 +39,7 @@ export default function BookingSuccess({ booking, studioName, serviceName, servi
       className="flex flex-col items-center gap-6 py-4 text-center"
       role="status"
       aria-live="polite"
-      aria-label="Бронирование успешно создано"
+      aria-label="Бронювання успішно створено"
     >
       <CheckCircle
         className="h-16 w-16 shrink-0"
@@ -55,23 +55,23 @@ export default function BookingSuccess({ booking, studioName, serviceName, servi
             color: 'var(--color-charcoal)',
           }}
         >
-          Заявка принята!
+          Заявку прийнято!
         </h3>
         <p className="text-sm leading-relaxed" style={{ color: 'var(--color-charcoal)', opacity: 0.7 }}>
-          Мы свяжемся с вами для подтверждения.
+          Ми зв'яжемося з вами для підтвердження.
           <br />
-          Детали записи отправлены на email.
+          Деталі запису надіслано на email.
         </p>
       </div>
 
       <div
         className="w-full rounded-2xl border border-gray-100 bg-[var(--color-blush)] px-6 py-5 text-left"
-        aria-label="Детали записи"
+        aria-label="Деталі запису"
       >
         <dl className="flex flex-col gap-3">
           <div className="flex items-start justify-between gap-4">
             <dt className="text-sm font-medium" style={{ color: 'var(--color-charcoal)', opacity: 0.6 }}>
-              Студия
+              Студія
             </dt>
             <dd className="text-sm font-semibold text-right" style={{ color: 'var(--color-charcoal)' }}>
               {studioName}
@@ -79,7 +79,7 @@ export default function BookingSuccess({ booking, studioName, serviceName, servi
           </div>
           <div className="flex items-start justify-between gap-4">
             <dt className="flex items-center gap-1.5 text-sm font-medium" style={{ color: 'var(--color-charcoal)', opacity: 0.6 }}>
-              Услуга
+              Послуга
             </dt>
             <dd className="text-sm font-semibold text-right" style={{ color: 'var(--color-charcoal)' }}>
               {serviceName}
@@ -95,7 +95,7 @@ export default function BookingSuccess({ booking, studioName, serviceName, servi
           </div>
           <div className="flex items-start justify-between gap-4">
             <dt className="text-sm font-medium" style={{ color: 'var(--color-charcoal)', opacity: 0.6 }}>
-              Время
+              Час
             </dt>
             <dd className="text-sm font-semibold text-right" style={{ color: 'var(--color-charcoal)' }}>
               {formattedTime}

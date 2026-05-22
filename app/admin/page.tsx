@@ -49,7 +49,7 @@ function addDays(dateStr: string, days: number): string {
 }
 
 function formatLocalTime(isoStr: string): string {
-  return new Date(isoStr).toLocaleTimeString('ru-RU', {
+  return new Date(isoStr).toLocaleTimeString('uk-UA', {
     timeZone: 'Asia/Jerusalem',
     hour: '2-digit',
     minute: '2-digit',
@@ -57,7 +57,7 @@ function formatLocalTime(isoStr: string): string {
 }
 
 function formatLocalDate(isoStr: string): string {
-  return new Date(isoStr).toLocaleDateString('ru-RU', {
+  return new Date(isoStr).toLocaleDateString('uk-UA', {
     timeZone: 'Asia/Jerusalem',
     day: '2-digit',
     month: '2-digit',
@@ -79,14 +79,14 @@ interface InlineMessage {
 }
 
 // Day labels index 0=Sun..6=Sat
-const DAY_LABELS = ['Вс', 'Пн', 'Вт', 'Ср', 'Чт', 'Пт', 'Сб']
+const DAY_LABELS = ['Нд', 'Пн', 'Вт', 'Ср', 'Чт', 'Пт', 'Сб']
 
 function formatDuration(minutes: number): string {
-  if (minutes < 60) return `${minutes} мин`
+  if (minutes < 60) return `${minutes} хв`
   const hours = Math.floor(minutes / 60)
   const mins = minutes % 60
-  if (mins === 0) return `${hours} ч`
-  return `${hours} ч ${mins} мин`
+  if (mins === 0) return `${hours} год`
+  return `${hours} год ${mins} хв`
 }
 
 const DURATION_OPTIONS: { value: number; label: string }[] = Array.from(
@@ -108,7 +108,7 @@ function AuthGate({ onAuth }: { onAuth: (secret: string) => void }) {
   function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
     if (!input.trim()) {
-      setError('Введите пароль')
+      setError('Введіть пароль')
       return
     }
     localStorage.setItem('admin_secret', input.trim())
@@ -119,12 +119,12 @@ function AuthGate({ onAuth }: { onAuth: (secret: string) => void }) {
     <main className="min-h-screen flex items-center justify-center bg-[var(--color-cream)]">
       <div className="bg-white border border-[var(--color-blush)] rounded-xl p-8 w-full max-w-sm shadow-sm">
         <h1 className="text-xl font-semibold text-[var(--color-charcoal)] mb-6 text-center">
-          Вход в панель управления
+          Вхід до панелі управління
         </h1>
         <form onSubmit={handleSubmit} className="flex flex-col gap-4">
           <input
             type="password"
-            placeholder="Пароль администратора"
+            placeholder="Пароль адміністратора"
             value={input}
             onChange={(e) => setInput(e.target.value)}
             className="border border-gray-300 rounded-lg px-4 py-2 text-sm focus:outline-none focus:border-[var(--color-rose)]"
@@ -135,7 +135,7 @@ function AuthGate({ onAuth }: { onAuth: (secret: string) => void }) {
             type="submit"
             className="bg-[var(--color-rose)] text-white rounded-lg px-4 py-2 text-sm font-medium hover:opacity-90 transition-opacity"
           >
-            Войти
+            Увійти
           </button>
         </form>
       </div>
@@ -150,15 +150,15 @@ function AuthGate({ onAuth }: { onAuth: (secret: string) => void }) {
 function StatusBadge({ status }: { status: string }) {
   const config: Record<string, { label: string; className: string }> = {
     available: {
-      label: 'Свободен',
+      label: 'Вільний',
       className: 'bg-green-50 text-green-700 border border-green-200',
     },
     booked: {
-      label: 'Забронирован',
+      label: 'Заброньований',
       className: 'bg-red-50 text-red-700 border border-red-200',
     },
     blocked: {
-      label: 'Заблокирован',
+      label: 'Заблокований',
       className: 'bg-gray-100 text-gray-600 border border-gray-300',
     },
   }
@@ -182,15 +182,15 @@ function StatusBadge({ status }: { status: string }) {
 function BookingStatusBadge({ status }: { status: string }) {
   const config: Record<string, { label: string; className: string }> = {
     PENDING: {
-      label: 'Ожидает',
+      label: 'Очікує',
       className: 'bg-yellow-50 text-yellow-700 border border-yellow-200',
     },
     CONFIRMED: {
-      label: 'Подтверждена',
+      label: 'Підтверджено',
       className: 'bg-green-50 text-green-700 border border-green-200',
     },
     CANCELLED: {
-      label: 'Отменена',
+      label: 'Скасовано',
       className: 'bg-gray-100 text-gray-500 border border-gray-300',
     },
   }
@@ -257,13 +257,13 @@ function ServicesTab({ studio, apiFetch, onUnauth }: ServicesTabProps) {
       if (res.status === 401) { onUnauth(); return }
       if (!res.ok) {
         const body = await res.json() as { error?: { message?: string } }
-        setMessage({ type: 'error', text: body.error?.message ?? 'Ошибка загрузки услуг' })
+        setMessage({ type: 'error', text: body.error?.message ?? 'Помилка завантаження послуг' })
         return
       }
       const data = await res.json() as { services: AdminServiceDTO[] }
       setServices(data.services ?? [])
     } catch {
-      setMessage({ type: 'error', text: 'Сетевая ошибка при загрузке услуг' })
+      setMessage({ type: 'error', text: 'Мережева помилка під час завантаження послуг' })
     } finally {
       setLoading(false)
     }
@@ -293,15 +293,15 @@ function ServicesTab({ studio, apiFetch, onUnauth }: ServicesTabProps) {
       if (res.status === 401) { onUnauth(); return }
       if (!res.ok) {
         const body = await res.json() as { error?: { message?: string } }
-        setMessage({ type: 'error', text: body.error?.message ?? 'Ошибка создания услуги' })
+        setMessage({ type: 'error', text: body.error?.message ?? 'Помилка створення послуги' })
         return
       }
-      setMessage({ type: 'success', text: 'Услуга создана' })
+      setMessage({ type: 'success', text: 'Послугу створено' })
       setShowForm(false)
       setNewIcon(''); setNewName(''); setNewDescription(''); setNewPrice(''); setNewDuration(60)
       await loadServices()
     } catch {
-      setMessage({ type: 'error', text: 'Сетевая ошибка при создании услуги' })
+      setMessage({ type: 'error', text: 'Мережева помилка під час створення послуги' })
     } finally {
       setFormLoading(false)
     }
@@ -337,14 +337,14 @@ function ServicesTab({ studio, apiFetch, onUnauth }: ServicesTabProps) {
       if (res.status === 401) { onUnauth(); return }
       if (!res.ok) {
         const body = await res.json() as { error?: { message?: string } }
-        setMessage({ type: 'error', text: body.error?.message ?? 'Ошибка обновления услуги' })
+        setMessage({ type: 'error', text: body.error?.message ?? 'Помилка оновлення послуги' })
         return
       }
-      setMessage({ type: 'success', text: 'Услуга обновлена' })
+      setMessage({ type: 'success', text: 'Послугу оновлено' })
       setEditingId(null)
       await loadServices()
     } catch {
-      setMessage({ type: 'error', text: 'Сетевая ошибка при обновлении услуги' })
+      setMessage({ type: 'error', text: 'Мережева помилка під час оновлення послуги' })
     } finally {
       setEditLoading(false)
     }
@@ -358,15 +358,15 @@ function ServicesTab({ studio, apiFetch, onUnauth }: ServicesTabProps) {
       if (res.status === 401) { onUnauth(); return }
       if (!res.ok) {
         const body = await res.json() as { error?: { message?: string } }
-        setMessage({ type: 'error', text: body.error?.message ?? 'Ошибка удаления услуги' })
+        setMessage({ type: 'error', text: body.error?.message ?? 'Помилка видалення послуги' })
         setDeleteTarget(null)
         return
       }
-      setMessage({ type: 'success', text: 'Услуга удалена' })
+      setMessage({ type: 'success', text: 'Послугу видалено' })
       setDeleteTarget(null)
       await loadServices()
     } catch {
-      setMessage({ type: 'error', text: 'Сетевая ошибка при удалении услуги' })
+      setMessage({ type: 'error', text: 'Мережева помилка під час видалення послуги' })
     } finally {
       setDeleting(false)
     }
@@ -414,12 +414,12 @@ function ServicesTab({ studio, apiFetch, onUnauth }: ServicesTabProps) {
   return (
     <div>
       <div className="flex items-center justify-between mb-4">
-        <h2 className="text-lg font-semibold text-[var(--color-charcoal)]">Услуги</h2>
+        <h2 className="text-lg font-semibold text-[var(--color-charcoal)]">Послуги</h2>
         <button
           onClick={() => { setShowForm((v) => !v); setEditingId(null) }}
           className="bg-[var(--color-rose)] text-white rounded-lg px-4 py-2 text-sm font-medium hover:opacity-90 transition-opacity"
         >
-          {showForm ? 'Скрыть форму' : 'Добавить услугу'}
+          {showForm ? 'Сховати форму' : 'Додати послугу'}
         </button>
       </div>
 
@@ -430,7 +430,7 @@ function ServicesTab({ studio, apiFetch, onUnauth }: ServicesTabProps) {
           className="mb-6 border border-[var(--color-blush)] rounded-xl p-5 bg-white grid grid-cols-1 sm:grid-cols-2 gap-4"
         >
           <label className="flex flex-col gap-1 text-sm text-gray-600">
-            Иконка (emoji)
+            Іконка (emoji)
             <input
               type="text"
               value={newIcon}
@@ -441,30 +441,30 @@ function ServicesTab({ studio, apiFetch, onUnauth }: ServicesTabProps) {
             />
           </label>
           <label className="flex flex-col gap-1 text-sm text-gray-600">
-            <span className='flex'>Название <span className="text-red-500">*</span></span>
+            <span className='flex'>Назва <span className="text-red-500">*</span></span>
             <input
               type="text"
               value={newName}
               onChange={(e) => setNewName(e.target.value)}
-              placeholder="Маникюр"
+              placeholder="Манікюр"
               required
               className={INPUT_CLS}
               disabled={formLoading}
             />
           </label>
           <label className="flex flex-col gap-1 text-sm text-gray-600 sm:col-span-2">
-            Описание
+            Опис
             <input
               type="text"
               value={newDescription}
               onChange={(e) => setNewDescription(e.target.value)}
-              placeholder="Краткое описание услуги"
+              placeholder="Короткий опис послуги"
               className={INPUT_CLS}
               disabled={formLoading}
             />
           </label>
           <label className="flex flex-col gap-1 text-sm text-gray-600">
-            <span className='flex'>Цена (₪) <span className="text-red-500">*</span></span>
+            <span className='flex'>Ціна (₪) <span className="text-red-500">*</span></span>
             <input
               type="number"
               min={0}
@@ -477,7 +477,7 @@ function ServicesTab({ studio, apiFetch, onUnauth }: ServicesTabProps) {
             />
           </label>
           <label className="flex flex-col gap-1 text-sm text-gray-600">
-            Длительность
+            Тривалість
             <select
               value={newDuration}
               onChange={(e) => setNewDuration(Number(e.target.value))}
@@ -495,14 +495,14 @@ function ServicesTab({ studio, apiFetch, onUnauth }: ServicesTabProps) {
               disabled={formLoading}
               className="bg-[var(--color-rose)] text-white rounded-lg px-6 py-2 text-sm font-medium hover:opacity-90 transition-opacity disabled:opacity-50"
             >
-              {formLoading ? 'Сохранение...' : 'Сохранить'}
+              {formLoading ? 'Збереження...' : 'Зберегти'}
             </button>
             <button
               type="button"
               onClick={() => setShowForm(false)}
               className="border border-gray-300 text-gray-600 rounded-lg px-4 py-2 text-sm font-medium hover:bg-gray-50 transition-colors"
             >
-              Отмена
+              Скасувати
             </button>
           </div>
         </form>
@@ -515,10 +515,10 @@ function ServicesTab({ studio, apiFetch, onUnauth }: ServicesTabProps) {
           className="mb-6 border border-[var(--color-blush)] rounded-xl p-5 bg-white grid grid-cols-1 sm:grid-cols-2 gap-4"
         >
           <h3 className="sm:col-span-2 text-sm font-semibold text-[var(--color-charcoal)]">
-            Редактировать услугу
+            Редагувати послугу
           </h3>
           <label className="flex flex-col gap-1 text-sm text-gray-600">
-            Иконка (emoji)
+            Іконка (emoji)
             <input
               type="text"
               value={editIcon}
@@ -529,7 +529,7 @@ function ServicesTab({ studio, apiFetch, onUnauth }: ServicesTabProps) {
             />
           </label>
           <label className="flex flex-col gap-1 text-sm text-gray-600">
-            <span className='flex'>Название <span className="text-red-500">*</span></span>
+            <span className='flex'>Назва <span className="text-red-500">*</span></span>
             <input
               type="text"
               value={editName}
@@ -540,7 +540,7 @@ function ServicesTab({ studio, apiFetch, onUnauth }: ServicesTabProps) {
             />
           </label>
           <label className="flex flex-col gap-1 text-sm text-gray-600 sm:col-span-2">
-            Описание
+            Опис
             <input
               type="text"
               value={editDescription}
@@ -550,7 +550,7 @@ function ServicesTab({ studio, apiFetch, onUnauth }: ServicesTabProps) {
             />
           </label>
           <label className="flex flex-col gap-1 text-sm text-gray-600">
-            <span className='flex'>Цена (₪) <span className="text-red-500">*</span></span>
+            <span className='flex'>Ціна (₪) <span className="text-red-500">*</span></span>
             <input
               type="number"
               min={0}
@@ -562,7 +562,7 @@ function ServicesTab({ studio, apiFetch, onUnauth }: ServicesTabProps) {
             />
           </label>
           <label className="flex flex-col gap-1 text-sm text-gray-600">
-            Длительность
+            Тривалість
             <select
               value={editDuration}
               onChange={(e) => setEditDuration(Number(e.target.value))}
@@ -580,14 +580,14 @@ function ServicesTab({ studio, apiFetch, onUnauth }: ServicesTabProps) {
               disabled={editLoading}
               className="bg-[var(--color-rose)] text-white rounded-lg px-6 py-2 text-sm font-medium hover:opacity-90 transition-opacity disabled:opacity-50"
             >
-              {editLoading ? 'Сохранение...' : 'Сохранить'}
+              {editLoading ? 'Збереження...' : 'Зберегти'}
             </button>
             <button
               type="button"
               onClick={() => setEditingId(null)}
               className="border border-gray-300 text-gray-600 rounded-lg px-4 py-2 text-sm font-medium hover:bg-gray-50 transition-colors"
             >
-              Отмена
+              Скасувати
             </button>
           </div>
         </form>
@@ -600,21 +600,21 @@ function ServicesTab({ studio, apiFetch, onUnauth }: ServicesTabProps) {
       )}
 
       {loading ? (
-        <p className="text-sm text-gray-400 py-4">Загрузка...</p>
+        <p className="text-sm text-gray-400 py-4">Завантаження...</p>
       ) : services.length === 0 ? (
-        <p className="text-sm text-gray-400 py-4">Услуги не найдены</p>
+        <p className="text-sm text-gray-400 py-4">Послуги не знайдено</p>
       ) : (
         <div className="overflow-x-auto">
           <table className="w-full text-sm border-collapse">
             <thead>
               <tr className="border-b border-gray-200 text-left text-gray-500">
                 <th className="py-2 pr-2 w-6"></th>
-                <th className="py-2 pr-4 font-medium">Иконка</th>
-                <th className="py-2 pr-4 font-medium">Название</th>
-                <th className="py-2 pr-4 font-medium">Длительность</th>
-                <th className="py-2 pr-4 font-medium">Цена</th>
+                <th className="py-2 pr-4 font-medium">Іконка</th>
+                <th className="py-2 pr-4 font-medium">Назва</th>
+                <th className="py-2 pr-4 font-medium">Тривалість</th>
+                <th className="py-2 pr-4 font-medium">Ціна</th>
                 <th className="py-2 pr-4 font-medium">Статус</th>
-                <th className="py-2 font-medium text-right">Действия</th>
+                <th className="py-2 font-medium text-right">Дії</th>
               </tr>
             </thead>
             <tbody>
@@ -652,13 +652,13 @@ function ServicesTab({ studio, apiFetch, onUnauth }: ServicesTabProps) {
                           onClick={() => startEdit(svc)}
                           className="px-3 py-1 rounded text-xs border border-gray-300 text-[var(--color-charcoal)] hover:bg-gray-50"
                         >
-                          Изменить
+                          Змінити
                         </button>
                         <button
                           onClick={() => setDeleteTarget((prev) => prev === svc.id ? null : svc.id)}
                           className="px-3 py-1 rounded text-xs border border-red-200 text-red-600 bg-red-50 hover:bg-red-100"
                         >
-                          Удалить
+                          Видалити
                         </button>
                       </div>
                     </td>
@@ -668,7 +668,7 @@ function ServicesTab({ studio, apiFetch, onUnauth }: ServicesTabProps) {
                       <td colSpan={7} className="px-4 py-3">
                         <div className="flex items-center justify-between gap-4">
                           <p className="text-sm text-red-700">
-                            Удалить услугу <strong>{svc.name}</strong>? Если к ней привязаны активные записи, она будет деактивирована.
+                            Видалити послугу <strong>{svc.name}</strong>? Якщо до неї прив'язані активні записи, вона буде деактивована.
                           </p>
                           <div className="flex gap-2 shrink-0">
                             <button
@@ -676,13 +676,13 @@ function ServicesTab({ studio, apiFetch, onUnauth }: ServicesTabProps) {
                               disabled={deleting}
                               className="px-3 py-1 rounded text-xs bg-red-600 text-white hover:bg-red-700 disabled:opacity-50 disabled:cursor-not-allowed"
                             >
-                              {deleting ? 'Удаление...' : 'Подтвердить'}
+                              {deleting ? 'Видалення...' : 'Підтвердити'}
                             </button>
                             <button
                               onClick={() => setDeleteTarget(null)}
                               className="px-3 py-1 rounded text-xs border border-gray-300 text-gray-600 hover:bg-white"
                             >
-                              Отмена
+                              Скасувати
                             </button>
                           </div>
                         </div>
@@ -727,7 +727,7 @@ function StudioServicesAssignmentTab({ studio, apiFetch, onUnauth }: StudioServi
       ])
       if (svcRes.status === 401 || assignRes.status === 401) { onUnauth(); return }
       if (!svcRes.ok) {
-        setMessage({ type: 'error', text: 'Ошибка загрузки услуг' })
+        setMessage({ type: 'error', text: 'Помилка завантаження послуг' })
         return
       }
       const svcData = await svcRes.json() as { services: AdminServiceDTO[] }
@@ -737,7 +737,7 @@ function StudioServicesAssignmentTab({ studio, apiFetch, onUnauth }: StudioServi
         setAssignedIds(new Set(assignData.service_ids))
       }
     } catch {
-      setMessage({ type: 'error', text: 'Сетевая ошибка' })
+      setMessage({ type: 'error', text: 'Мережева помилка' })
     } finally {
       setLoading(false)
     }
@@ -762,11 +762,11 @@ function StudioServicesAssignmentTab({ studio, apiFetch, onUnauth }: StudioServi
       if (res.status === 401) { onUnauth(); return }
       if (!res.ok) {
         setAssignedIds(assignedIds)
-        setMessage({ type: 'error', text: 'Ошибка сохранения' })
+        setMessage({ type: 'error', text: 'Помилка збереження' })
       }
     } catch {
       setAssignedIds(assignedIds)
-      setMessage({ type: 'error', text: 'Сетевая ошибка при сохранении' })
+      setMessage({ type: 'error', text: 'Мережева помилка під час збереження' })
     } finally {
       setSavingId(null)
     }
@@ -776,9 +776,9 @@ function StudioServicesAssignmentTab({ studio, apiFetch, onUnauth }: StudioServi
     <div>
       <div className="flex items-center justify-between mb-6">
         <div>
-          <h2 className="text-lg font-semibold text-[var(--color-charcoal)]">Услуги студии</h2>
+          <h2 className="text-lg font-semibold text-[var(--color-charcoal)]">Послуги студії</h2>
           <p className="text-xs text-gray-400 mt-0.5">
-            Отметьте услуги, доступные в этой студии
+            Позначте послуги, доступні в цій студії
           </p>
         </div>
         {message && (
@@ -789,9 +789,9 @@ function StudioServicesAssignmentTab({ studio, apiFetch, onUnauth }: StudioServi
       </div>
 
       {loading ? (
-        <p className="text-sm text-gray-400 py-8 text-center">Загрузка...</p>
+        <p className="text-sm text-gray-400 py-8 text-center">Завантаження...</p>
       ) : services.length === 0 ? (
-        <p className="text-sm text-gray-400 py-8 text-center">Услуги не найдены</p>
+        <p className="text-sm text-gray-400 py-8 text-center">Послуги не знайдено</p>
       ) : (
         <ul className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3" role="list">
           {services.map((svc) => {
@@ -850,7 +850,7 @@ function StudioServicesAssignmentTab({ studio, apiFetch, onUnauth }: StudioServi
                 {/* Price + duration */}
                 <div className="flex items-center justify-between mt-auto">
                   <span className="text-sm font-semibold" style={{ color: 'var(--color-rose)' }}>
-                    от {svc.price} ₪
+                    від {svc.price} ₪
                   </span>
                   <span className="text-xs text-gray-400">{formatDuration(svc.duration_minutes)}</span>
                 </div>
@@ -956,7 +956,7 @@ function ScheduleTab({ studio, apiFetch, onUnauth }: ScheduleTabProps) {
   })()
 
   const monthLabel = (() => {
-    const label = selectedMonth.toLocaleDateString('ru-RU', { month: 'long', year: 'numeric' })
+    const label = selectedMonth.toLocaleDateString('uk-UA', { month: 'long', year: 'numeric' })
     return label.charAt(0).toUpperCase() + label.slice(1)
   })()
 
@@ -981,13 +981,13 @@ function ScheduleTab({ studio, apiFetch, onUnauth }: ScheduleTabProps) {
       if (res.status === 401) { onUnauth(); return }
       if (!res.ok) {
         const body = await res.json() as { error?: { message?: string } }
-        setMessage({ type: 'error', text: body.error?.message ?? 'Ошибка загрузки расписания' })
+        setMessage({ type: 'error', text: body.error?.message ?? 'Помилка завантаження розкладу' })
         return
       }
       const data = await res.json() as GetMasterScheduleResponse
       setRows(templateToRows(data.schedule))
     } catch {
-      setMessage({ type: 'error', text: 'Сетевая ошибка при загрузке расписания' })
+      setMessage({ type: 'error', text: 'Мережева помилка під час завантаження розкладу' })
     } finally {
       setLoading(false)
     }
@@ -1052,18 +1052,18 @@ function ScheduleTab({ studio, apiFetch, onUnauth }: ScheduleTabProps) {
       if (res.status === 401) { onUnauth(); return }
       const data = await res.json() as GenerateSlotsFromTemplateResponse & { error?: { message?: string } }
       if (!res.ok) {
-        setGenerateMsg({ type: 'error', text: data.error?.message ?? 'Ошибка генерации слотов' })
+        setGenerateMsg({ type: 'error', text: data.error?.message ?? 'Помилка генерації слотів' })
         return
       }
       setSlotModal(null)
       setPendingGenerate(null)
       setGenerateMsg({
         type: 'success',
-        text: `Создано ${data.created} слотов` + (data.skipped > 0 ? `, пропущено ${data.skipped}` : ''),
+        text: `Створено ${data.created} слотів` + (data.skipped > 0 ? `, пропущено ${data.skipped}` : ''),
       })
       await loadSlots()
     } catch {
-      setGenerateMsg({ type: 'error', text: 'Сетевая ошибка' })
+      setGenerateMsg({ type: 'error', text: 'Мережева помилка' })
     } finally {
       setGenerating(false)
     }
@@ -1093,12 +1093,12 @@ function ScheduleTab({ studio, apiFetch, onUnauth }: ScheduleTabProps) {
       if (res.status === 401) { onUnauth(); return }
       if (!res.ok) {
         const body = await res.json() as { error?: { message?: string } }
-        setMessage({ type: 'error', text: body.error?.message ?? 'Ошибка сохранения расписания' })
+        setMessage({ type: 'error', text: body.error?.message ?? 'Помилка збереження розкладу' })
         return
       }
-      setMessage({ type: 'success', text: 'Сохранено!' })
+      setMessage({ type: 'success', text: 'Збережено!' })
     } catch {
-      setMessage({ type: 'error', text: 'Сетевая ошибка при сохранении расписания' })
+      setMessage({ type: 'error', text: 'Мережева помилка під час збереження розкладу' })
     } finally {
       setSaving(false)
     }
@@ -1117,11 +1117,11 @@ function ScheduleTab({ studio, apiFetch, onUnauth }: ScheduleTabProps) {
       {/* Left: Schedule editor (1/3) */}
       <div className="w-1/3 shrink-0">
         <h2 className="text-lg font-semibold text-[var(--color-charcoal)] mb-4">
-          Расписание работы
+          Розклад роботи
         </h2>
 
         {loading ? (
-          <p className="text-sm text-gray-400 py-4">Загрузка...</p>
+          <p className="text-sm text-gray-400 py-4">Завантаження...</p>
         ) : (
           <div className="flex flex-col gap-2">
             {rows.map((row) => (
@@ -1173,7 +1173,7 @@ function ScheduleTab({ studio, apiFetch, onUnauth }: ScheduleTabProps) {
             disabled={saving || loading}
             className="bg-[var(--color-rose)] text-white rounded-lg px-6 py-2 text-sm font-medium hover:opacity-90 transition-opacity disabled:opacity-50"
           >
-            {saving ? 'Сохранение...' : 'Сохранить расписание'}
+            {saving ? 'Збереження...' : 'Зберегти розклад'}
           </button>
           {message && (
             <p className={`text-sm ${message.type === 'success' ? 'text-green-600' : 'text-red-500'}`}>
@@ -1190,13 +1190,13 @@ function ScheduleTab({ studio, apiFetch, onUnauth }: ScheduleTabProps) {
       <div className="flex-1 min-w-0">
         {/* Header with dropdown */}
         <div className="flex items-center justify-between mb-4">
-          <h2 className="text-lg font-semibold text-[var(--color-charcoal)]">Слоты</h2>
+          <h2 className="text-lg font-semibold text-[var(--color-charcoal)]">Слоти</h2>
           <div className="relative" ref={dropdownRef}>
             <button
               onClick={() => setDropdownOpen(v => !v)}
               className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-gray-200 bg-white text-sm text-[var(--color-charcoal)] hover:border-[var(--color-rose)] transition-colors"
             >
-              Добавить слоты
+              Додати слоти
               <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
                 <path d="M2 4.5l5 5 5-5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
               </svg>
@@ -1212,7 +1212,7 @@ function ScheduleTab({ studio, apiFetch, onUnauth }: ScheduleTabProps) {
                   }}
                   className="w-full text-left px-4 py-2.5 text-sm text-[var(--color-charcoal)] hover:bg-gray-50 transition-colors"
                 >
-                  На текущий день
+                  На поточний день
                 </button>
                 <button
                   onClick={() => {
@@ -1223,7 +1223,7 @@ function ScheduleTab({ studio, apiFetch, onUnauth }: ScheduleTabProps) {
                   }}
                   className="w-full text-left px-4 py-2.5 text-sm text-[var(--color-charcoal)] hover:bg-gray-50 transition-colors"
                 >
-                  На следующие 7 дней
+                  На наступні 7 днів
                 </button>
                 <button
                   onClick={() => {
@@ -1234,7 +1234,7 @@ function ScheduleTab({ studio, apiFetch, onUnauth }: ScheduleTabProps) {
                   }}
                   className="w-full text-left px-4 py-2.5 text-sm text-[var(--color-charcoal)] hover:bg-gray-50 transition-colors"
                 >
-                  На следующие 14 дней
+                  На наступні 14 днів
                 </button>
                 <div className="my-1 border-t border-gray-100" />
                 <button
@@ -1246,7 +1246,7 @@ function ScheduleTab({ studio, apiFetch, onUnauth }: ScheduleTabProps) {
                   }}
                   className="w-full text-left px-4 py-2.5 text-sm text-[var(--color-charcoal)] hover:bg-gray-50 transition-colors"
                 >
-                  Между датами
+                  Між датами
                 </button>
               </div>
             )}
@@ -1258,7 +1258,7 @@ function ScheduleTab({ studio, apiFetch, onUnauth }: ScheduleTabProps) {
           <button
             onClick={() => navigateMonth(-1)}
             className="w-8 h-8 flex items-center justify-center rounded-lg border border-gray-200 bg-white text-gray-500 hover:border-[var(--color-rose)] hover:text-[var(--color-rose)] transition-colors"
-            aria-label="Предыдущий месяц"
+            aria-label="Попередній місяць"
           >
             <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
               <path d="M10 12L6 8l4-4" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
@@ -1268,7 +1268,7 @@ function ScheduleTab({ studio, apiFetch, onUnauth }: ScheduleTabProps) {
           <button
             onClick={() => navigateMonth(1)}
             className="w-8 h-8 flex items-center justify-center rounded-lg border border-gray-200 bg-white text-gray-500 hover:border-[var(--color-rose)] hover:text-[var(--color-rose)] transition-colors"
-            aria-label="Следующий месяц"
+            aria-label="Наступний місяць"
           >
             <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
               <path d="M6 4l4 4-4 4" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
@@ -1282,9 +1282,9 @@ function ScheduleTab({ studio, apiFetch, onUnauth }: ScheduleTabProps) {
             {daysInMonth.map(({ dateStr, date }) => {
               const isSelected = selectedDay === dateStr
               const isToday = dateStr === todayStr
-              const weekday = new Intl.DateTimeFormat('ru-IL', { weekday: 'short', timeZone: 'Asia/Jerusalem' }).format(date)
-              const dayNum = new Intl.DateTimeFormat('ru-IL', { day: 'numeric', timeZone: 'Asia/Jerusalem' }).format(date)
-              const monthShort = new Intl.DateTimeFormat('ru-IL', { month: 'short', timeZone: 'Asia/Jerusalem' }).format(date)
+              const weekday = new Intl.DateTimeFormat('uk-UA', { weekday: 'short', timeZone: 'Asia/Jerusalem' }).format(date)
+              const dayNum = new Intl.DateTimeFormat('uk-UA', { day: 'numeric', timeZone: 'Asia/Jerusalem' }).format(date)
+              const monthShort = new Intl.DateTimeFormat('uk-UA', { month: 'short', timeZone: 'Asia/Jerusalem' }).format(date)
               return (
                 <button
                   key={dateStr}
@@ -1318,11 +1318,11 @@ function ScheduleTab({ studio, apiFetch, onUnauth }: ScheduleTabProps) {
 
         {/* Slot cubes */}
         {slotsLoading ? (
-          <p className="text-sm text-gray-400 py-4">Загрузка слотов...</p>
+          <p className="text-sm text-gray-400 py-4">Завантаження слотів...</p>
         ) : !selectedDay ? (
-          <p className="text-sm text-gray-400 py-4 text-center">Выберите день для просмотра слотов</p>
+          <p className="text-sm text-gray-400 py-4 text-center">Виберіть день для перегляду слотів</p>
         ) : slotsForDay.length === 0 ? (
-          <p className="text-sm text-gray-400 py-4">Слоты не найдены</p>
+          <p className="text-sm text-gray-400 py-4">Слоти не знайдено</p>
         ) : (
           <div className="grid grid-cols-4 sm:grid-cols-6 lg:grid-cols-8 gap-2">
             {slotsForDay.map((slot) => (
@@ -1342,10 +1342,10 @@ function ScheduleTab({ studio, apiFetch, onUnauth }: ScheduleTabProps) {
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/30 backdrop-blur-sm">
           <div className="bg-white rounded-2xl shadow-xl p-6 w-full max-w-sm mx-4">
             <h3 className="text-base font-semibold text-[var(--color-charcoal)] mb-4">
-              Добавить слоты на{' '}
+              Додати слоти на{' '}
               {selectedDay
-                ? new Date(selectedDay + 'T12:00:00').toLocaleDateString('ru-RU', { day: 'numeric', month: 'long' })
-                : 'выбранный день'}
+                ? new Date(selectedDay + 'T12:00:00').toLocaleDateString('uk-UA', { day: 'numeric', month: 'long' })
+                : 'вибраний день'}
             </h3>
 
             <div className="flex flex-col gap-3 mb-3">
@@ -1382,7 +1382,7 @@ function ScheduleTab({ studio, apiFetch, onUnauth }: ScheduleTabProps) {
               onClick={() => setCustomRanges(prev => [...prev, { from: '09:00', to: '18:00' }])}
               className="text-sm text-[var(--color-rose)] hover:opacity-80 transition-opacity mb-5 flex items-center gap-1"
             >
-              + Добавить промежуток
+              + Додати проміжок
             </button>
 
             {generateMsg && (
@@ -1396,14 +1396,14 @@ function ScheduleTab({ studio, apiFetch, onUnauth }: ScheduleTabProps) {
                 onClick={() => { setSlotModal(null); setGenerateMsg(null) }}
                 className="px-4 py-2 text-sm text-gray-500 hover:text-gray-700 transition-colors"
               >
-                Отмена
+                Скасувати
               </button>
               <button
                 onClick={() => handleGenerateSlots(selectedDay ?? todayStr, selectedDay ?? todayStr, customRanges)}
                 disabled={generating}
                 className="px-4 py-2 bg-[var(--color-rose)] text-white rounded-lg text-sm font-medium hover:opacity-90 transition-opacity disabled:opacity-50"
               >
-                {generating ? 'Добавление...' : 'Добавить'}
+                {generating ? 'Додавання...' : 'Додати'}
               </button>
             </div>
           </div>
@@ -1415,18 +1415,18 @@ function ScheduleTab({ studio, apiFetch, onUnauth }: ScheduleTabProps) {
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/30 backdrop-blur-sm">
           <div className="bg-white rounded-2xl shadow-xl p-6 w-full max-w-sm mx-4">
             <h3 className="text-base font-semibold text-[var(--color-charcoal)] mb-2">
-              Подтвердите создание слотов
+              Підтвердіть створення слотів
             </h3>
             <p className="text-sm text-gray-500 mb-5">
-              {'Создать слоты по расписанию с '}
+              {'Створити слоти за розкладом з '}
               <span className="font-medium text-[var(--color-charcoal)]">
-                {new Date(pendingGenerate.dateFrom + 'T12:00:00').toLocaleDateString('ru-RU', { day: 'numeric', month: 'long' })}
+                {new Date(pendingGenerate.dateFrom + 'T12:00:00').toLocaleDateString('uk-UA', { day: 'numeric', month: 'long' })}
               </span>
               {' по '}
               <span className="font-medium text-[var(--color-charcoal)]">
-                {new Date(pendingGenerate.dateTo + 'T12:00:00').toLocaleDateString('ru-RU', { day: 'numeric', month: 'long', year: 'numeric' })}
+                {new Date(pendingGenerate.dateTo + 'T12:00:00').toLocaleDateString('uk-UA', { day: 'numeric', month: 'long', year: 'numeric' })}
               </span>
-              {' включительно? '}
+              {' включно? '}
               <span className="text-gray-400">
                 {'('}
                 {Math.round(
@@ -1450,14 +1450,14 @@ function ScheduleTab({ studio, apiFetch, onUnauth }: ScheduleTabProps) {
                 disabled={generating}
                 className="px-4 py-2 text-sm text-gray-500 hover:text-gray-700 transition-colors disabled:opacity-50"
               >
-                Отмена
+                Скасувати
               </button>
               <button
                 onClick={() => handleGenerateSlots(pendingGenerate.dateFrom, pendingGenerate.dateTo)}
                 disabled={generating}
                 className="px-4 py-2 bg-[var(--color-rose)] text-white rounded-lg text-sm font-medium hover:opacity-90 transition-opacity disabled:opacity-50"
               >
-                {generating ? 'Создание...' : 'Создать'}
+                {generating ? 'Створення...' : 'Створити'}
               </button>
             </div>
           </div>
@@ -1469,13 +1469,13 @@ function ScheduleTab({ studio, apiFetch, onUnauth }: ScheduleTabProps) {
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/30 backdrop-blur-sm">
           <div className="bg-white rounded-2xl shadow-xl p-6 w-full max-w-sm mx-4">
             <h3 className="text-base font-semibold text-[var(--color-charcoal)] mb-4">
-              Добавить слоты между датами
+              Додати слоти між датами
             </h3>
-            <p className="text-xs text-gray-400 mb-4">Используется расписание работы студии</p>
+            <p className="text-xs text-gray-400 mb-4">Використовується розклад роботи студії</p>
 
             <div className="flex flex-col gap-3 mb-5">
               <div className="flex items-center gap-3">
-                <label className="text-sm text-gray-500 w-5 shrink-0">С</label>
+                <label className="text-sm text-gray-500 w-5 shrink-0">З</label>
                 <input
                   type="date"
                   value={rangeFrom}
@@ -1484,7 +1484,7 @@ function ScheduleTab({ studio, apiFetch, onUnauth }: ScheduleTabProps) {
                 />
               </div>
               <div className="flex items-center gap-3">
-                <label className="text-sm text-gray-500 w-5 shrink-0">По</label>
+                <label className="text-sm text-gray-500 w-5 shrink-0">До</label>
                 <input
                   type="date"
                   value={rangeTo}
@@ -1505,7 +1505,7 @@ function ScheduleTab({ studio, apiFetch, onUnauth }: ScheduleTabProps) {
                 onClick={() => { setSlotModal(null); setGenerateMsg(null) }}
                 className="px-4 py-2 text-sm text-gray-500 hover:text-gray-700 transition-colors"
               >
-                Отмена
+                Скасувати
               </button>
               <button
                 onClick={() => {
@@ -1516,7 +1516,7 @@ function ScheduleTab({ studio, apiFetch, onUnauth }: ScheduleTabProps) {
                 disabled={!rangeFrom || !rangeTo || rangeTo < rangeFrom}
                 className="px-4 py-2 bg-[var(--color-rose)] text-white rounded-lg text-sm font-medium hover:opacity-90 transition-opacity disabled:opacity-50"
               >
-                Далее
+                Далі
               </button>
             </div>
           </div>
@@ -1558,7 +1558,7 @@ function ScheduleEditor({
   onChange: (rows: ScheduleRow[]) => void
   disabled?: boolean
 }) {
-  const STUDIO_DAY_LABELS = ['Вс', 'Пн', 'Вт', 'Ср', 'Чт', 'Пт', 'Сб']
+  const STUDIO_DAY_LABELS = ['Нд', 'Пн', 'Вт', 'Ср', 'Чт', 'Пт', 'Сб']
   const updateRow = (index: number, patch: Partial<ScheduleRow>) => {
     const next = rows.map((r, i) => (i === index ? { ...r, ...patch } : r))
     onChange(next)
@@ -1602,7 +1602,7 @@ function ScheduleEditor({
             ))}
           </select>
           {!row.is_working && (
-            <span className="text-xs text-gray-400">Выходной</span>
+            <span className="text-xs text-gray-400">Вихідний</span>
           )}
         </div>
       ))}
@@ -1679,9 +1679,9 @@ function StudiosTab({ apiFetch, onUnauth, onStudiosChanged, secret }: StudiosTab
     })
     const data = await res.json() as { error?: { message?: string } }
     if (!res.ok) {
-      setMessage({ type: 'error', text: data.error?.message ?? 'Ошибка создания студии' })
+      setMessage({ type: 'error', text: data.error?.message ?? 'Помилка створення студії' })
     } else {
-      setMessage({ type: 'success', text: 'Студия создана' })
+      setMessage({ type: 'success', text: 'Студію створено' })
       setShowCreate(false)
       setNewId(''); setNewName(''); setNewStreet(''); setNewCity('')
       setNewTimezone('Asia/Jerusalem'); setNewScheduleText(''); setNewSchedule(buildStudioDefaultSchedule())
@@ -1712,9 +1712,9 @@ function StudiosTab({ apiFetch, onUnauth, onStudiosChanged, secret }: StudiosTab
     })
     const data = await res.json() as { error?: { message?: string } }
     if (!res.ok) {
-      setMessage({ type: 'error', text: data.error?.message ?? 'Ошибка обновления студии' })
+      setMessage({ type: 'error', text: data.error?.message ?? 'Помилка оновлення студії' })
     } else {
-      setMessage({ type: 'success', text: 'Студия обновлена' })
+      setMessage({ type: 'success', text: 'Студію оновлено' })
       setEditingId(null)
       await load(true)
       onStudiosChanged()
@@ -1728,10 +1728,10 @@ function StudiosTab({ apiFetch, onUnauth, onStudiosChanged, secret }: StudiosTab
     const res = await apiFetch(`/api/admin/studios/${studioId}`, { method: 'DELETE' })
     const data = await res.json() as { error?: { message?: string } }
     if (!res.ok) {
-      setMessage({ type: 'error', text: data.error?.message ?? 'Ошибка удаления студии' })
+      setMessage({ type: 'error', text: data.error?.message ?? 'Помилка видалення студії' })
       setDeleteTarget(null)
     } else {
-      setMessage({ type: 'success', text: 'Студия удалена' })
+      setMessage({ type: 'success', text: 'Студію видалено' })
       setDeleteTarget(null)
       await load(true)
       onStudiosChanged()
@@ -1753,14 +1753,14 @@ function StudiosTab({ apiFetch, onUnauth, onStudiosChanged, secret }: StudiosTab
       })
       const data = await res.json() as { image_url?: string; error?: { message?: string } }
       if (!res.ok) {
-        setImageError(data.error?.message ?? 'Ошибка загрузки фото')
+        setImageError(data.error?.message ?? 'Помилка завантаження фото')
       } else {
         setImageError(null)
         await load(true)
         onStudiosChanged()
       }
     } catch {
-      setImageError('Сетевая ошибка при загрузке фото')
+      setImageError('Мережева помилка під час завантаження фото')
     }
     setUploadingImage(false)
   }
@@ -1772,14 +1772,14 @@ function StudiosTab({ apiFetch, onUnauth, onStudiosChanged, secret }: StudiosTab
       const res = await apiFetch(`/api/admin/studios/${studioId}/image`, { method: 'DELETE' })
       if (!res.ok) {
         const data = await res.json() as { error?: { message?: string } }
-        setImageError(data.error?.message ?? 'Ошибка удаления фото')
+        setImageError(data.error?.message ?? 'Помилка видалення фото')
       } else {
         setImageError(null)
         await load(true)
         onStudiosChanged()
       }
     } catch {
-      setImageError('Сетевая ошибка при удалении фото')
+      setImageError('Мережева помилка під час видалення фото')
     }
     setUploadingImage(false)
   }
@@ -1830,12 +1830,12 @@ function StudiosTab({ apiFetch, onUnauth, onStudiosChanged, secret }: StudiosTab
   return (
     <div>
       <div className="flex items-center justify-between mb-6">
-        <h2 className="text-xl font-semibold text-[var(--color-charcoal)]">Студии</h2>
+        <h2 className="text-xl font-semibold text-[var(--color-charcoal)]">Студії</h2>
         <button
           onClick={() => { setShowCreate(v => !v); setEditingId(null); setDeleteTarget(null) }}
           className="px-4 py-2 rounded-lg text-sm font-medium bg-[var(--color-rose)] text-white hover:opacity-90 transition-opacity"
         >
-          {showCreate ? 'Отмена' : '+ Добавить студию'}
+          {showCreate ? 'Скасувати' : '+ Додати студію'}
         </button>
       </div>
 
@@ -1848,7 +1848,7 @@ function StudiosTab({ apiFetch, onUnauth, onStudiosChanged, secret }: StudiosTab
       {/* Create form */}
       {showCreate && (
         <form onSubmit={handleCreate} className="mb-6 p-4 border border-[var(--color-blush)] rounded-xl space-y-4">
-          <h3 className="text-sm font-semibold text-[var(--color-charcoal)]">Новая студия</h3>
+          <h3 className="text-sm font-semibold text-[var(--color-charcoal)]">Нова студія</h3>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <div>
               <label className="block text-xs text-gray-500 mb-1">ID (slug) *</label>
@@ -1858,48 +1858,48 @@ function StudiosTab({ apiFetch, onUnauth, onStudiosChanged, secret }: StudiosTab
                 required
                 className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm text-[var(--color-charcoal)] focus:outline-none focus:border-[var(--color-rose)]"
               />
-              <p className="mt-1 text-xs text-gray-400">Строчные буквы, цифры и дефисы</p>
+              <p className="mt-1 text-xs text-gray-400">Малі літери, цифри та дефіси</p>
             </div>
             <div>
-              <label className="block text-xs text-gray-500 mb-1">Название *</label>
+              <label className="block text-xs text-gray-500 mb-1">Назва *</label>
               <input
                 value={newName} onChange={e => setNewName(e.target.value)}
-                placeholder="Студия маникюра Тель-Авив"
+                placeholder="Студія манікюру Тель-Авів"
                 required
                 className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm text-[var(--color-charcoal)] focus:outline-none focus:border-[var(--color-rose)]"
               />
             </div>
             <div>
-              <label className="block text-xs text-gray-500 mb-1">Улица</label>
+              <label className="block text-xs text-gray-500 mb-1">Вулиця</label>
               <input
                 value={newStreet} onChange={e => setNewStreet(e.target.value)}
-                placeholder="ул. Дизенгоф, 99"
+                placeholder="вул. Дізенгоф, 99"
                 className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm text-[var(--color-charcoal)] focus:outline-none focus:border-[var(--color-rose)]"
               />
             </div>
             <div>
-              <label className="block text-xs text-gray-500 mb-1">Город *</label>
+              <label className="block text-xs text-gray-500 mb-1">Місто *</label>
               <input
                 value={newCity} onChange={e => setNewCity(e.target.value)}
-                placeholder="Тель-Авив"
+                placeholder="Тель-Авів"
                 required
                 className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm text-[var(--color-charcoal)] focus:outline-none focus:border-[var(--color-rose)]"
               />
             </div>
           </div>
           <div className="sm:col-span-2">
-            <label className="block text-xs text-gray-500 mb-1">Расписание (текст для сайта)</label>
+            <label className="block text-xs text-gray-500 mb-1">Розклад (текст для сайту)</label>
             <textarea
               value={newScheduleText}
               onChange={e => setNewScheduleText(e.target.value)}
-              placeholder={"Воскресенье — четверг: 9:00–20:00\nПятница: 9:00–15:00\nСуббота: выходной"}
+              placeholder={"Неділя — четвер: 9:00–20:00\nП'ятниця: 9:00–15:00\nСубота: вихідний"}
               rows={3}
               className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm text-[var(--color-charcoal)] focus:outline-none focus:border-[var(--color-rose)] resize-none"
             />
-            <p className="mt-1 text-xs text-gray-400">Отображается на главной странице сайта. Каждая строка — отдельная строчка расписания.</p>
+            <p className="mt-1 text-xs text-gray-400">Відображається на головній сторінці сайту. Кожен рядок — окремий рядок розкладу.</p>
           </div>
           <div className="sm:col-span-2">
-            <label className="block text-xs text-gray-500 mb-2">Расписание работы</label>
+            <label className="block text-xs text-gray-500 mb-2">Розклад роботи</label>
             <ScheduleEditor rows={newSchedule} onChange={setNewSchedule} disabled={formLoading} />
           </div>
           <div className="flex gap-2">
@@ -1908,28 +1908,28 @@ function StudiosTab({ apiFetch, onUnauth, onStudiosChanged, secret }: StudiosTab
               disabled={formLoading}
               className="px-4 py-2 rounded-lg text-sm font-medium bg-[var(--color-rose)] text-white hover:opacity-90 transition-opacity disabled:opacity-50 disabled:cursor-not-allowed"
             >
-              {formLoading ? 'Сохранение...' : 'Создать студию'}
+              {formLoading ? 'Збереження...' : 'Створити студію'}
             </button>
             <button
               type="button"
               onClick={() => setShowCreate(false)}
               className="px-4 py-2 rounded-lg text-sm font-medium border border-gray-300 text-[var(--color-charcoal)] hover:bg-gray-50"
             >
-              Отмена
+              Скасувати
             </button>
           </div>
-          <p className="text-xs text-gray-400">Фото можно добавить после создания студии.</p>
+          <p className="text-xs text-gray-400">Фото можна додати після створення студії.</p>
         </form>
       )}
 
       {/* Edit form */}
       {editingId && (
         <form onSubmit={handleEdit} className="mb-6 p-4 border border-[var(--color-blush)] rounded-xl space-y-4">
-          <h3 className="text-sm font-semibold text-[var(--color-charcoal)]">Редактировать студию</h3>
+          <h3 className="text-sm font-semibold text-[var(--color-charcoal)]">Редагувати студію</h3>
 
           {/* Photo section */}
           <div className="sm:col-span-2">
-            <label className="block text-xs text-gray-500 mb-2">Фото студии</label>
+            <label className="block text-xs text-gray-500 mb-2">Фото студії</label>
             {imageError && (
               <p className="text-xs text-red-500 mb-2">{imageError}</p>
             )}
@@ -1941,7 +1941,7 @@ function StudiosTab({ apiFetch, onUnauth, onStudiosChanged, secret }: StudiosTab
                   {/* eslint-disable-next-line @next/next/no-img-element */}
                   <img
                     src={currentStudio!.image_url!}
-                    alt="Фото студии"
+                    alt="Фото студії"
                     className="w-24 h-16 object-cover rounded-lg border border-[var(--color-blush)]"
                   />
                   <button
@@ -1950,13 +1950,13 @@ function StudiosTab({ apiFetch, onUnauth, onStudiosChanged, secret }: StudiosTab
                     disabled={uploadingImage}
                     className="px-3 py-1.5 rounded text-xs border border-red-200 text-red-600 bg-red-50 hover:bg-red-100 disabled:opacity-50 disabled:cursor-not-allowed"
                   >
-                    {uploadingImage ? 'Удаление...' : 'Удалить фото'}
+                    {uploadingImage ? 'Видалення...' : 'Видалити фото'}
                   </button>
                 </div>
               ) : (
                 <div className="flex items-center gap-3">
                   <label className={`cursor-pointer flex items-center gap-2 px-3 py-1.5 rounded text-xs border border-gray-300 text-[var(--color-charcoal)] hover:bg-gray-50 ${uploadingImage ? 'opacity-50 pointer-events-none' : ''}`}>
-                    {uploadingImage ? 'Загрузка...' : '+ Загрузить фото'}
+                    {uploadingImage ? 'Завантаження...' : '+ Завантажити фото'}
                     <input
                       type="file"
                       accept="image/jpeg,image/png,image/webp"
@@ -1977,7 +1977,7 @@ function StudiosTab({ apiFetch, onUnauth, onStudiosChanged, secret }: StudiosTab
 
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <div>
-              <label className="block text-xs text-gray-500 mb-1">Название *</label>
+              <label className="block text-xs text-gray-500 mb-1">Назва *</label>
               <input
                 value={editName} onChange={e => setEditName(e.target.value)}
                 required
@@ -1985,14 +1985,14 @@ function StudiosTab({ apiFetch, onUnauth, onStudiosChanged, secret }: StudiosTab
               />
             </div>
             <div>
-              <label className="block text-xs text-gray-500 mb-1">Улица</label>
+              <label className="block text-xs text-gray-500 mb-1">Вулиця</label>
               <input
                 value={editStreet} onChange={e => setEditStreet(e.target.value)}
                 className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm text-[var(--color-charcoal)] focus:outline-none focus:border-[var(--color-rose)]"
               />
             </div>
             <div>
-              <label className="block text-xs text-gray-500 mb-1">Город *</label>
+              <label className="block text-xs text-gray-500 mb-1">Місто *</label>
               <input
                 value={editCity} onChange={e => setEditCity(e.target.value)}
                 required
@@ -2001,14 +2001,14 @@ function StudiosTab({ apiFetch, onUnauth, onStudiosChanged, secret }: StudiosTab
             </div>
           </div>
           <div className="sm:col-span-2">
-            <label className="block text-xs text-gray-500 mb-1">Расписание (текст для сайта)</label>
+            <label className="block text-xs text-gray-500 mb-1">Розклад (текст для сайту)</label>
             <textarea
               value={editScheduleText}
               onChange={e => setEditScheduleText(e.target.value)}
               rows={3}
               className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm text-[var(--color-charcoal)] focus:outline-none focus:border-[var(--color-rose)] resize-none"
             />
-            <p className="mt-1 text-xs text-gray-400">Отображается на главной странице сайта. Каждая строка — отдельная строчка расписания.</p>
+            <p className="mt-1 text-xs text-gray-400">Відображається на головній сторінці сайту. Кожен рядок — окремий рядок розкладу.</p>
           </div>
           <div className="flex gap-2">
             <button
@@ -2016,14 +2016,14 @@ function StudiosTab({ apiFetch, onUnauth, onStudiosChanged, secret }: StudiosTab
               disabled={editLoading}
               className="px-4 py-2 rounded-lg text-sm font-medium bg-[var(--color-rose)] text-white hover:opacity-90 transition-opacity disabled:opacity-50 disabled:cursor-not-allowed"
             >
-              {editLoading ? 'Сохранение...' : 'Сохранить'}
+              {editLoading ? 'Збереження...' : 'Зберегти'}
             </button>
             <button
               type="button"
               onClick={() => setEditingId(null)}
               className="px-4 py-2 rounded-lg text-sm font-medium border border-gray-300 text-[var(--color-charcoal)] hover:bg-gray-50"
             >
-              Отмена
+              Скасувати
             </button>
           </div>
         </form>
@@ -2031,20 +2031,20 @@ function StudiosTab({ apiFetch, onUnauth, onStudiosChanged, secret }: StudiosTab
 
       {/* Studios list */}
       {loading ? (
-        <p className="text-sm text-gray-400">Загрузка студий...</p>
+        <p className="text-sm text-gray-400">Завантаження студій...</p>
       ) : studiosList.length === 0 ? (
-        <p className="text-sm text-gray-400">Студии не найдены.</p>
+        <p className="text-sm text-gray-400">Студії не знайдено.</p>
       ) : (
         <div className="overflow-x-auto">
           <table className="w-full text-sm">
             <thead>
               <tr className="border-b border-[var(--color-blush)]">
                 <th className="py-2 pr-2 w-6"></th>
-                <th className="text-left py-2 pr-4 text-xs font-medium text-gray-500">Название</th>
-                <th className="text-left py-2 pr-4 text-xs font-medium text-gray-500">Улица</th>
-                <th className="text-left py-2 pr-4 text-xs font-medium text-gray-500">Город</th>
+                <th className="text-left py-2 pr-4 text-xs font-medium text-gray-500">Назва</th>
+                <th className="text-left py-2 pr-4 text-xs font-medium text-gray-500">Вулиця</th>
+                <th className="text-left py-2 pr-4 text-xs font-medium text-gray-500">Місто</th>
                 <th className="text-left py-2 pr-4 text-xs font-medium text-gray-500">ID</th>
-                <th className="text-right py-2 text-xs font-medium text-gray-500">Действия</th>
+                <th className="text-right py-2 text-xs font-medium text-gray-500">Дії</th>
               </tr>
             </thead>
             <tbody>
@@ -2073,13 +2073,13 @@ function StudiosTab({ apiFetch, onUnauth, onStudiosChanged, secret }: StudiosTab
                           onClick={() => startEdit(s)}
                           className="px-3 py-1 rounded text-xs border border-gray-300 text-[var(--color-charcoal)] hover:bg-gray-50"
                         >
-                          Изменить
+                          Змінити
                         </button>
                         <button
                           onClick={() => setDeleteTarget(prev => prev === s.id ? null : s.id)}
                           className="px-3 py-1 rounded text-xs border border-red-200 text-red-600 bg-red-50 hover:bg-red-100"
                         >
-                          Удалить
+                          Видалити
                         </button>
                       </div>
                     </td>
@@ -2089,7 +2089,7 @@ function StudiosTab({ apiFetch, onUnauth, onStudiosChanged, secret }: StudiosTab
                       <td colSpan={6} className="px-4 py-3">
                         <div className="flex items-center justify-between gap-4">
                           <p className="text-sm text-red-700">
-                            Удалить студию <strong>{s.name}</strong>? Будут удалены все связанные данные: расписание, слоты, услуги и отменённые записи. Активные записи блокируют удаление.
+                            Видалити студію <strong>{s.name}</strong>? Будуть видалені всі пов'язані дані: розклад, слоти, послуги та скасовані записи. Активні записи блокують видалення.
                           </p>
                           <div className="flex gap-2 shrink-0">
                             <button
@@ -2097,13 +2097,13 @@ function StudiosTab({ apiFetch, onUnauth, onStudiosChanged, secret }: StudiosTab
                               disabled={deleting}
                               className="px-3 py-1 rounded text-xs bg-red-600 text-white hover:bg-red-700 disabled:opacity-50 disabled:cursor-not-allowed"
                             >
-                              {deleting ? 'Удаление...' : 'Подтвердить'}
+                              {deleting ? 'Видалення...' : 'Підтвердити'}
                             </button>
                             <button
                               onClick={() => setDeleteTarget(null)}
                               className="px-3 py-1 rounded text-xs border border-gray-300 text-gray-600 hover:bg-white"
                             >
-                              Отмена
+                              Скасувати
                             </button>
                           </div>
                         </div>
@@ -2193,14 +2193,14 @@ function ClientsSection({ apiFetch, onUnauth, onEditBooking, hideBookingsModal }
       const res = await apiFetch(`/api/admin/clients?${params.toString()}`)
       if (!res.ok) {
         const body = await res.json() as { error?: { message?: string } }
-        setError(body.error?.message ?? 'Ошибка загрузки клиентов')
+        setError(body.error?.message ?? 'Помилка завантаження клієнтів')
         return
       }
       const data = await res.json() as { clients: AdminClientDTO[]; total: number }
       setClients(data.clients ?? [])
       setTotal(data.total ?? 0)
     } catch {
-      setError('Сетевая ошибка при загрузке клиентов')
+      setError('Мережева помилка під час завантаження клієнтів')
     } finally {
       setLoading(false)
     }
@@ -2220,7 +2220,7 @@ function ClientsSection({ apiFetch, onUnauth, onEditBooking, hideBookingsModal }
   }
 
   function formatDate(isoStr: string): string {
-    return new Date(isoStr).toLocaleDateString('ru-IL', {
+    return new Date(isoStr).toLocaleDateString('uk-UA', {
       timeZone: 'Asia/Jerusalem',
       day: '2-digit',
       month: '2-digit',
@@ -2230,7 +2230,7 @@ function ClientsSection({ apiFetch, onUnauth, onEditBooking, hideBookingsModal }
 
   function formatBookingDateTime(isoStr: string): string {
     if (!isoStr) return '—'
-    return new Date(isoStr).toLocaleString('ru-IL', {
+    return new Date(isoStr).toLocaleString('uk-UA', {
       timeZone: 'Asia/Jerusalem',
       day: '2-digit',
       month: '2-digit',
@@ -2263,13 +2263,13 @@ function ClientsSection({ apiFetch, onUnauth, onEditBooking, hideBookingsModal }
       })
       if (!res.ok) {
         const body = await res.json() as { error?: { message?: string } }
-        setEditError(body.error?.message ?? 'Ошибка сохранения')
+        setEditError(body.error?.message ?? 'Помилка збереження')
         return
       }
       setEditingClient(null)
       void loadClients(search)
     } catch {
-      setEditError('Сетевая ошибка при сохранении')
+      setEditError('Мережева помилка під час збереження')
     } finally {
       setEditSaving(false)
     }
@@ -2282,14 +2282,14 @@ function ClientsSection({ apiFetch, onUnauth, onEditBooking, hideBookingsModal }
       const res = await apiFetch(`/api/admin/clients/${clientId}`, { method: 'DELETE' })
       if (!res.ok) {
         const body = await res.json() as { error?: { message?: string } }
-        setDeleteError(body.error?.message ?? 'Ошибка удаления клиента')
+        setDeleteError(body.error?.message ?? 'Помилка видалення клієнта')
         setDeleteTarget(null)
         return
       }
       setDeleteTarget(null)
       void loadClients(search)
     } catch {
-      setDeleteError('Сетевая ошибка при удалении клиента')
+      setDeleteError('Мережева помилка під час видалення клієнта')
     } finally {
       setDeleting(false)
     }
@@ -2309,13 +2309,13 @@ function ClientsSection({ apiFetch, onUnauth, onEditBooking, hideBookingsModal }
       }
       if (!res.ok) {
         const body = await res.json() as { error?: { message?: string } }
-        setBookingsError(body.error?.message ?? 'Ошибка загрузки записей')
+        setBookingsError(body.error?.message ?? 'Помилка завантаження записів')
         return
       }
       const data = await res.json() as { client: AdminClientDTO; bookings: ClientBookingDTO[] }
       setClientDetail(data)
     } catch {
-      setBookingsError('Ошибка при загрузке записей')
+      setBookingsError('Помилка під час завантаження записів')
     } finally {
       setBookingsLoading(false)
     }
@@ -2332,13 +2332,13 @@ function ClientsSection({ apiFetch, onUnauth, onEditBooking, hideBookingsModal }
       }
       if (!res.ok) {
         const body = await res.json() as { error?: { message?: string } }
-        setFetchBookingError(body.error?.message ?? 'Ошибка загрузки записи')
+        setFetchBookingError(body.error?.message ?? 'Помилка завантаження запису')
         return
       }
       const data = await res.json() as { booking: AdminBookingDTO }
       onEditBooking(data.booking)
     } catch {
-      setFetchBookingError('Ошибка при загрузке записи')
+      setFetchBookingError('Помилка під час завантаження запису')
     } finally {
       setFetchingBookingId(null)
     }
@@ -2349,7 +2349,7 @@ function ClientsSection({ apiFetch, onUnauth, onEditBooking, hideBookingsModal }
       {/* Section header */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6">
         <div className="flex items-center gap-3">
-          <h2 className="text-lg font-semibold text-[var(--color-charcoal)]">Клиенты</h2>
+          <h2 className="text-lg font-semibold text-[var(--color-charcoal)]">Клієнти</h2>
           {!loading && (
             <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-600 border border-gray-200">
               {total}
@@ -2361,18 +2361,18 @@ function ClientsSection({ apiFetch, onUnauth, onEditBooking, hideBookingsModal }
           disabled={loading}
           className="border border-[var(--color-rose)] text-[var(--color-rose)] rounded-lg px-4 py-2 text-sm font-medium hover:bg-[var(--color-blush)] transition-colors disabled:opacity-50 self-start sm:self-auto"
         >
-          {loading ? 'Загрузка...' : 'Обновить список'}
+          {loading ? 'Завантаження...' : 'Оновити список'}
         </button>
       </div>
 
       {/* Search / filter bar */}
       <div className="flex flex-wrap gap-4 mb-4">
         <div className="flex flex-col gap-1 text-sm text-gray-600 w-full sm:w-auto">
-          <label htmlFor="clients-search" className="sr-only">Поиск клиента</label>
+          <label htmlFor="clients-search" className="sr-only">Пошук клієнта</label>
           <input
             id="clients-search"
             type="text"
-            placeholder="Поиск по имени или номеру телефона"
+            placeholder="Пошук за ім'ям або номером телефону"
             value={searchInput}
             onChange={handleSearchChange}
             className={INPUT_CLS + ' w-full sm:w-80'}
@@ -2393,12 +2393,12 @@ function ClientsSection({ apiFetch, onUnauth, onEditBooking, hideBookingsModal }
         <table className="w-full text-sm border-collapse">
           <thead>
             <tr className="border-b border-gray-200 text-left text-gray-500">
-              <th className="py-2 pr-4 font-medium">Имя</th>
+              <th className="py-2 pr-4 font-medium">Ім'я</th>
               <th className="py-2 pr-4 font-medium">Телефон</th>
               <th className="py-2 pr-4 font-medium">Email</th>
-              <th className="py-2 pr-4 font-medium">Город</th>
-              <th className="py-2 pr-4 font-medium">Дата регистрации</th>
-              <th className="py-2 font-medium">Действия</th>
+              <th className="py-2 pr-4 font-medium">Місто</th>
+              <th className="py-2 pr-4 font-medium">Дата реєстрації</th>
+              <th className="py-2 font-medium">Дії</th>
             </tr>
           </thead>
           <tbody>
@@ -2418,7 +2418,7 @@ function ClientsSection({ apiFetch, onUnauth, onEditBooking, hideBookingsModal }
             {!loading && clients.length === 0 && (
               <tr>
                 <td colSpan={6} className="py-10 text-center text-gray-400">
-                  {search ? 'Клиентов по запросу не найдено' : 'Клиентов не найдено'}
+                  {search ? 'Клієнтів за запитом не знайдено' : 'Клієнтів не знайдено'}
                 </td>
               </tr>
             )}
@@ -2446,7 +2446,7 @@ function ClientsSection({ apiFetch, onUnauth, onEditBooking, hideBookingsModal }
                         onClick={() => openEditModal(client)}
                         className="px-3 py-1 rounded text-xs font-medium bg-blue-50 text-blue-600 border border-blue-200 hover:bg-blue-100 transition-colors"
                       >
-                        Изменить
+                        Змінити
                       </button>
                       <button
                         onClick={() => void openBookingsModal(client)}
@@ -2458,7 +2458,7 @@ function ClientsSection({ apiFetch, onUnauth, onEditBooking, hideBookingsModal }
                         onClick={() => setDeleteTarget((prev) => prev === client.id ? null : client.id)}
                         className="px-3 py-1 rounded text-xs font-medium border border-red-200 text-red-600 bg-red-50 hover:bg-red-100 transition-colors"
                       >
-                        Удалить
+                        Видалити
                       </button>
                     </div>
                   </td>
@@ -2468,7 +2468,7 @@ function ClientsSection({ apiFetch, onUnauth, onEditBooking, hideBookingsModal }
                     <td colSpan={6} className="px-4 py-3">
                       <div className="flex items-center justify-between gap-4">
                         <p className="text-sm text-red-700">
-                          Удалить клиента <strong>{client.first_name} {client.last_name}</strong>? Это действие необратимо.
+                          Видалити клієнта <strong>{client.first_name} {client.last_name}</strong>? Цю дію неможливо скасувати.
                         </p>
                         <div className="flex gap-2 shrink-0">
                           <button
@@ -2476,13 +2476,13 @@ function ClientsSection({ apiFetch, onUnauth, onEditBooking, hideBookingsModal }
                             disabled={deleting}
                             className="px-3 py-1 rounded text-xs bg-red-600 text-white hover:bg-red-700 disabled:opacity-50 disabled:cursor-not-allowed"
                           >
-                            {deleting ? 'Удаление...' : 'Подтвердить'}
+                            {deleting ? 'Видалення...' : 'Підтвердити'}
                           </button>
                           <button
                             onClick={() => setDeleteTarget(null)}
                             className="px-3 py-1 rounded text-xs border border-gray-300 text-gray-600 hover:bg-white"
                           >
-                            Отмена
+                            Скасувати
                           </button>
                         </div>
                       </div>
@@ -2506,13 +2506,13 @@ function ClientsSection({ apiFetch, onUnauth, onEditBooking, hideBookingsModal }
             onClick={(e) => e.stopPropagation()}
           >
             <h3 className="text-lg font-semibold text-[var(--color-charcoal)] mb-1">
-              Редактировать клиента
+              Редагувати клієнта
             </h3>
             <p className="text-sm text-gray-500 mb-4">Телефон: {editingClient.phone}</p>
 
             <div className="flex flex-col gap-3 mb-4">
               <label className="flex flex-col gap-1 text-sm text-gray-600">
-                Имя
+                Ім'я
                 <input
                   type="text"
                   value={editForm.first_name}
@@ -2521,7 +2521,7 @@ function ClientsSection({ apiFetch, onUnauth, onEditBooking, hideBookingsModal }
                 />
               </label>
               <label className="flex flex-col gap-1 text-sm text-gray-600">
-                Фамилия
+                Прізвище
                 <input
                   type="text"
                   value={editForm.last_name}
@@ -2539,7 +2539,7 @@ function ClientsSection({ apiFetch, onUnauth, onEditBooking, hideBookingsModal }
                 />
               </label>
               <label className="flex flex-col gap-1 text-sm text-gray-600">
-                Город
+                Місто
                 <input
                   type="text"
                   value={editForm.city}
@@ -2558,14 +2558,14 @@ function ClientsSection({ apiFetch, onUnauth, onEditBooking, hideBookingsModal }
                 onClick={() => setEditingClient(null)}
                 className="px-4 py-2 text-sm border border-gray-300 text-gray-600 rounded-lg hover:bg-gray-50 transition-colors"
               >
-                Отмена
+                Скасувати
               </button>
               <button
                 onClick={() => void handleEditSave()}
                 disabled={editSaving}
                 className="px-4 py-2 text-sm bg-[var(--color-rose)] text-white rounded-lg font-medium hover:opacity-90 transition-opacity disabled:opacity-50"
               >
-                {editSaving ? 'Сохранение...' : 'Сохранить'}
+                {editSaving ? 'Збереження...' : 'Зберегти'}
               </button>
             </div>
           </div>
@@ -2584,7 +2584,7 @@ function ClientsSection({ apiFetch, onUnauth, onEditBooking, hideBookingsModal }
           >
             {bookingsLoading ? (
               <div className="flex-1 flex items-center justify-center py-8">
-                <p className="text-sm text-gray-400">Загрузка...</p>
+                <p className="text-sm text-gray-400">Завантаження...</p>
               </div>
             ) : bookingsError ? (
               <div className="flex-1 flex flex-col items-center justify-center py-8 gap-4">
@@ -2593,18 +2593,18 @@ function ClientsSection({ apiFetch, onUnauth, onEditBooking, hideBookingsModal }
                   onClick={() => { setViewingClientId(null); setBookingsError(null) }}
                   className="px-4 py-2 rounded-lg text-sm border border-gray-300 text-gray-600 hover:bg-gray-50 transition-colors"
                 >
-                  Закрыть
+                  Закрити
                 </button>
               </div>
             ) : !clientDetail ? (
               <div className="flex-1 flex items-center justify-center py-8">
-                <p className="text-sm text-gray-400">Не удалось загрузить данные</p>
+                <p className="text-sm text-gray-400">Не вдалося завантажити дані</p>
               </div>
             ) : (
               <>
                 <div className="mb-4 shrink-0">
                   <h3 className="text-lg font-semibold text-[var(--color-charcoal)]">
-                    Записи клиента
+                    Записи клієнта
                   </h3>
                   <p className="text-sm text-gray-500 mt-0.5">
                     {clientDetail.client.first_name} {clientDetail.client.last_name} · {clientDetail.client.phone}
@@ -2613,7 +2613,7 @@ function ClientsSection({ apiFetch, onUnauth, onEditBooking, hideBookingsModal }
 
                 <div className="flex-1 overflow-y-auto -mx-1 px-1">
                   {clientDetail.bookings.length === 0 ? (
-                    <p className="text-sm text-gray-400 text-center py-6">Записей нет</p>
+                    <p className="text-sm text-gray-400 text-center py-6">Записів немає</p>
                   ) : (
                     <>
                     {fetchBookingError && (
@@ -2642,7 +2642,7 @@ function ClientsSection({ apiFetch, onUnauth, onEditBooking, hideBookingsModal }
                               disabled={fetchingBookingId === booking.id}
                               className="px-3 py-1 rounded text-xs font-medium bg-blue-50 text-blue-600 border border-blue-200 hover:bg-blue-100 transition-colors disabled:opacity-50"
                             >
-                              {fetchingBookingId === booking.id ? '...' : 'Изменить'}
+                              {fetchingBookingId === booking.id ? '...' : 'Змінити'}
                             </button>
                           </div>
                         </li>
@@ -2657,7 +2657,7 @@ function ClientsSection({ apiFetch, onUnauth, onEditBooking, hideBookingsModal }
                     onClick={() => { setViewingClientId(null); setBookingsError(null) }}
                     className="px-4 py-2 rounded-lg text-sm border border-gray-300 text-gray-600 hover:bg-gray-50 transition-colors"
                   >
-                    Закрыть
+                    Закрити
                   </button>
                 </div>
               </>
@@ -2761,13 +2761,13 @@ export default function AdminPage() {
       }
       if (!res.ok) {
         const body = await res.json() as { error?: { message?: string } }
-        setBookingsMessage({ type: 'error', text: body.error?.message ?? 'Ошибка загрузки записей' })
+        setBookingsMessage({ type: 'error', text: body.error?.message ?? 'Помилка завантаження записів' })
         return
       }
       const data = await res.json() as GetAdminBookingsResponse
       setBookings(data.bookings)
     } catch {
-      setBookingsMessage({ type: 'error', text: 'Сетевая ошибка при загрузке записей' })
+      setBookingsMessage({ type: 'error', text: 'Мережева помилка під час завантаження записів' })
     } finally {
       setBookingsLoading(false)
     }
@@ -2807,20 +2807,20 @@ export default function AdminPage() {
       }
       if (!res.ok) {
         const body = await res.json() as { error?: { message?: string } }
-        setGenMessage({ type: 'error', text: body.error?.message ?? 'Ошибка генерации слотов' })
+        setGenMessage({ type: 'error', text: body.error?.message ?? 'Помилка генерації слотів' })
         return
       }
       const data = await res.json() as GenerateSlotsFromTemplateResponse
       setGenMessage({
         type: 'success',
-        text: `Создано ${data.created} слотов${data.skipped > 0 ? `, пропущено ${data.skipped} (уже существуют)` : ''}`,
+        text: `Створено ${data.created} слотів${data.skipped > 0 ? `, пропущено ${data.skipped} (вже існують)` : ''}`,
       })
       // Refresh bookings list if date ranges overlap
       if (genDateFrom <= listDateTo && genDateTo >= listDateFrom) {
         await loadBookings()
       }
     } catch {
-      setGenMessage({ type: 'error', text: 'Сетевая ошибка при генерации слотов' })
+      setGenMessage({ type: 'error', text: 'Мережева помилка під час генерації слотів' })
     } finally {
       setGenLoading(false)
     }
@@ -2845,14 +2845,14 @@ export default function AdminPage() {
       }
       if (!res.ok) {
         const body = await res.json() as { error?: { message?: string } }
-        setBookingsMessage({ type: 'error', text: body.error?.message ?? 'Ошибка отмены записи' })
+        setBookingsMessage({ type: 'error', text: body.error?.message ?? 'Помилка скасування запису' })
         return
       }
       setBookings((prev) =>
         prev.map((b) => b.id === id ? { ...b, status: 'CANCELLED' as AdminBookingDTO['status'] } : b),
       )
     } catch {
-      setBookingsMessage({ type: 'error', text: 'Сетевая ошибка при отмене записи' })
+      setBookingsMessage({ type: 'error', text: 'Мережева помилка під час скасування запису' })
     } finally {
       setCancellingId(null)
     }
@@ -2874,8 +2874,8 @@ export default function AdminPage() {
 
   const TABS: { key: AdminTab; label: string }[] = [
     { key: 'bookings', label: 'Записи' },
-    { key: 'schedule', label: 'Расписание' },
-    { key: 'services', label: 'Услуги' },
+    { key: 'schedule', label: 'Розклад' },
+    { key: 'services', label: 'Послуги' },
   ]
 
   return (
@@ -2884,7 +2884,7 @@ export default function AdminPage() {
         {/* Header */}
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-8">
           <h1 className="text-2xl font-semibold text-[var(--color-charcoal)]">
-            Управление — WOVSDH Nails
+            Управління — WOVSDH Nails
           </h1>
           <div className="flex items-center gap-4 self-start sm:self-auto">
             <button
@@ -2894,12 +2894,12 @@ export default function AdminPage() {
               }}
               className="text-sm text-gray-500 underline"
             >
-              Выйти
+              Вийти
             </button>
           </div>
         </div>
 
-        {/* Top-level navigation: Студии | Настройки */}
+        {/* Top-level navigation: Студії | Налаштування */}
         <div className="flex gap-1 mb-8 p-1 bg-white border border-gray-200 rounded-xl w-fit">
           <button
             onClick={() => setTopSection('studios')}
@@ -2910,7 +2910,7 @@ export default function AdminPage() {
             }`}
           >
             <Building2 size={16} />
-            Студии
+            Студії
           </button>
           <button
             onClick={() => setTopSection('settings')}
@@ -2921,7 +2921,7 @@ export default function AdminPage() {
             }`}
           >
             <Settings size={16} />
-            Настройки
+            Налаштування
           </button>
           <button
             onClick={() => setTopSection('clients')}
@@ -2932,7 +2932,7 @@ export default function AdminPage() {
             }`}
           >
             <Users size={16} />
-            Клиенты
+            Клієнти
           </button>
         </div>
 
@@ -2942,8 +2942,8 @@ export default function AdminPage() {
             {/* Settings sub-tab navigation */}
             <div className="flex gap-2 mb-6 border-b border-gray-100 pb-1">
               {([
-                { key: 'studios', label: 'Студии' },
-                { key: 'services', label: 'Услуги' },
+                { key: 'studios', label: 'Студії' },
+                { key: 'services', label: 'Послуги' },
               ] as { key: SettingsSubTab; label: string }[]).map((sub) => (
                 <button
                   key={sub.key}
@@ -2959,14 +2959,14 @@ export default function AdminPage() {
               ))}
             </div>
 
-            {/* Settings sub-tab: Студии */}
+            {/* Settings sub-tab: Студії */}
             {settingsSubTab === 'studios' && (
               <section className="bg-white border border-[var(--color-blush)] rounded-xl p-6">
                 <StudiosTab apiFetch={apiFetch} onUnauth={handleUnauth} onStudiosChanged={loadStudios} secret={secret} />
               </section>
             )}
 
-            {/* Settings sub-tab: Услуги */}
+            {/* Settings sub-tab: Послуги */}
             {settingsSubTab === 'services' && (
               <section className="bg-white border border-[var(--color-blush)] rounded-xl p-6">
                 <ServicesTab studio={studio} apiFetch={apiFetch} onUnauth={handleUnauth} />
@@ -3024,13 +3024,13 @@ export default function AdminPage() {
             {/* Bookings list */}
             <section className="bg-white border border-[var(--color-blush)] rounded-xl p-6">
               <h2 className="text-lg font-semibold text-[var(--color-charcoal)] mb-4">
-                Список записей
+                Список записів
               </h2>
 
               {/* Date range filters */}
               <div className="flex flex-wrap gap-4 mb-4">
                 <label className="flex flex-col gap-1 text-sm text-gray-600">
-                  Дата с
+                  Дата з
                   <input
                     type="date"
                     value={listDateFrom}
@@ -3053,7 +3053,7 @@ export default function AdminPage() {
                     disabled={bookingsLoading}
                     className="border border-[var(--color-rose)] text-[var(--color-rose)] rounded-lg px-4 py-2 text-sm font-medium hover:bg-[var(--color-blush)] transition-colors disabled:opacity-50"
                   >
-                    {bookingsLoading ? 'Загрузка...' : 'Обновить список'}
+                    {bookingsLoading ? 'Завантаження...' : 'Оновити список'}
                   </button>
                 </div>
               </div>
@@ -3070,25 +3070,25 @@ export default function AdminPage() {
                   <thead>
                     <tr className="border-b border-gray-200 text-left text-gray-500">
                       <th className="py-2 pr-4 font-medium">Дата</th>
-                      <th className="py-2 pr-4 font-medium">Время</th>
+                      <th className="py-2 pr-4 font-medium">Час</th>
                       <th className="py-2 pr-4 font-medium">Статус</th>
-                      <th className="py-2 pr-4 font-medium">Клиент</th>
-                      <th className="py-2 pr-4 font-medium">Услуга</th>
-                      <th className="py-2 font-medium">Действия</th>
+                      <th className="py-2 pr-4 font-medium">Клієнт</th>
+                      <th className="py-2 pr-4 font-medium">Послуга</th>
+                      <th className="py-2 font-medium">Дії</th>
                     </tr>
                   </thead>
                   <tbody>
                     {bookings.length === 0 && !bookingsLoading && (
                       <tr>
                         <td colSpan={6} className="py-8 text-center text-gray-400">
-                          Записи не найдены
+                          Записів не знайдено
                         </td>
                       </tr>
                     )}
                     {bookingsLoading && (
                       <tr>
                         <td colSpan={6} className="py-8 text-center text-gray-400">
-                          Загрузка...
+                          Завантаження...
                         </td>
                       </tr>
                     )}
@@ -3128,19 +3128,19 @@ export default function AdminPage() {
                                 onClick={() => setEditingBooking(booking)}
                                 className="px-3 py-1 rounded text-xs font-medium bg-blue-50 text-blue-600 border border-blue-200 hover:bg-blue-100 transition-colors"
                               >
-                                Изменить
+                                Змінити
                               </button>
                               <button
                                 onClick={() => handleCancelBooking(booking.id)}
                                 disabled={isCancelled || isCancelling}
-                                title={isCancelled ? 'Запись уже отменена' : 'Отменить запись'}
+                                title={isCancelled ? 'Запис вже скасовано' : 'Скасувати запис'}
                                 className={`px-3 py-1 rounded text-xs font-medium transition-colors ${
                                   !isCancelled && !isCancelling
                                     ? 'bg-red-50 text-red-600 border border-red-200 hover:bg-red-100'
                                     : 'bg-gray-100 text-gray-400 border border-gray-200 cursor-not-allowed'
                                 }`}
                               >
-                                {isCancelling ? '...' : 'Отменить'}
+                                {isCancelling ? '...' : 'Скасувати'}
                               </button>
                             </div>
                           </td>
@@ -3155,14 +3155,14 @@ export default function AdminPage() {
           </>
         )}
 
-            {/* Tab: Расписание */}
+            {/* Tab: Розклад */}
             {activeTab === 'schedule' && (
               <section className="bg-white border border-[var(--color-blush)] rounded-xl p-6">
                 <ScheduleTab studio={studio} apiFetch={apiFetch} onUnauth={handleUnauth} />
               </section>
             )}
 
-            {/* Tab: Услуги */}
+            {/* Tab: Послуги */}
             {activeTab === 'services' && (
               <section className="bg-white border border-[var(--color-blush)] rounded-xl p-6">
                 <StudioServicesAssignmentTab studio={studio} apiFetch={apiFetch} onUnauth={handleUnauth} />
@@ -3183,10 +3183,10 @@ export default function AdminPage() {
             onClick={(e) => e.stopPropagation()}
           >
             <h3 className="text-lg font-semibold text-[var(--color-charcoal)] mb-4">
-              Детали записи
+              Деталі запису
             </h3>
             <dl className="grid grid-cols-[auto_1fr] gap-x-4 gap-y-2 text-sm mb-6">
-              <dt className="text-gray-500 self-center">Клиент</dt>
+              <dt className="text-gray-500 self-center">Клієнт</dt>
               <dd className="text-[var(--color-charcoal)]">
                 {editingBooking.client_first_name} {editingBooking.client_last_name}
               </dd>
@@ -3198,13 +3198,13 @@ export default function AdminPage() {
               <dd className="text-[var(--color-charcoal)]">
                 {editingBooking.start_at ? formatLocalDate(editingBooking.start_at) : '—'}
               </dd>
-              <dt className="text-gray-500 self-center">Время</dt>
+              <dt className="text-gray-500 self-center">Час</dt>
               <dd className="text-[var(--color-charcoal)]">
                 {editingBooking.start_at && editingBooking.end_at
                   ? `${formatLocalTime(editingBooking.start_at)}–${formatLocalTime(editingBooking.end_at)}`
                   : '—'}
               </dd>
-              <dt className="text-gray-500 self-center">Услуга</dt>
+              <dt className="text-gray-500 self-center">Послуга</dt>
               <dd className="text-[var(--color-charcoal)]">
                 {typeof (editingBooking.service_snapshot as { name?: string }).name === 'string'
                   ? (editingBooking.service_snapshot as { name?: string }).name
@@ -3214,7 +3214,7 @@ export default function AdminPage() {
               <dd><BookingStatusBadge status={editingBooking.status} /></dd>
               {editingBooking.comment && (
                 <>
-                  <dt className="text-gray-500 self-start pt-0.5">Комментарий</dt>
+                  <dt className="text-gray-500 self-start pt-0.5">Коментар</dt>
                   <dd className="text-[var(--color-charcoal)]">{editingBooking.comment}</dd>
                 </>
               )}
@@ -3224,7 +3224,7 @@ export default function AdminPage() {
                 onClick={() => setEditingBooking(null)}
                 className="px-4 py-2 rounded-lg text-sm border border-gray-300 text-gray-600 hover:bg-gray-50 transition-colors"
               >
-                Закрыть
+                Закрити
               </button>
             </div>
           </div>

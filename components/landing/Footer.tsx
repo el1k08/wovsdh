@@ -27,7 +27,7 @@ export default function Footer() {
       className="py-12 md:py-16"
       style={{ background: 'var(--color-charcoal)' }}
       role="contentinfo"
-      aria-label="Подвал сайта"
+      aria-label="Підвал сайту"
     >
       <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
         <div className="grid grid-cols-1 gap-8 md:grid-cols-3 md:gap-12">
@@ -52,22 +52,22 @@ export default function Footer() {
               </span>
             </div>
             <p className="text-sm leading-relaxed text-white opacity-50">
-              Профессиональный маникюр и педикюр в Израиле. Студии в Ришон-ле-Цион и Ашдоде.
+              Професійний манікюр та педикюр в Ізраїлі. Студії в Рішон-ле-Ціон та Ашдоді.
             </p>
           </div>
 
           {/* Navigation column */}
-          <nav aria-label="Навигация в подвале">
+          <nav aria-label="Навігація у підвалі">
             <p className="mb-4 text-xs font-semibold uppercase tracking-widest text-white opacity-40">
-              Навигация
+              Навігація
             </p>
             <ul className="space-y-2 text-sm">
               {[
-                { label: 'Услуги', href: '#services' },
+                { label: 'Послуги', href: '#services' },
                 { label: 'Галерея', href: '#gallery' },
-                { label: 'Студии', href: '#studios' },
-                { label: 'Запись', href: '#booking' },
-                { label: 'Контакты', href: '#contact' },
+                { label: 'Студії', href: '#studios' },
+                { label: 'Запис', href: '#booking' },
+                { label: 'Контакти', href: '#contact' },
               ].map((link) => (
                 <li key={link.href}>
                   <a
@@ -84,14 +84,14 @@ export default function Footer() {
           {/* Social & Legal column */}
           <div>
             <p className="mb-4 text-xs font-semibold uppercase tracking-widest text-white opacity-40">
-              Мы в соцсетях
+              Ми в соцмережах
             </p>
             <div className="mb-6 flex gap-3">
               <a
                 href="https://wa.me/972XXXXXXXXX"
                 target="_blank"
                 rel="noopener noreferrer"
-                aria-label="WhatsApp (открывается в новой вкладке)"
+                aria-label="WhatsApp (відкривається у новій вкладці)"
                 className="flex h-10 w-10 items-center justify-center rounded-full bg-white/10 text-white transition-colors hover:bg-white/20 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-rose)]"
               >
                 <MessageCircle className="h-4 w-4" aria-hidden="true" />
@@ -100,21 +100,21 @@ export default function Footer() {
                 href="https://instagram.com"
                 target="_blank"
                 rel="noopener noreferrer"
-                aria-label="Instagram (открывается в новой вкладке)"
+                aria-label="Instagram (відкривається у новій вкладці)"
                 className="flex h-10 w-10 items-center justify-center rounded-full bg-white/10 text-white transition-colors hover:bg-white/20 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-rose)]"
               >
                 <InstagramIcon />
               </a>
               <a
                 href="tel:+972XXXXXXXXX"
-                aria-label="Позвонить нам"
+                aria-label="Зателефонувати нам"
                 className="flex h-10 w-10 items-center justify-center rounded-full bg-white/10 text-white transition-colors hover:bg-white/20 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-rose)]"
               >
                 <Phone className="h-4 w-4" aria-hidden="true" />
               </a>
               <a
                 href="mailto:hello@wovsdh-nails.com"
-                aria-label="Написать нам по email"
+                aria-label="Написати нам на email"
                 className="flex h-10 w-10 items-center justify-center rounded-full bg-white/10 text-white transition-colors hover:bg-white/20 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-rose)]"
               >
                 <Mail className="h-4 w-4" aria-hidden="true" />
@@ -126,13 +126,13 @@ export default function Footer() {
                 href="/privacy"
                 className="hover:opacity-100 transition-opacity focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-[var(--color-rose)] rounded"
               >
-                Политика конфиденциальности
+                Політика конфіденційності
               </a>
               <a
                 href="/terms"
                 className="hover:opacity-100 transition-opacity focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-[var(--color-rose)] rounded"
               >
-                Условия использования
+                Умови використання
               </a>
             </div>
           </div>
@@ -143,7 +143,7 @@ export default function Footer() {
           className="mt-10 border-t pt-6 text-center text-xs text-white opacity-30"
           style={{ borderColor: 'rgba(255,255,255,0.1)' }}
         >
-          <p>© 2025 WOVSDH Nails. Все права защищены.</p>
+          <p>© 2025 WOVSDH Nails. Всі права захищені.</p>
         </div>
       </div>
     </footer>

@@ -9,7 +9,7 @@ interface DatePickerProps {
 }
 
 const TZ = 'Asia/Jerusalem'
-const LOCALE = 'ru-IL'
+const LOCALE = 'uk-IL'
 
 function toLocalDateString(date: Date): string {
   // Returns YYYY-MM-DD in Asia/Jerusalem timezone
@@ -48,7 +48,7 @@ export default function DatePicker({ value, onChange, disabled = false }: DatePi
     <div
       className="overflow-x-auto pb-2 -mx-1"
       role="group"
-      aria-label="Выберите дату"
+      aria-label="Виберіть дату"
     >
       <div className="flex gap-2 px-1 min-w-max">
         {dates.map(({ dateStr, date }) => {

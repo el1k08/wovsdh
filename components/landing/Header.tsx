@@ -5,10 +5,10 @@ import { Menu, X } from 'lucide-react'
 import Button from '@/components/ui/Button'
 
 const navLinks = [
-  { label: 'Услуги', href: '#services' },
+  { label: 'Послуги', href: '#services' },
   { label: 'Галерея', href: '#gallery' },
-  { label: 'О нас', href: '#studios' },
-  { label: 'Контакты', href: '#contact' },
+  { label: 'Про нас', href: '#studios' },
+  { label: 'Контакти', href: '#contact' },
 ]
 
 export default function Header() {
@@ -54,7 +54,7 @@ export default function Header() {
           <a
             href="/"
             className="flex items-center gap-2 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-rose)] rounded"
-            aria-label="WOVSDH Nails — главная страница"
+            aria-label="WOVSDH Nails — головна сторінка"
           >
             <span
               className="font-cormorant text-2xl font-semibold tracking-widest text-[var(--color-charcoal)]"
@@ -73,7 +73,7 @@ export default function Header() {
           {/* Desktop Navigation */}
           <nav
             className="hidden md:flex items-center gap-6"
-            aria-label="Основная навигация"
+            aria-label="Основна навігація"
           >
             {navLinks.map((link) => (
               <a
@@ -92,7 +92,7 @@ export default function Header() {
               variant="primary"
               size="sm"
             >
-              Записаться
+              Записатись
             </Button>
           </nav>
 
@@ -102,7 +102,7 @@ export default function Header() {
             className="md:hidden inline-flex items-center justify-center p-2 rounded-md text-[var(--color-charcoal)] hover:bg-[var(--color-blush)] transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-rose)]"
             aria-expanded={isMobileOpen}
             aria-controls="mobile-menu"
-            aria-label={isMobileOpen ? 'Закрыть меню' : 'Открыть меню'}
+            aria-label={isMobileOpen ? 'Закрити меню' : 'Відкрити меню'}
             onClick={() => setIsMobileOpen((prev) => !prev)}
           >
             {isMobileOpen ? (
@@ -120,7 +120,7 @@ export default function Header() {
           id="mobile-menu"
           className="md:hidden bg-white/95 backdrop-blur-md border-t border-[var(--color-blush)]"
           role="navigation"
-          aria-label="Мобильная навигация"
+          aria-label="Мобільна навігація"
         >
           <div className="px-4 py-4 flex flex-col gap-2">
             {navLinks.map((link) => (
@@ -142,7 +142,7 @@ export default function Header() {
                 size="md"
                 className="w-full justify-center"
               >
-                Записаться
+                Записатись
               </Button>
             </div>
           </div>

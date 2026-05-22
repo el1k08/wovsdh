@@ -31,7 +31,7 @@ function ErrorState({ message }: { message: string }) {
       >
         <div style={{ fontSize: '48px', marginBottom: '16px' }}>&#x274C;</div>
         <h1 style={{ color: '#3D3535', fontSize: '22px', marginBottom: '12px' }}>
-          Ошибка
+          Помилка
         </h1>
         <p style={{ color: '#666', fontSize: '16px' }}>{message}</p>
         <a
@@ -48,7 +48,7 @@ function ErrorState({ message }: { message: string }) {
             fontWeight: 'bold',
           }}
         >
-          На главную
+          На головну
         </a>
       </div>
     </main>
@@ -81,7 +81,7 @@ function InfoState({ message }: { message: string }) {
       >
         <div style={{ fontSize: '48px', marginBottom: '16px' }}>&#x2139;&#xFE0F;</div>
         <h1 style={{ color: '#3D3535', fontSize: '22px', marginBottom: '12px' }}>
-          Информация
+          Інформація
         </h1>
         <p style={{ color: '#666', fontSize: '16px' }}>{message}</p>
         <a
@@ -98,7 +98,7 @@ function InfoState({ message }: { message: string }) {
             fontWeight: 'bold',
           }}
         >
-          На главную
+          На головну
         </a>
       </div>
     </main>
@@ -131,10 +131,10 @@ function SuccessState({ clientName }: { clientName: string }) {
       >
         <div style={{ fontSize: '48px', marginBottom: '16px' }}>&#x2705;</div>
         <h1 style={{ color: '#3D3535', fontSize: '22px', marginBottom: '12px' }}>
-          Запись отменена
+          Запис скасовано
         </h1>
         <p style={{ color: '#666', fontSize: '16px' }}>
-          {clientName}, ваша запись успешно отменена. Будем рады видеть вас снова!
+          {clientName}, ваш запис успішно скасовано. Будемо раді бачити вас знову!
         </p>
         <a
           href="/"
@@ -150,7 +150,7 @@ function SuccessState({ clientName }: { clientName: string }) {
             fontWeight: 'bold',
           }}
         >
-          Записаться снова
+          Записатись знову
         </a>
       </div>
     </main>
@@ -169,7 +169,7 @@ export default async function CancelPage({
   const { token } = await searchParams
 
   if (!token) {
-    return <ErrorState message="Ссылка отмены недействительна." />
+    return <ErrorState message="Посилання для скасування недійсне." />
   }
 
   // Find booking by cancellation token
@@ -180,7 +180,7 @@ export default async function CancelPage({
     .single()
 
   if (fetchError || !booking) {
-    return <ErrorState message="Запись не найдена." />
+    return <ErrorState message="Запис не знайдено." />
   }
 
   const typedBooking = booking as {
@@ -191,7 +191,7 @@ export default async function CancelPage({
   }
 
   if (typedBooking.status === BookingStatus.Cancelled) {
-    return <InfoState message="Эта запись уже была отменена." />
+    return <InfoState message="Цей запис вже було скасовано." />
   }
 
   // Perform cancellation via internal API
@@ -206,13 +206,13 @@ export default async function CancelPage({
     })
   } catch {
     return (
-      <ErrorState message="Не удалось отменить запись. Попробуйте позже или свяжитесь с нами." />
+      <ErrorState message="Не вдалося скасувати запис. Спробуйте пізніше або зв'яжіться з нами." />
     )
   }
 
   if (!res.ok) {
     return (
-      <ErrorState message="Не удалось отменить запись. Попробуйте позже или свяжитесь с нами." />
+      <ErrorState message="Не вдалося скасувати запис. Спробуйте пізніше або зв'яжіться з нами." />
     )
   }
 

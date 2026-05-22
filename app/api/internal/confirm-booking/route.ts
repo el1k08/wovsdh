@@ -152,13 +152,13 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
   const studioName = raw.studio?.name ?? raw.studio_id
   const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? 'http://localhost:3000'
 
-  const dateFormatter = new Intl.DateTimeFormat('ru-IL', {
+  const dateFormatter = new Intl.DateTimeFormat('uk-IL', {
     timeZone: TZ,
     day: 'numeric',
     month: 'long',
     year: 'numeric',
   })
-  const timeFormatter = new Intl.DateTimeFormat('ru-IL', {
+  const timeFormatter = new Intl.DateTimeFormat('uk-IL', {
     timeZone: TZ,
     hour: '2-digit',
     minute: '2-digit',
@@ -169,11 +169,11 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
   const timeStr = timeFormatter.format(startDate)
 
   const whatsAppMessage =
-    `✅ Ваша запись подтверждена!\n` +
-    `Студия: ${studioName}\n` +
+    `✅ Ваш запис підтверджено!\n` +
+    `Студія: ${studioName}\n` +
     `Дата: ${dateStr} ${timeStr}\n` +
-    `До встречи!\n` +
-    `Отменить запись: ${appUrl}/cancel?token=${raw.cancellation_token}`
+    `До зустрічі!\n` +
+    `Скасувати запис: ${appUrl}/cancel?token=${raw.cancellation_token}`
 
   sendWhatsAppMessage({ to: raw.client_phone, body: whatsAppMessage }).catch((err: unknown) =>
     console.error(`${LOG_PREFIX} WhatsApp confirmation failed`, { booking_id, error: err }),

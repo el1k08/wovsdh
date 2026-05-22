@@ -30,7 +30,7 @@ export default function CitySelector({ studios, value, onChange, loading = false
 
   return (
     <fieldset>
-      <legend className="sr-only">Выберите студию</legend>
+      <legend className="sr-only">Виберіть студію</legend>
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
         {studios.map((studio) => {
           const isSelected = value === studio.id

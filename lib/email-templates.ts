@@ -1,10 +1,10 @@
 /**
  * HTML email templates for booking notifications.
- * All dates are formatted using Intl with locale 'ru-IL' and timeZone 'Asia/Jerusalem'.
+ * All dates are formatted using Intl with locale 'uk-IL' and timeZone 'Asia/Jerusalem'.
  */
 
 const TZ = 'Asia/Jerusalem'
-const LOCALE = 'ru-IL'
+const LOCALE = 'uk-IL'
 
 // ---------------------------------------------------------------------------
 // Date helpers
@@ -47,9 +47,9 @@ function buildGoogleCalendarLink(params: {
 }): string {
   const { studioName, startAt, endAt } = params
   const dates = `${toGcalDate(startAt)}/${toGcalDate(endAt)}`
-  const details = encodeURIComponent(`Студия: ${studioName}`)
+  const details = encodeURIComponent(`Студія: ${studioName}`)
   const location = encodeURIComponent(studioName)
-  const text = encodeURIComponent('Запись в WOVSDH Nails')
+  const text = encodeURIComponent('Запис у WOVSDH Nails')
   return (
     `https://www.google.com/calendar/render?action=TEMPLATE` +
     `&text=${text}` +
@@ -88,7 +88,7 @@ export function buildConfirmationEmail(params: ConfirmationEmailParams): EmailCo
   const icsLink = `${appUrl}/api/calendar/ics?booking_id=${bookingId}`
   const googleCalendarLink = buildGoogleCalendarLink({ studioName, startAt, endAt })
 
-  const subject = 'Ваша запись подтверждена! — WOVSDH Nails'
+  const subject = 'Ваш запис підтверджено! — WOVSDH Nails'
 
   const html = `<!DOCTYPE html>
 <html>
@@ -99,20 +99,20 @@ export function buildConfirmationEmail(params: ConfirmationEmailParams): EmailCo
     <!-- Header -->
     <div style="background: linear-gradient(135deg, #C8968A, #C9A84C); padding: 32px; text-align: center;">
       <h1 style="color: white; margin: 0; font-size: 24px;">WOVSDH Nails</h1>
-      <p style="color: rgba(255,255,255,0.9); margin: 8px 0 0;">Ваша запись подтверждена! &#x2705;</p>
+      <p style="color: rgba(255,255,255,0.9); margin: 8px 0 0;">Ваш запис підтверджено! &#x2705;</p>
     </div>
 
     <!-- Body -->
     <div style="padding: 32px;">
-      <p style="font-size: 16px; color: #3D3535;">Здравствуйте, <strong>${clientName}</strong>!</p>
-      <p style="color: #666;">Ваша запись успешно подтверждена. Ждём вас!</p>
+      <p style="font-size: 16px; color: #3D3535;">Вітаємо, <strong>${clientName}</strong>!</p>
+      <p style="color: #666;">Ваш запис успішно підтверджено. Чекаємо на вас!</p>
 
       <!-- Details block -->
       <div style="background: #F4E4E1; border-radius: 8px; padding: 20px; margin: 24px 0;">
-        <h3 style="margin: 0 0 16px; color: #3D3535;">Детали записи</h3>
+        <h3 style="margin: 0 0 16px; color: #3D3535;">Деталі запису</h3>
         <table style="width: 100%; border-collapse: collapse;">
           <tr>
-            <td style="padding: 6px 0; color: #666; width: 40%;">&#x1F4CD; Студия</td>
+            <td style="padding: 6px 0; color: #666; width: 40%;">&#x1F4CD; Студія</td>
             <td style="padding: 6px 0; color: #3D3535; font-weight: bold;">${studioName}</td>
           </tr>
           <tr>
@@ -120,7 +120,7 @@ export function buildConfirmationEmail(params: ConfirmationEmailParams): EmailCo
             <td style="padding: 6px 0; color: #3D3535; font-weight: bold;">${formattedDate}</td>
           </tr>
           <tr>
-            <td style="padding: 6px 0; color: #666;">&#x23F0; Время</td>
+            <td style="padding: 6px 0; color: #666;">&#x23F0; Час</td>
             <td style="padding: 6px 0; color: #3D3535; font-weight: bold;">${formattedTime}</td>
           </tr>
         </table>
@@ -130,41 +130,41 @@ export function buildConfirmationEmail(params: ConfirmationEmailParams): EmailCo
       <div style="text-align: center; margin: 24px 0;">
         <a href="${googleCalendarLink}" target="_blank"
            style="display: inline-block; background: #4285F4; color: white; padding: 12px 24px; border-radius: 8px; text-decoration: none; margin: 0 8px 12px; font-size: 14px;">
-          &#x1F4C5; Добавить в Google Calendar
+          &#x1F4C5; Додати до Google Calendar
         </a>
         <a href="${icsLink}"
            style="display: inline-block; background: #34A853; color: white; padding: 12px 24px; border-radius: 8px; text-decoration: none; margin: 0 8px 12px; font-size: 14px;">
-          &#x1F4E5; Скачать .ics файл
+          &#x1F4E5; Завантажити .ics файл
         </a>
       </div>
 
       <!-- Cancel link -->
       <div style="border-top: 1px solid #eee; padding-top: 20px; margin-top: 20px; text-align: center;">
-        <p style="color: #999; font-size: 14px;">Если вы хотите отменить запись:</p>
+        <p style="color: #999; font-size: 14px;">Якщо ви хочете скасувати запис:</p>
         <a href="${cancellationLink}"
            style="color: #C8968A; font-size: 14px; text-decoration: underline;">
-          Отменить запись
+          Скасувати запис
         </a>
       </div>
     </div>
 
     <!-- Footer -->
     <div style="background: #F4E4E1; padding: 20px; text-align: center;">
-      <p style="color: #999; font-size: 12px; margin: 0;">&#xa9; 2025 WOVSDH Nails. Все права защищены.</p>
+      <p style="color: #999; font-size: 12px; margin: 0;">&#xa9; 2025 WOVSDH Nails. Всі права захищені.</p>
     </div>
   </div>
 </body>
 </html>`
 
   const text =
-    `Здравствуйте, ${clientName}!\n\n` +
-    `Ваша запись успешно подтверждена.\n\n` +
-    `Студия: ${studioName}\n` +
+    `Вітаємо, ${clientName}!\n\n` +
+    `Ваш запис успішно підтверджено.\n\n` +
+    `Студія: ${studioName}\n` +
     `Дата: ${formattedDate}\n` +
-    `Время: ${formattedTime}\n\n` +
-    `Добавить в Google Calendar: ${googleCalendarLink}\n` +
-    `Скачать .ics файл: ${icsLink}\n\n` +
-    `Отменить запись: ${cancellationLink}\n\n` +
+    `Час: ${formattedTime}\n\n` +
+    `Додати до Google Calendar: ${googleCalendarLink}\n` +
+    `Завантажити .ics файл: ${icsLink}\n\n` +
+    `Скасувати запис: ${cancellationLink}\n\n` +
     `© 2025 WOVSDH Nails`
 
   return { subject, html, text }
@@ -189,7 +189,7 @@ export function buildCancellationEmail(params: CancellationEmailParams): EmailCo
   const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'
   const bookingLink = `${appUrl}`
 
-  const subject = 'Ваша запись отменена — WOVSDH Nails'
+  const subject = 'Ваш запис скасовано — WOVSDH Nails'
 
   const html = `<!DOCTYPE html>
 <html>
@@ -200,20 +200,20 @@ export function buildCancellationEmail(params: CancellationEmailParams): EmailCo
     <!-- Header -->
     <div style="background: linear-gradient(135deg, #C8968A, #C9A84C); padding: 32px; text-align: center;">
       <h1 style="color: white; margin: 0; font-size: 24px;">WOVSDH Nails</h1>
-      <p style="color: rgba(255,255,255,0.9); margin: 8px 0 0;">Запись отменена</p>
+      <p style="color: rgba(255,255,255,0.9); margin: 8px 0 0;">Запис скасовано</p>
     </div>
 
     <!-- Body -->
     <div style="padding: 32px;">
-      <p style="font-size: 16px; color: #3D3535;">Здравствуйте, <strong>${clientName}</strong>!</p>
-      <p style="color: #666;">Ваша запись была успешно отменена.</p>
+      <p style="font-size: 16px; color: #3D3535;">Вітаємо, <strong>${clientName}</strong>!</p>
+      <p style="color: #666;">Ваш запис було успішно скасовано.</p>
 
       <!-- Cancelled details block -->
       <div style="background: #F4E4E1; border-radius: 8px; padding: 20px; margin: 24px 0;">
-        <h3 style="margin: 0 0 16px; color: #3D3535;">Отменённая запись</h3>
+        <h3 style="margin: 0 0 16px; color: #3D3535;">Скасований запис</h3>
         <table style="width: 100%; border-collapse: collapse;">
           <tr>
-            <td style="padding: 6px 0; color: #666; width: 40%;">&#x1F4CD; Студия</td>
+            <td style="padding: 6px 0; color: #666; width: 40%;">&#x1F4CD; Студія</td>
             <td style="padding: 6px 0; color: #3D3535; font-weight: bold;">${studioName}</td>
           </tr>
           <tr>
@@ -221,7 +221,7 @@ export function buildCancellationEmail(params: CancellationEmailParams): EmailCo
             <td style="padding: 6px 0; color: #3D3535; font-weight: bold;">${formattedDate}</td>
           </tr>
           <tr>
-            <td style="padding: 6px 0; color: #666;">&#x23F0; Время</td>
+            <td style="padding: 6px 0; color: #666;">&#x23F0; Час</td>
             <td style="padding: 6px 0; color: #3D3535; font-weight: bold;">${formattedTime}</td>
           </tr>
         </table>
@@ -229,29 +229,29 @@ export function buildCancellationEmail(params: CancellationEmailParams): EmailCo
 
       <!-- Book again -->
       <div style="text-align: center; margin: 24px 0;">
-        <p style="color: #666; margin-bottom: 16px;">Хотите записаться снова?</p>
+        <p style="color: #666; margin-bottom: 16px;">Бажаєте записатися знову?</p>
         <a href="${bookingLink}"
            style="display: inline-block; background: linear-gradient(135deg, #C8968A, #C9A84C); color: white; padding: 14px 32px; border-radius: 8px; text-decoration: none; font-size: 15px; font-weight: bold;">
-          Записаться снова
+          Записатися знову
         </a>
       </div>
     </div>
 
     <!-- Footer -->
     <div style="background: #F4E4E1; padding: 20px; text-align: center;">
-      <p style="color: #999; font-size: 12px; margin: 0;">&#xa9; 2025 WOVSDH Nails. Все права защищены.</p>
+      <p style="color: #999; font-size: 12px; margin: 0;">&#xa9; 2025 WOVSDH Nails. Всі права захищені.</p>
     </div>
   </div>
 </body>
 </html>`
 
   const text =
-    `Здравствуйте, ${clientName}!\n\n` +
-    `Ваша запись была успешно отменена.\n\n` +
-    `Студия: ${studioName}\n` +
+    `Вітаємо, ${clientName}!\n\n` +
+    `Ваш запис було успішно скасовано.\n\n` +
+    `Студія: ${studioName}\n` +
     `Дата: ${formattedDate}\n` +
-    `Время: ${formattedTime}\n\n` +
-    `Хотите записаться снова? ${bookingLink}\n\n` +
+    `Час: ${formattedTime}\n\n` +
+    `Бажаєте записатися знову? ${bookingLink}\n\n` +
     `© 2025 WOVSDH Nails`
 
   return { subject, html, text }

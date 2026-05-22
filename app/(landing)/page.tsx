@@ -9,9 +9,9 @@ import Contact from '@/components/landing/Contact'
 import Footer from '@/components/landing/Footer'
 
 export const metadata: Metadata = {
-  title: 'WOVSDH Nails — Маникюр и педикюр в Ришон-ле-Цион и Ашдоде',
+  title: 'WOVSDH Nails — Манікюр та педикюр у Рішон-ле-Ціон та Ашдоді',
   description:
-    'Профессиональный маникюр, педикюр и нейл-арт в Израиле. Студии в Ришон-ле-Цион и Ашдоде. Онлайн запись.',
+    'Професійний манікюр, педикюр та нейл-арт в Ізраїлі. Студії у Рішон-ле-Ціон та Ашдоді. Онлайн запис.',
 }
 
 const jsonLd = {
@@ -20,11 +20,11 @@ const jsonLd = {
     {
       '@type': 'BeautySalon',
       '@id': 'https://wovsdh-nails.com/#rishon',
-      name: 'WOVSDH Nails — Ришон-ле-Цион',
-      description: 'Студия маникюра и педикюра в Ришон-ле-Цион',
+      name: 'WOVSDH Nails — Рішон-ле-Ціон',
+      description: 'Студія манікюру та педикюру у Рішон-ле-Ціон',
       address: {
         '@type': 'PostalAddress',
-        addressLocality: 'Ришон-ле-Цион',
+        addressLocality: 'Рішон-ле-Ціон',
         addressCountry: 'IL',
       },
       telephone: '+972-XX-XXX-XXXX',
@@ -35,7 +35,7 @@ const jsonLd = {
       '@type': 'BeautySalon',
       '@id': 'https://wovsdh-nails.com/#ashdod',
       name: 'WOVSDH Nails — Ашдод',
-      description: 'Студия маникюра и педикюра в Ашдоде',
+      description: 'Студія манікюру та педикюру в Ашдоді',
       address: {
         '@type': 'PostalAddress',
         addressLocality: 'Ашдод',
@@ -47,37 +47,37 @@ const jsonLd = {
     },
     {
       '@type': 'ItemList',
-      name: 'Услуги маникюра и педикюра',
+      name: 'Послуги манікюру та педикюру',
       itemListElement: [
         {
           '@type': 'ListItem',
           position: 1,
-          name: 'Маникюр',
-          description: 'Классический, аппаратный, европейский маникюр',
+          name: 'Манікюр',
+          description: 'Класичний, апаратний, європейський манікюр',
         },
         {
           '@type': 'ListItem',
           position: 2,
           name: 'Педикюр',
-          description: 'СПА-педикюр, аппаратный, классический педикюр',
+          description: 'СПА-педикюр, апаратний, класичний педикюр',
         },
         {
           '@type': 'ListItem',
           position: 3,
           name: 'Гель-лак',
-          description: 'Покрытие гель-лаком, снятие, укрепление',
+          description: 'Покриття гель-лаком, зняття, зміцнення',
         },
         {
           '@type': 'ListItem',
           position: 4,
-          name: 'Наращивание ногтей',
-          description: 'Гелевое наращивание, коррекция',
+          name: 'Нарощування нігтів',
+          description: 'Гелеве нарощування, корекція',
         },
         {
           '@type': 'ListItem',
           position: 5,
-          name: 'Дизайн ногтей',
-          description: 'Роспись, втирка, стемпинг, фольга',
+          name: 'Дизайн нігтів',
+          description: 'Розпис, втирка, стемпінг, фольга',
         },
       ],
     },

@@ -10,7 +10,7 @@ interface TimePickerProps {
   disabled?: boolean
 }
 
-const TIME_FORMATTER = new Intl.DateTimeFormat('ru-IL', {
+const TIME_FORMATTER = new Intl.DateTimeFormat('uk-IL', {
   hour: '2-digit',
   minute: '2-digit',
   timeZone: 'Asia/Jerusalem',
@@ -33,13 +33,13 @@ export default function TimePicker({
     return (
       <div
         role="status"
-        aria-label="Загрузка доступных слотов"
+        aria-label="Завантаження доступних слотів"
         className="flex flex-wrap gap-3 pt-1"
       >
         {Array.from({ length: 4 }).map((_, i) => (
           <SkeletonBlock key={i} />
         ))}
-        <span className="sr-only">Загрузка...</span>
+        <span className="sr-only">Завантаження...</span>
       </div>
     )
   }
@@ -47,7 +47,7 @@ export default function TimePicker({
   if (startTimes.length === 0) {
     return (
       <p className="text-sm py-2" style={{ color: 'var(--color-charcoal)', opacity: 0.6 }}>
-        На выбранную дату свободных окон нет
+        На вибрану дату немає вільних слотів
       </p>
     )
   }
@@ -55,7 +55,7 @@ export default function TimePicker({
   return (
     <div
       role="group"
-      aria-label="Выберите время"
+      aria-label="Виберіть час"
       className="flex flex-wrap gap-3 pt-1"
     >
       {startTimes.map((item) => {
@@ -69,7 +69,7 @@ export default function TimePicker({
             onClick={() => !disabled && onChange(item.start_at)}
             disabled={disabled}
             aria-pressed={isSelected}
-            aria-label={`Время ${timeLabel}`}
+            aria-label={`Час ${timeLabel}`}
             className={[
               'rounded-xl px-4 py-2 text-sm font-medium transition-all duration-200',
               'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-1',

@@ -2,7 +2,7 @@ import { supabaseAdmin } from '@/lib/supabase'
 import { ServiceStudioBadge } from './ServiceStudioBadge'
 
 function formatPrice(price: number): string {
-  return `от ${price} ₪`
+  return `від ${price} ₪`
 }
 
 export default async function Services() {
@@ -46,7 +46,7 @@ export default async function Services() {
         {/* Section header */}
         <div className="mb-14 text-center">
           <p className="mb-3 text-sm font-medium uppercase tracking-[0.2em] text-[var(--color-rose)]">
-            Что мы предлагаем
+            Що ми пропонуємо
           </p>
           <h2
             id="services-heading"
@@ -56,10 +56,10 @@ export default async function Services() {
               fontSize: 'clamp(2rem, 5vw, 3.5rem)',
             }}
           >
-            Наши услуги
+            Наші послуги
           </h2>
           <p className="mx-auto max-w-xl text-base text-[var(--color-charcoal)] opacity-70 leading-relaxed">
-            Полный спектр услуг по уходу за ногтями — от классического маникюра до изысканного нейл-арта
+            Повний спектр послуг по догляду за нігтями — від класичного манікюру до вишуканого нейл-арту
           </p>
         </div>
 
@@ -68,7 +68,7 @@ export default async function Services() {
           <ul
             className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3"
             role="list"
-            aria-label="Список услуг"
+            aria-label="Список послуг"
           >
             {services.map((service) => {
               const studioNames = studiosByService.get(service.id) ?? []
@@ -114,16 +114,16 @@ export default async function Services() {
                     <span
                       className="text-base font-semibold"
                       style={{ color: 'var(--color-rose)' }}
-                      aria-label={`Цена: ${formatPrice(service.price)}`}
+                      aria-label={`Вартість: ${formatPrice(service.price)}`}
                     >
                       {formatPrice(service.price)}
                     </span>
                     <a
                       href="#booking"
                       className="text-sm font-medium text-[var(--color-gold)] hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-rose)] rounded"
-                      aria-label={`Записаться на ${service.name}`}
+                      aria-label={`Записатись на ${service.name}`}
                     >
-                      Записаться →
+                      Записатись →
                     </a>
                   </div>
 
@@ -142,7 +142,7 @@ export default async function Services() {
           </ul>
         ) : (
           <p className="text-center text-[var(--color-charcoal)] opacity-50">
-            Услуги появятся здесь после добавления в панели управления
+            Послуги з'являться тут після додавання в панелі керування
           </p>
         )}
       </div>

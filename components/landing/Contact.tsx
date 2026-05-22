@@ -6,14 +6,14 @@ const contactItems = [
     label: 'Телефон',
     value: '+972-XX-XXX-XXXX',
     href: 'tel:+972XXXXXXXXX',
-    ariaLabel: 'Позвонить в студию',
+    ariaLabel: 'Зателефонувати до студії',
   },
   {
     icon: Mail,
     label: 'Email',
     value: 'hello@wovsdh-nails.com',
     href: 'mailto:hello@wovsdh-nails.com',
-    ariaLabel: 'Написать нам на email',
+    ariaLabel: 'Написати нам на email',
   },
 ]
 
@@ -51,7 +51,7 @@ export default function Contact() {
         {/* Section header */}
         <div className="mb-14 text-center">
           <p className="mb-3 text-sm font-medium uppercase tracking-[0.2em] text-[var(--color-rose)]">
-            Мы всегда на связи
+            Ми завжди на зв'язку
           </p>
           <h2
             id="contact-heading"
@@ -61,10 +61,10 @@ export default function Contact() {
               fontSize: 'clamp(2rem, 5vw, 3.5rem)',
             }}
           >
-            Контакты
+            Контакти
           </h2>
           <p className="mx-auto max-w-xl text-base text-[var(--color-charcoal)] opacity-70 leading-relaxed">
-            Свяжитесь с нами любым удобным способом — мы ответим быстро
+            Зв'яжіться з нами будь-яким зручним способом — ми відповімо швидко
           </p>
         </div>
 
@@ -73,7 +73,7 @@ export default function Contact() {
           <ul
             className="grid grid-cols-1 gap-5 sm:grid-cols-2 w-full max-w-2xl"
             role="list"
-            aria-label="Контактная информация"
+            aria-label="Контактна інформація"
           >
             {contactItems.map((item) => {
               const Icon = item.icon
@@ -115,7 +115,7 @@ export default function Contact() {
               href="https://wa.me/972XXXXXXXXX"
               target="_blank"
               rel="noopener noreferrer"
-              aria-label="Написать нам в WhatsApp (открывается в новой вкладке)"
+              aria-label="Написати нам у WhatsApp (відкривається у новій вкладці)"
               className="inline-flex items-center gap-3 rounded-full px-6 py-3 text-sm font-medium text-white shadow-sm transition-all duration-200 hover:opacity-90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-[#25D366]"
               style={{ background: '#25D366' }}
             >
@@ -128,7 +128,7 @@ export default function Contact() {
               href="https://instagram.com"
               target="_blank"
               rel="noopener noreferrer"
-              aria-label="Наш Instagram (открывается в новой вкладке)"
+              aria-label="Наш Instagram (відкривається у новій вкладці)"
               className="inline-flex items-center gap-3 rounded-full px-6 py-3 text-sm font-medium text-white shadow-sm transition-all duration-200 hover:opacity-90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-[var(--color-rose)]"
               style={{
                 background:

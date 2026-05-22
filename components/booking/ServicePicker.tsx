@@ -36,13 +36,13 @@ export default function ServicePicker({
     return (
       <div
         role="status"
-        aria-label="Загрузка услуг"
+        aria-label="Завантаження послуг"
         className="grid grid-cols-1 gap-4 sm:grid-cols-2"
       >
         {Array.from({ length: 4 }).map((_, i) => (
           <SkeletonCard key={i} />
         ))}
-        <span className="sr-only">Загрузка...</span>
+        <span className="sr-only">Завантаження...</span>
       </div>
     )
   }
@@ -53,7 +53,7 @@ export default function ServicePicker({
         className="py-4 text-sm"
         style={{ color: 'var(--color-charcoal)', opacity: 0.6 }}
       >
-        Услуги не найдены
+        Послуги не знайдено
       </p>
     )
   }
@@ -61,7 +61,7 @@ export default function ServicePicker({
   return (
     <div
       role="group"
-      aria-label="Выберите услугу"
+      aria-label="Виберіть послугу"
       className="grid grid-cols-1 gap-4 sm:grid-cols-2"
     >
       {services.map((service) => {
@@ -73,7 +73,7 @@ export default function ServicePicker({
             type="button"
             onClick={() => onChange(service.id, service)}
             aria-pressed={isSelected}
-            aria-label={`${service.name}, ${service.price} шекелей, ${service.duration_minutes} минут`}
+            aria-label={`${service.name}, ${service.price} шекелів, ${service.duration_minutes} хвилин`}
             className={[
               'flex flex-col gap-2 rounded-xl border-2 p-4 text-left transition-all duration-200',
               'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-1',
@@ -118,7 +118,7 @@ export default function ServicePicker({
                 className="text-sm"
                 style={{ color: 'var(--color-charcoal)', opacity: 0.6 }}
               >
-                {service.duration_minutes} мин
+                {service.duration_minutes} хв
               </span>
             </div>
           </button>
