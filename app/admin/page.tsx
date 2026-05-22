@@ -2147,9 +2147,10 @@ interface ClientBookingDTO {
 
 interface ClientsSectionProps {
   apiFetch: (path: string, options?: RequestInit) => Promise<Response>
+  onUnauth: () => void
 }
 
-function ClientsSection({ apiFetch }: ClientsSectionProps) {
+function ClientsSection({ apiFetch, onUnauth }: ClientsSectionProps) {
   const [clients, setClients] = useState<AdminClientDTO[]>([])
   const [total, setTotal] = useState(0)
   const [loading, setLoading] = useState(false)
@@ -2168,6 +2169,14 @@ function ClientsSection({ apiFetch }: ClientsSectionProps) {
   const [viewingClientId, setViewingClientId] = useState<string | null>(null)
   const [clientDetail, setClientDetail] = useState<{ client: AdminClientDTO; bookings: ClientBookingDTO[] } | null>(null)
   const [bookingsLoading, setBookingsLoading] = useState(false)
+  const [bookingsError, setBookingsError] = useState<string | null>(null)
+
+  // Delete state
+  const [deleteTarget, setDeleteTarget] = useState<string | null>(null)
+  const [deleting, setDeleting] = useState(false)
+  const [deleteError, setDeleteError] = useState<string | null>(null)
+
+  const INPUT_CLS = 'border border-gray-300 rounded-lg px-3 py-2 text-sm text-[var(--color-charcoal)] focus:outline-none focus:border-[var(--color-rose)]'
 
   const loadClients = useCallback(async (searchTerm: string) => {
     setLoading(true)
@@ -2234,6 +2243,7 @@ function ClientsSection({ apiFetch }: ClientsSectionProps) {
       city: client.city,
     })
     setEditError(null)
+    setDeleteTarget(null)
   }
 
   async function handleEditSave() {
@@ -2259,57 +2269,107 @@ function ClientsSection({ apiFetch }: ClientsSectionProps) {
     }
   }
 
+  async function handleDelete(clientId: string) {
+    setDeleting(true)
+    setDeleteError(null)
+    try {
+      const res = await apiFetch(`/api/admin/clients/${clientId}`, { method: 'DELETE' })
+      if (!res.ok) {
+        const body = await res.json() as { error?: { message?: string } }
+        setDeleteError(body.error?.message ?? 'Ошибка удаления клиента')
+        setDeleteTarget(null)
+        return
+      }
+      setDeleteTarget(null)
+      void loadClients(search)
+    } catch {
+      setDeleteError('Сетевая ошибка при удалении клиента')
+    } finally {
+      setDeleting(false)
+    }
+  }
+
   async function openBookingsModal(client: AdminClientDTO) {
     setViewingClientId(client.id)
     setClientDetail(null)
     setBookingsLoading(true)
+    setBookingsError(null)
     try {
       const res = await apiFetch(`/api/admin/clients/${client.id}`)
-      if (res.ok) {
-        const data = await res.json() as { client: AdminClientDTO; bookings: ClientBookingDTO[] }
-        setClientDetail(data)
+      if (res.status === 401) {
+        onUnauth()
+        setViewingClientId(null)
+        return
       }
+      if (!res.ok) {
+        const body = await res.json() as { error?: { message?: string } }
+        setBookingsError(body.error?.message ?? 'Ошибка загрузки записей')
+        return
+      }
+      const data = await res.json() as { client: AdminClientDTO; bookings: ClientBookingDTO[] }
+      setClientDetail(data)
     } catch {
-      // detail stays null; modal will show empty state
+      setBookingsError('Ошибка при загрузке записей')
     } finally {
       setBookingsLoading(false)
     }
   }
 
   return (
-    <div>
+    <section className="bg-white border border-[var(--color-blush)] rounded-xl p-6">
+      {/* Section header */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6">
-        <h2 className="text-lg font-semibold text-[var(--color-charcoal)]">
-          Клиенты
+        <div className="flex items-center gap-3">
+          <h2 className="text-lg font-semibold text-[var(--color-charcoal)]">Клиенты</h2>
           {!loading && (
-            <span className="ml-2 text-sm font-normal text-gray-500">
-              Всего клиентов: {total}
+            <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-600 border border-gray-200">
+              {total}
             </span>
           )}
-        </h2>
-        <input
-          type="text"
-          placeholder="Поиск по имени или номеру телефона"
-          value={searchInput}
-          onChange={handleSearchChange}
-          className="border border-gray-300 rounded-lg px-3 py-2 text-sm text-[var(--color-charcoal)] focus:outline-none focus:border-[var(--color-rose)] w-full sm:w-72"
-        />
+        </div>
+        <button
+          onClick={() => void loadClients(search)}
+          disabled={loading}
+          className="border border-[var(--color-rose)] text-[var(--color-rose)] rounded-lg px-4 py-2 text-sm font-medium hover:bg-[var(--color-blush)] transition-colors disabled:opacity-50 self-start sm:self-auto"
+        >
+          {loading ? 'Загрузка...' : 'Обновить список'}
+        </button>
+      </div>
+
+      {/* Search / filter bar */}
+      <div className="flex flex-wrap gap-4 mb-4">
+        <div className="flex flex-col gap-1 text-sm text-gray-600 w-full sm:w-auto">
+          <label htmlFor="clients-search" className="sr-only">Поиск клиента</label>
+          <input
+            id="clients-search"
+            type="text"
+            placeholder="Поиск по имени или номеру телефона"
+            value={searchInput}
+            onChange={handleSearchChange}
+            className={INPUT_CLS + ' w-full sm:w-80'}
+          />
+        </div>
       </div>
 
       {error && (
         <p className="mb-4 text-sm text-red-500">{error}</p>
       )}
 
+      {deleteError && (
+        <p className="mb-4 text-sm text-red-500">{deleteError}</p>
+      )}
+
+      {/* Table */}
       <div className="overflow-x-auto">
-        <table className="w-full text-sm">
+        <table className="w-full text-sm border-collapse">
           <thead>
-            <tr className="border-b border-[var(--color-blush)]">
-              <th className="text-left py-2 pr-4 text-xs font-medium text-gray-500">Имя</th>
-              <th className="text-left py-2 pr-4 text-xs font-medium text-gray-500">Телефон</th>
-              <th className="text-left py-2 pr-4 text-xs font-medium text-gray-500">Email</th>
-              <th className="text-left py-2 pr-4 text-xs font-medium text-gray-500">Город</th>
-              <th className="text-left py-2 pr-4 text-xs font-medium text-gray-500">Дата регистрации</th>
-              <th className="text-right py-2 text-xs font-medium text-gray-500">Действия</th>
+            <tr className="border-b border-gray-200 text-left text-gray-500">
+              <th className="py-2 pr-4 font-medium">Имя</th>
+              <th className="py-2 pr-4 font-medium">Телефон</th>
+              <th className="py-2 pr-4 font-medium">Email</th>
+              <th className="py-2 pr-4 font-medium">Город</th>
+              <th className="py-2 pr-4 font-medium">Дата регистрации</th>
+              <th className="py-2 font-medium">Действия</th>
             </tr>
           </thead>
           <tbody>
@@ -2329,44 +2389,78 @@ function ClientsSection({ apiFetch }: ClientsSectionProps) {
             {!loading && clients.length === 0 && (
               <tr>
                 <td colSpan={6} className="py-10 text-center text-gray-400">
-                  Клиентов не найдено
+                  {search ? 'Клиентов по запросу не найдено' : 'Клиентов не найдено'}
                 </td>
               </tr>
             )}
             {!loading && clients.map((client) => (
-              <tr key={client.id} className="border-b border-gray-100 transition-opacity hover:bg-gray-50">
-                <td className="py-3 pr-4 text-[var(--color-charcoal)] font-medium">
-                  {client.first_name} {client.last_name}
-                </td>
-                <td className="py-3 pr-4 text-gray-600">
-                  {client.phone}
-                </td>
-                <td className="py-3 pr-4 text-gray-600">
-                  {client.email || '—'}
-                </td>
-                <td className="py-3 pr-4 text-gray-600">
-                  {client.city}
-                </td>
-                <td className="py-3 pr-4 text-gray-600">
-                  {formatDate(client.created_at)}
-                </td>
-                <td className="py-3 text-right">
-                  <div className="flex items-center justify-end gap-2">
-                    <button
-                      onClick={() => openEditModal(client)}
-                      className="px-3 py-1 rounded text-xs border border-gray-300 text-[var(--color-charcoal)] hover:bg-gray-50"
-                    >
-                      Изменить
-                    </button>
-                    <button
-                      onClick={() => void openBookingsModal(client)}
-                      className="px-3 py-1 rounded text-xs border border-gray-300 text-[var(--color-charcoal)] hover:bg-gray-50"
-                    >
-                      Записи
-                    </button>
-                  </div>
-                </td>
-              </tr>
+              <React.Fragment key={client.id}>
+                <tr className="border-b border-gray-100 hover:bg-gray-50 transition-colors">
+                  <td className="py-2 pr-4 text-[var(--color-charcoal)] font-medium whitespace-nowrap">
+                    {client.first_name} {client.last_name}
+                  </td>
+                  <td className="py-2 pr-4 text-[var(--color-charcoal)] whitespace-nowrap">
+                    {client.phone}
+                  </td>
+                  <td className="py-2 pr-4 text-[var(--color-charcoal)]">
+                    {client.email || '—'}
+                  </td>
+                  <td className="py-2 pr-4 text-[var(--color-charcoal)]">
+                    {client.city}
+                  </td>
+                  <td className="py-2 pr-4 text-[var(--color-charcoal)] whitespace-nowrap">
+                    {formatDate(client.created_at)}
+                  </td>
+                  <td className="py-2">
+                    <div className="flex gap-2">
+                      <button
+                        onClick={() => openEditModal(client)}
+                        className="px-3 py-1 rounded text-xs font-medium bg-blue-50 text-blue-600 border border-blue-200 hover:bg-blue-100 transition-colors"
+                      >
+                        Изменить
+                      </button>
+                      <button
+                        onClick={() => void openBookingsModal(client)}
+                        className="px-3 py-1 rounded text-xs font-medium border border-gray-300 text-[var(--color-charcoal)] hover:bg-gray-50 transition-colors"
+                      >
+                        Записи
+                      </button>
+                      <button
+                        onClick={() => setDeleteTarget((prev) => prev === client.id ? null : client.id)}
+                        className="px-3 py-1 rounded text-xs font-medium border border-red-200 text-red-600 bg-red-50 hover:bg-red-100 transition-colors"
+                      >
+                        Удалить
+                      </button>
+                    </div>
+                  </td>
+                </tr>
+                {deleteTarget === client.id && (
+                  <tr className="bg-red-50">
+                    <td colSpan={6} className="px-4 py-3">
+                      <div className="flex items-center justify-between gap-4">
+                        <p className="text-sm text-red-700">
+                          Удалить клиента <strong>{client.first_name} {client.last_name}</strong>? Это действие необратимо.
+                        </p>
+                        <div className="flex gap-2 shrink-0">
+                          <button
+                            onClick={() => void handleDelete(client.id)}
+                            disabled={deleting}
+                            className="px-3 py-1 rounded text-xs bg-red-600 text-white hover:bg-red-700 disabled:opacity-50 disabled:cursor-not-allowed"
+                          >
+                            {deleting ? 'Удаление...' : 'Подтвердить'}
+                          </button>
+                          <button
+                            onClick={() => setDeleteTarget(null)}
+                            className="px-3 py-1 rounded text-xs border border-gray-300 text-gray-600 hover:bg-white"
+                          >
+                            Отмена
+                          </button>
+                        </div>
+                      </div>
+                    </td>
+                  </tr>
+                )}
+              </React.Fragment>
             ))}
           </tbody>
         </table>
@@ -2394,7 +2488,7 @@ function ClientsSection({ apiFetch }: ClientsSectionProps) {
                   type="text"
                   value={editForm.first_name}
                   onChange={(e) => setEditForm((f) => ({ ...f, first_name: e.target.value }))}
-                  className="border border-gray-300 rounded-lg px-3 py-2 text-sm text-[var(--color-charcoal)] focus:outline-none focus:border-[var(--color-rose)]"
+                  className={INPUT_CLS}
                 />
               </label>
               <label className="flex flex-col gap-1 text-sm text-gray-600">
@@ -2403,7 +2497,7 @@ function ClientsSection({ apiFetch }: ClientsSectionProps) {
                   type="text"
                   value={editForm.last_name}
                   onChange={(e) => setEditForm((f) => ({ ...f, last_name: e.target.value }))}
-                  className="border border-gray-300 rounded-lg px-3 py-2 text-sm text-[var(--color-charcoal)] focus:outline-none focus:border-[var(--color-rose)]"
+                  className={INPUT_CLS}
                 />
               </label>
               <label className="flex flex-col gap-1 text-sm text-gray-600">
@@ -2412,7 +2506,7 @@ function ClientsSection({ apiFetch }: ClientsSectionProps) {
                   type="email"
                   value={editForm.email}
                   onChange={(e) => setEditForm((f) => ({ ...f, email: e.target.value }))}
-                  className="border border-gray-300 rounded-lg px-3 py-2 text-sm text-[var(--color-charcoal)] focus:outline-none focus:border-[var(--color-rose)]"
+                  className={INPUT_CLS}
                 />
               </label>
               <label className="flex flex-col gap-1 text-sm text-gray-600">
@@ -2421,7 +2515,7 @@ function ClientsSection({ apiFetch }: ClientsSectionProps) {
                   type="text"
                   value={editForm.city}
                   onChange={(e) => setEditForm((f) => ({ ...f, city: e.target.value }))}
-                  className="border border-gray-300 rounded-lg px-3 py-2 text-sm text-[var(--color-charcoal)] focus:outline-none focus:border-[var(--color-rose)]"
+                  className={INPUT_CLS}
                 />
               </label>
             </div>
@@ -2453,25 +2547,39 @@ function ClientsSection({ apiFetch }: ClientsSectionProps) {
       {viewingClientId !== null && (
         <div
           className="fixed inset-0 bg-black/40 z-50 flex items-center justify-center"
-          onClick={() => setViewingClientId(null)}
+          onClick={() => { setViewingClientId(null); setBookingsError(null) }}
         >
           <div
             className="bg-white rounded-2xl p-6 w-full max-w-md mx-4 shadow-xl max-h-[80vh] flex flex-col"
             onClick={(e) => e.stopPropagation()}
           >
-            {bookingsLoading || !clientDetail ? (
+            {bookingsLoading ? (
               <div className="flex-1 flex items-center justify-center py-8">
-                <p className="text-sm text-gray-400">
-                  {bookingsLoading ? 'Загрузка...' : 'Не удалось загрузить данные'}
-                </p>
+                <p className="text-sm text-gray-400">Загрузка...</p>
+              </div>
+            ) : bookingsError ? (
+              <div className="flex-1 flex flex-col items-center justify-center py-8 gap-4">
+                <p className="text-sm text-red-500 text-center">{bookingsError}</p>
+                <button
+                  onClick={() => { setViewingClientId(null); setBookingsError(null) }}
+                  className="px-4 py-2 rounded-lg text-sm border border-gray-300 text-gray-600 hover:bg-gray-50 transition-colors"
+                >
+                  Закрыть
+                </button>
+              </div>
+            ) : !clientDetail ? (
+              <div className="flex-1 flex items-center justify-center py-8">
+                <p className="text-sm text-gray-400">Не удалось загрузить данные</p>
               </div>
             ) : (
               <>
                 <div className="mb-4 shrink-0">
                   <h3 className="text-lg font-semibold text-[var(--color-charcoal)]">
-                    Записи клиента: {clientDetail.client.first_name} {clientDetail.client.last_name}
+                    Записи клиента
                   </h3>
-                  <p className="text-sm text-gray-500 mt-0.5">{clientDetail.client.phone}</p>
+                  <p className="text-sm text-gray-500 mt-0.5">
+                    {clientDetail.client.first_name} {clientDetail.client.last_name} · {clientDetail.client.phone}
+                  </p>
                 </div>
 
                 <div className="flex-1 overflow-y-auto -mx-1 px-1">
@@ -2503,7 +2611,7 @@ function ClientsSection({ apiFetch }: ClientsSectionProps) {
 
                 <div className="flex justify-end mt-4 shrink-0">
                   <button
-                    onClick={() => setViewingClientId(null)}
+                    onClick={() => { setViewingClientId(null); setBookingsError(null) }}
                     className="px-4 py-2 rounded-lg text-sm border border-gray-300 text-gray-600 hover:bg-gray-50 transition-colors"
                   >
                     Закрыть
@@ -2514,7 +2622,7 @@ function ClientsSection({ apiFetch }: ClientsSectionProps) {
           </div>
         </div>
       )}
-    </div>
+    </section>
   )
 }
 
@@ -2826,7 +2934,7 @@ export default function AdminPage() {
 
         {/* Clients section */}
         {topSection === 'clients' && (
-          <ClientsSection apiFetch={apiFetch} />
+          <ClientsSection apiFetch={apiFetch} onUnauth={handleUnauth} />
         )}
 
         {/* Studio switcher + tabs */}
@@ -2868,53 +2976,7 @@ export default function AdminPage() {
             {/* Tab: Записи */}
             {activeTab === 'bookings' && (
           <>
-            {/* Generate slots form */}
-            <section className="bg-white border border-[var(--color-blush)] rounded-xl p-6 mb-8">
-              <h2 className="text-lg font-semibold text-[var(--color-charcoal)] mb-4">
-                Генерация слотов из расписания
-              </h2>
-              <form onSubmit={handleGenerate} className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-                <label className="flex flex-col gap-1 text-sm text-gray-600">
-                  Дата с
-                  <input
-                    type="date"
-                    value={genDateFrom}
-                    onChange={(e) => setGenDateFrom(e.target.value)}
-                    required
-                    className={INPUT_CLS}
-                  />
-                </label>
-                <label className="flex flex-col gap-1 text-sm text-gray-600">
-                  Дата по
-                  <input
-                    type="date"
-                    value={genDateTo}
-                    onChange={(e) => setGenDateTo(e.target.value)}
-                    required
-                    className={INPUT_CLS}
-                  />
-                </label>
-                <div className="flex items-end">
-                  <button
-                    type="submit"
-                    disabled={genLoading}
-                    className="bg-[var(--color-rose)] text-white rounded-lg px-6 py-2 text-sm font-medium hover:opacity-90 transition-opacity disabled:opacity-50"
-                  >
-                    {genLoading ? 'Создание...' : 'Создать слоты'}
-                  </button>
-                </div>
-              </form>
 
-              {genMessage && (
-                <p
-                  className={`mt-4 text-sm ${
-                    genMessage.type === 'success' ? 'text-green-600' : 'text-red-500'
-                  }`}
-                >
-                  {genMessage.text}
-                </p>
-              )}
-            </section>
 
             {/* Bookings list */}
             <section className="bg-white border border-[var(--color-blush)] rounded-xl p-6">
