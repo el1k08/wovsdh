@@ -2148,9 +2148,11 @@ interface ClientBookingDTO {
 interface ClientsSectionProps {
   apiFetch: (path: string, options?: RequestInit) => Promise<Response>
   onUnauth: () => void
+  onEditBooking: (booking: AdminBookingDTO) => void
+  hideBookingsModal?: boolean
 }
 
-function ClientsSection({ apiFetch, onUnauth }: ClientsSectionProps) {
+function ClientsSection({ apiFetch, onUnauth, onEditBooking, hideBookingsModal }: ClientsSectionProps) {
   const [clients, setClients] = useState<AdminClientDTO[]>([])
   const [total, setTotal] = useState(0)
   const [loading, setLoading] = useState(false)
@@ -2170,6 +2172,10 @@ function ClientsSection({ apiFetch, onUnauth }: ClientsSectionProps) {
   const [clientDetail, setClientDetail] = useState<{ client: AdminClientDTO; bookings: ClientBookingDTO[] } | null>(null)
   const [bookingsLoading, setBookingsLoading] = useState(false)
   const [bookingsError, setBookingsError] = useState<string | null>(null)
+
+  // Edit booking from client modal
+  const [fetchingBookingId, setFetchingBookingId] = useState<string | null>(null)
+  const [fetchBookingError, setFetchBookingError] = useState<string | null>(null)
 
   // Delete state
   const [deleteTarget, setDeleteTarget] = useState<string | null>(null)
@@ -2312,6 +2318,29 @@ function ClientsSection({ apiFetch, onUnauth }: ClientsSectionProps) {
       setBookingsError('Ошибка при загрузке записей')
     } finally {
       setBookingsLoading(false)
+    }
+  }
+
+  async function handleEditClientBooking(bookingId: string) {
+    setFetchingBookingId(bookingId)
+    setFetchBookingError(null)
+    try {
+      const res = await apiFetch(`/api/admin/bookings/${bookingId}`)
+      if (res.status === 401) {
+        onUnauth()
+        return
+      }
+      if (!res.ok) {
+        const body = await res.json() as { error?: { message?: string } }
+        setFetchBookingError(body.error?.message ?? 'Ошибка загрузки записи')
+        return
+      }
+      const data = await res.json() as { booking: AdminBookingDTO }
+      onEditBooking(data.booking)
+    } catch {
+      setFetchBookingError('Ошибка при загрузке записи')
+    } finally {
+      setFetchingBookingId(null)
     }
   }
 
@@ -2544,7 +2573,7 @@ function ClientsSection({ apiFetch, onUnauth }: ClientsSectionProps) {
       )}
 
       {/* Client bookings modal */}
-      {viewingClientId !== null && (
+      {viewingClientId !== null && !hideBookingsModal && (
         <div
           className="fixed inset-0 bg-black/40 z-50 flex items-center justify-center"
           onClick={() => { setViewingClientId(null); setBookingsError(null) }}
@@ -2586,6 +2615,10 @@ function ClientsSection({ apiFetch, onUnauth }: ClientsSectionProps) {
                   {clientDetail.bookings.length === 0 ? (
                     <p className="text-sm text-gray-400 text-center py-6">Записей нет</p>
                   ) : (
+                    <>
+                    {fetchBookingError && (
+                      <p className="text-xs text-red-500 mb-2">{fetchBookingError}</p>
+                    )}
                     <ul className="flex flex-col gap-2">
                       {clientDetail.bookings.map((booking) => (
                         <li
@@ -2602,10 +2635,20 @@ function ClientsSection({ apiFetch, onUnauth }: ClientsSectionProps) {
                               {formatBookingDateTime(booking.start_at)}
                             </span>
                           </div>
-                          <BookingStatusBadge status={booking.status} />
+                          <div className="flex items-center gap-2 shrink-0">
+                            <BookingStatusBadge status={booking.status} />
+                            <button
+                              onClick={() => void handleEditClientBooking(booking.id)}
+                              disabled={fetchingBookingId === booking.id}
+                              className="px-3 py-1 rounded text-xs font-medium bg-blue-50 text-blue-600 border border-blue-200 hover:bg-blue-100 transition-colors disabled:opacity-50"
+                            >
+                              {fetchingBookingId === booking.id ? '...' : 'Изменить'}
+                            </button>
+                          </div>
                         </li>
                       ))}
                     </ul>
+                    </>
                   )}
                 </div>
 
@@ -2934,7 +2977,7 @@ export default function AdminPage() {
 
         {/* Clients section */}
         {topSection === 'clients' && (
-          <ClientsSection apiFetch={apiFetch} onUnauth={handleUnauth} />
+          <ClientsSection apiFetch={apiFetch} onUnauth={handleUnauth} onEditBooking={setEditingBooking} hideBookingsModal={!!editingBooking} />
         )}
 
         {/* Studio switcher + tabs */}
@@ -3109,64 +3152,6 @@ export default function AdminPage() {
               </div>
             </section>
 
-            {/* Edit booking modal */}
-            {editingBooking && (
-              <div
-                className="fixed inset-0 bg-black/40 flex items-center justify-center z-50"
-                onClick={() => setEditingBooking(null)}
-              >
-                <div
-                  className="bg-white rounded-xl p-6 max-w-md w-full mx-4 shadow-xl"
-                  onClick={(e) => e.stopPropagation()}
-                >
-                  <h3 className="text-lg font-semibold text-[var(--color-charcoal)] mb-4">
-                    Детали записи
-                  </h3>
-                  <dl className="grid grid-cols-[auto_1fr] gap-x-4 gap-y-2 text-sm mb-6">
-                    <dt className="text-gray-500 self-center">Клиент</dt>
-                    <dd className="text-[var(--color-charcoal)]">
-                      {editingBooking.client_first_name} {editingBooking.client_last_name}
-                    </dd>
-                    <dt className="text-gray-500 self-center">Телефон</dt>
-                    <dd className="text-[var(--color-charcoal)]">{editingBooking.client_phone}</dd>
-                    <dt className="text-gray-500 self-center">Email</dt>
-                    <dd className="text-[var(--color-charcoal)]">{editingBooking.client_email}</dd>
-                    <dt className="text-gray-500 self-center">Дата</dt>
-                    <dd className="text-[var(--color-charcoal)]">
-                      {editingBooking.start_at ? formatLocalDate(editingBooking.start_at) : '—'}
-                    </dd>
-                    <dt className="text-gray-500 self-center">Время</dt>
-                    <dd className="text-[var(--color-charcoal)]">
-                      {editingBooking.start_at && editingBooking.end_at
-                        ? `${formatLocalTime(editingBooking.start_at)}–${formatLocalTime(editingBooking.end_at)}`
-                        : '—'}
-                    </dd>
-                    <dt className="text-gray-500 self-center">Услуга</dt>
-                    <dd className="text-[var(--color-charcoal)]">
-                      {typeof (editingBooking.service_snapshot as { name?: string }).name === 'string'
-                        ? (editingBooking.service_snapshot as { name?: string }).name
-                        : '—'}
-                    </dd>
-                    <dt className="text-gray-500 self-center">Статус</dt>
-                    <dd><BookingStatusBadge status={editingBooking.status} /></dd>
-                    {editingBooking.comment && (
-                      <>
-                        <dt className="text-gray-500 self-start pt-0.5">Комментарий</dt>
-                        <dd className="text-[var(--color-charcoal)]">{editingBooking.comment}</dd>
-                      </>
-                    )}
-                  </dl>
-                  <div className="flex justify-end">
-                    <button
-                      onClick={() => setEditingBooking(null)}
-                      className="px-4 py-2 rounded-lg text-sm border border-gray-300 text-gray-600 hover:bg-gray-50 transition-colors"
-                    >
-                      Закрыть
-                    </button>
-                  </div>
-                </div>
-              </div>
-            )}
           </>
         )}
 
@@ -3186,6 +3171,65 @@ export default function AdminPage() {
           </>
         )}
       </div>
+
+      {/* Edit booking modal — rendered at root level so it works from any section */}
+      {editingBooking && (
+        <div
+          className="fixed inset-0 bg-black/40 flex items-center justify-center z-50"
+          onClick={() => setEditingBooking(null)}
+        >
+          <div
+            className="bg-white rounded-xl p-6 max-w-md w-full mx-4 shadow-xl"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <h3 className="text-lg font-semibold text-[var(--color-charcoal)] mb-4">
+              Детали записи
+            </h3>
+            <dl className="grid grid-cols-[auto_1fr] gap-x-4 gap-y-2 text-sm mb-6">
+              <dt className="text-gray-500 self-center">Клиент</dt>
+              <dd className="text-[var(--color-charcoal)]">
+                {editingBooking.client_first_name} {editingBooking.client_last_name}
+              </dd>
+              <dt className="text-gray-500 self-center">Телефон</dt>
+              <dd className="text-[var(--color-charcoal)]">{editingBooking.client_phone}</dd>
+              <dt className="text-gray-500 self-center">Email</dt>
+              <dd className="text-[var(--color-charcoal)]">{editingBooking.client_email}</dd>
+              <dt className="text-gray-500 self-center">Дата</dt>
+              <dd className="text-[var(--color-charcoal)]">
+                {editingBooking.start_at ? formatLocalDate(editingBooking.start_at) : '—'}
+              </dd>
+              <dt className="text-gray-500 self-center">Время</dt>
+              <dd className="text-[var(--color-charcoal)]">
+                {editingBooking.start_at && editingBooking.end_at
+                  ? `${formatLocalTime(editingBooking.start_at)}–${formatLocalTime(editingBooking.end_at)}`
+                  : '—'}
+              </dd>
+              <dt className="text-gray-500 self-center">Услуга</dt>
+              <dd className="text-[var(--color-charcoal)]">
+                {typeof (editingBooking.service_snapshot as { name?: string }).name === 'string'
+                  ? (editingBooking.service_snapshot as { name?: string }).name
+                  : '—'}
+              </dd>
+              <dt className="text-gray-500 self-center">Статус</dt>
+              <dd><BookingStatusBadge status={editingBooking.status} /></dd>
+              {editingBooking.comment && (
+                <>
+                  <dt className="text-gray-500 self-start pt-0.5">Комментарий</dt>
+                  <dd className="text-[var(--color-charcoal)]">{editingBooking.comment}</dd>
+                </>
+              )}
+            </dl>
+            <div className="flex justify-end">
+              <button
+                onClick={() => setEditingBooking(null)}
+                className="px-4 py-2 rounded-lg text-sm border border-gray-300 text-gray-600 hover:bg-gray-50 transition-colors"
+              >
+                Закрыть
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </main>
   )
 }

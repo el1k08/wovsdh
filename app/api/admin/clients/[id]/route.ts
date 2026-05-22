@@ -24,11 +24,10 @@ interface ClientRow {
 interface ClientBookingRow {
   id: string
   status: string
-  start_at: string | null
-  end_at: string | null
   service_snapshot: Record<string, unknown>
   studio_id: string
   created_at: string
+  booking_slots: Array<{ slot_id: string; slot: { start_at: string } | null }>
 }
 
 export interface ClientBookingDTO {
@@ -87,9 +86,14 @@ export async function GET(
 
   const { data: bookingsData, error: bookingsError } = await supabaseAdmin
     .from('bookings')
-    .select('id, status, start_at, end_at, service_snapshot, studio_id, created_at')
+    .select(
+      `id, status, service_snapshot, studio_id, created_at,
+      booking_slots (
+        slot_id,
+        slot:slots!booking_slots_slot_id_fkey (start_at)
+      )`,
+    )
     .eq('client_id', id)
-    .order('start_at', { ascending: false })
 
   if (bookingsError) {
     console.error(`${LOG_PREFIX} DB error fetching bookings for client`, { id, error: bookingsError })
@@ -99,15 +103,23 @@ export async function GET(
     )
   }
 
-  const bookings: ClientBookingDTO[] = ((bookingsData ?? []) as ClientBookingRow[]).map((b) => ({
-    id: b.id,
-    status: b.status,
-    start_at: b.start_at ?? '',
-    end_at: b.end_at ?? '',
-    service_snapshot: b.service_snapshot,
-    studio_id: b.studio_id,
-    created_at: b.created_at,
-  }))
+  const bookings: ClientBookingDTO[] = ((bookingsData ?? []) as unknown as ClientBookingRow[])
+    .map((b) => {
+      const slotsWithTimes = (b.booking_slots ?? [])
+        .map((bs) => bs.slot?.start_at ?? '')
+        .filter(Boolean)
+        .sort()
+      return {
+        id: b.id,
+        status: b.status,
+        start_at: slotsWithTimes[0] ?? '',
+        end_at: slotsWithTimes[slotsWithTimes.length - 1] ?? '',
+        service_snapshot: b.service_snapshot,
+        studio_id: b.studio_id,
+        created_at: b.created_at,
+      }
+    })
+    .sort((a, b) => b.start_at.localeCompare(a.start_at))
 
   return NextResponse.json<{ client: ClientRow; bookings: ClientBookingDTO[] }>({
     client,
