@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useCallback, useRef } from 'react'
+import { useTranslations } from 'next-intl'
 import Button from '@/components/ui/Button'
 import { normalizePhone } from '@/lib/phone-utils'
 import type { ClientLookupResponse } from '@/lib/types'
@@ -12,7 +13,7 @@ export interface ContactFormData {
   email: string
   comment?: string
   marketing_consent: boolean
-  existingClientId?: string   // populated when phone lookup finds an existing client
+  existingClientId?: string
 }
 
 interface FieldErrors {
@@ -37,32 +38,6 @@ export interface ContactFormProps {
   }
 }
 
-function validateData(data: ContactFormData): FieldErrors {
-  const errors: FieldErrors = {}
-
-  if (!data.firstName.trim() || data.firstName.trim().length < 2) {
-    errors.firstName = "Ім'я має містити не менше 2 символів"
-  }
-  if (!data.lastName.trim() || data.lastName.trim().length < 2) {
-    errors.lastName = 'Прізвище має містити не менше 2 символів'
-  }
-  if (!data.phone.trim()) {
-    errors.phone = 'Введіть номер телефону'
-  } else if (!/^\+[\d+]{9,}$/.test(data.phone.trim())) {
-    errors.phone = 'Телефон має починатися з + і містити не менше 10 символів'
-  }
-  if (!data.email.trim()) {
-    errors.email = 'Введіть email'
-  } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(data.email.trim())) {
-    errors.email = 'Введіть коректний email'
-  }
-  if (!data.marketing_consent) {
-    errors.marketing_consent = 'Необхідна згода на обробку даних'
-  }
-
-  return errors
-}
-
 const INPUT_BASE =
   'w-full rounded-xl border px-4 py-3 text-sm transition-colors duration-150 bg-white ' +
   'placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-offset-1 ' +
@@ -84,6 +59,34 @@ function isPhoneComplete(value: string): boolean {
 }
 
 export default function ContactForm({ onSubmit, loading, disabled = false, prefillData }: ContactFormProps) {
+  const t = useTranslations('contact_form')
+  const tv = useTranslations('contact_form.validation')
+  const tb = useTranslations('booking')
+
+  function validateData(data: ContactFormData): FieldErrors {
+    const errors: FieldErrors = {}
+    if (!data.firstName.trim() || data.firstName.trim().length < 2) {
+      errors.firstName = tv('first_name_short')
+    }
+    if (!data.lastName.trim() || data.lastName.trim().length < 2) {
+      errors.lastName = tv('last_name_short')
+    }
+    if (!data.phone.trim()) {
+      errors.phone = tv('phone_required')
+    } else if (!/^\+[\d+]{9,}$/.test(data.phone.trim())) {
+      errors.phone = tv('phone_invalid')
+    }
+    if (!data.email.trim()) {
+      errors.email = tv('email_required')
+    } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(data.email.trim())) {
+      errors.email = tv('email_invalid')
+    }
+    if (!data.marketing_consent) {
+      errors.marketing_consent = tv('consent_required')
+    }
+    return errors
+  }
+
   const [form, setForm] = useState<ContactFormData>({
     firstName: prefillData?.firstName ?? '',
     lastName: prefillData?.lastName ?? '',
@@ -95,16 +98,12 @@ export default function ContactForm({ onSubmit, loading, disabled = false, prefi
   const [errors, setErrors] = useState<FieldErrors>({})
   const [touched, setTouched] = useState<Partial<Record<keyof ContactFormData, boolean>>>({})
   const [lookupState, setLookupState] = useState<LookupState>('idle')
-  // Secondary fields are revealed after the first completed phone lookup
   const [fieldsRevealed, setFieldsRevealed] = useState<boolean>(!!prefillData?.phone)
 
-  // Tracks the last phone that was successfully looked up so we don't re-fetch on re-blur
   const lastLookedUpPhone = useRef<string>('')
-  // Stores the client ID returned by a successful phone lookup
   const lookedUpClientId = useRef<string | undefined>(prefillData?.existingClientId)
 
   const triggerLookup = useCallback(async (normalized: string) => {
-    // Idempotent — skip if this exact number was already looked up
     if (lastLookedUpPhone.current === normalized) return
     lastLookedUpPhone.current = normalized
     setLookupState('loading')
@@ -114,7 +113,6 @@ export default function ContactForm({ onSubmit, loading, disabled = false, prefi
       const json = (await res.json()) as ClientLookupResponse | { error: unknown }
 
       if ('error' in json) {
-        // Server error — silently ignore, don't block the form
         setLookupState('idle')
         setFieldsRevealed(true)
         return
@@ -131,7 +129,6 @@ export default function ContactForm({ onSubmit, loading, disabled = false, prefi
       }
       setFieldsRevealed(true)
     } catch {
-      // Network error — silently ignore
       setLookupState('idle')
       setFieldsRevealed(true)
     }
@@ -147,12 +144,12 @@ export default function ContactForm({ onSubmit, loading, disabled = false, prefi
           const newErrors = validateData(next)
           setErrors((prev) => ({ ...prev, [field]: newErrors[field] }))
         }
-        // Auto-trigger lookup as soon as the user types a complete Israeli phone number
         if (field === 'phone' && isPhoneComplete(newValue)) {
           const normalized = normalizePhone(newValue.trim())
           triggerLookup(normalized)
         }
       },
+    // eslint-disable-next-line react-hooks/exhaustive-deps
     [form, touched, triggerLookup],
   )
 
@@ -162,6 +159,7 @@ export default function ContactForm({ onSubmit, loading, disabled = false, prefi
       const newErrors = validateData(form)
       setErrors((prev) => ({ ...prev, [field]: newErrors[field] }))
     },
+    // eslint-disable-next-line react-hooks/exhaustive-deps
     [form],
   )
 
@@ -169,18 +167,15 @@ export default function ContactForm({ onSubmit, loading, disabled = false, prefi
     setTouched((prev) => ({ ...prev, phone: true }))
 
     const normalized = normalizePhone(form.phone.trim())
-
-    // Update the field to the normalized value immediately
     setForm((prev) => ({ ...prev, phone: normalized }))
 
-    // Validate the normalized value
     const currentForm = { ...form, phone: normalized }
     const newErrors = validateData(currentForm)
     setErrors((prev) => ({ ...prev, phone: newErrors.phone }))
 
-    // If the number is complete and was already looked up on change, skip the fetch
     if (newErrors.phone || !normalized) return
     await triggerLookup(normalized)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [form, triggerLookup])
 
   const handleConsentChange = useCallback(
@@ -192,6 +187,7 @@ export default function ContactForm({ onSubmit, loading, disabled = false, prefi
         setErrors((prev) => ({ ...prev, marketing_consent: newErrors.marketing_consent }))
       }
     },
+    // eslint-disable-next-line react-hooks/exhaustive-deps
     [form, touched],
   )
 
@@ -223,16 +219,16 @@ export default function ContactForm({ onSubmit, loading, disabled = false, prefi
   const isDisabled = loading || disabled
 
   return (
-    <form onSubmit={handleSubmit} noValidate aria-label="Контактні дані">
+    <form onSubmit={handleSubmit} noValidate aria-label={t('form_aria')}>
       <div className="flex flex-col gap-5">
-        {/* Телефон — first for client lookup */}
+        {/* Phone — first for client lookup */}
         <div>
           <label
             htmlFor="contact-phone"
             className="mb-1.5 block text-sm font-medium"
             style={{ color: 'var(--color-charcoal)' }}
           >
-            Телефон <span aria-hidden="true" className="text-red-500">*</span>
+            {t('phone_label')} <span aria-hidden="true" className="text-red-500">*</span>
           </label>
           <div className="relative">
             <input
@@ -244,14 +240,14 @@ export default function ContactForm({ onSubmit, loading, disabled = false, prefi
               onBlur={handlePhoneBlur}
               disabled={isDisabled}
               required
-              placeholder="+972501234567"
+              placeholder={t('phone_placeholder')}
               aria-invalid={!!errors.phone}
               aria-describedby={errors.phone ? 'error-phone' : 'hint-phone'}
               className={`${INPUT_BASE} ${errors.phone ? INPUT_ERROR : INPUT_NORMAL}`}
             />
             {lookupState === 'loading' && (
               <span
-                aria-label="Пошук клієнта..."
+                aria-label={t('phone_searching')}
                 className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2"
               >
                 <svg
@@ -284,11 +280,11 @@ export default function ContactForm({ onSubmit, loading, disabled = false, prefi
             </p>
           ) : lookupState === 'not-found' ? (
             <p className="mt-1 text-xs" style={{ color: 'var(--color-charcoal)', opacity: 0.55 }}>
-              Новий клієнт
+              {t('client_new')}
             </p>
           ) : lookupState === 'found' ? (
             <p className="mt-1 text-xs" style={{ color: 'var(--color-charcoal)', opacity: 0.55 }}>
-              Клієнта знайдено — дані буде оновлено
+              {t('client_found')}
             </p>
           ) : (
             <p
@@ -296,7 +292,7 @@ export default function ContactForm({ onSubmit, loading, disabled = false, prefi
               className="mt-1 text-xs"
               style={{ color: 'var(--color-charcoal)', opacity: 0.5 }}
             >
-              Починається з +, наприклад +972501234567
+              {t('phone_hint')}
             </p>
           )}
         </div>
@@ -312,157 +308,156 @@ export default function ContactForm({ onSubmit, loading, disabled = false, prefi
           ].join(' ')}
         >
           <>
-              {/* Имя */}
-              <div>
-                <label
-                  htmlFor="contact-first-name"
-                  className="mb-1.5 block text-sm font-medium"
-                  style={{ color: 'var(--color-charcoal)' }}
-                >
-                  Ім'я <span aria-hidden="true" className="text-red-500">*</span>
-                </label>
-                <input
-                  id="contact-first-name"
-                  type="text"
-                  autoComplete="given-name"
-                  value={form.firstName}
-                  onChange={handleChange('firstName')}
-                  onBlur={handleBlur('firstName')}
-                  disabled={isDisabled}
-                  required
-                  minLength={2}
-                  placeholder="Анна"
-                  aria-invalid={!!errors.firstName}
-                  aria-describedby={errors.firstName ? 'error-first-name' : undefined}
-                  className={`${INPUT_BASE} ${errors.firstName ? INPUT_ERROR : INPUT_NORMAL}`}
-                />
-                {errors.firstName && (
-                  <p id="error-first-name" role="alert" className="mt-1 text-xs text-red-500">
-                    {errors.firstName}
-                  </p>
-                )}
-              </div>
-
-              {/* Фамилия */}
-              <div>
-                <label
-                  htmlFor="contact-last-name"
-                  className="mb-1.5 block text-sm font-medium"
-                  style={{ color: 'var(--color-charcoal)' }}
-                >
-                  Прізвище <span aria-hidden="true" className="text-red-500">*</span>
-                </label>
-                <input
-                  id="contact-last-name"
-                  type="text"
-                  autoComplete="family-name"
-                  value={form.lastName}
-                  onChange={handleChange('lastName')}
-                  onBlur={handleBlur('lastName')}
-                  disabled={isDisabled}
-                  required
-                  minLength={2}
-                  placeholder="Іваненко"
-                  aria-invalid={!!errors.lastName}
-                  aria-describedby={errors.lastName ? 'error-last-name' : undefined}
-                  className={`${INPUT_BASE} ${errors.lastName ? INPUT_ERROR : INPUT_NORMAL}`}
-                />
-                {errors.lastName && (
-                  <p id="error-last-name" role="alert" className="mt-1 text-xs text-red-500">
-                    {errors.lastName}
-                  </p>
-                )}
-              </div>
-
-              {/* Email */}
-              <div>
-                <label
-                  htmlFor="contact-email"
-                  className="mb-1.5 block text-sm font-medium"
-                  style={{ color: 'var(--color-charcoal)' }}
-                >
-                  Email <span aria-hidden="true" className="text-red-500">*</span>
-                </label>
-                <input
-                  id="contact-email"
-                  type="email"
-                  autoComplete="email"
-                  value={form.email}
-                  onChange={handleChange('email')}
-                  onBlur={handleBlur('email')}
-                  disabled={isDisabled}
-                  required
-                  placeholder="anna@example.com"
-                  aria-invalid={!!errors.email}
-                  aria-describedby={errors.email ? 'error-email' : undefined}
-                  className={`${INPUT_BASE} ${errors.email ? INPUT_ERROR : INPUT_NORMAL}`}
-                />
-                {errors.email && (
-                  <p id="error-email" role="alert" className="mt-1 text-xs text-red-500">
-                    {errors.email}
-                  </p>
-                )}
-              </div>
-
-              {/* Комментарий (необязательно) */}
-              <div>
-                <label
-                  htmlFor="contact-comment"
-                  className="mb-1.5 block text-sm font-medium"
-                  style={{ color: 'var(--color-charcoal)' }}
-                >
-                  Коментар
-                </label>
-                <textarea
-                  id="contact-comment"
-                  value={form.comment ?? ''}
-                  onChange={handleChange('comment')}
-                  disabled={isDisabled}
-                  rows={3}
-                  placeholder="Коментар до запису (необов'язково)"
-                  className={`${TEXTAREA_BASE} ${INPUT_NORMAL}`}
-                />
-              </div>
-
-              {/* Согласие на обработку данных */}
-              <div>
-                <label className="flex cursor-pointer items-start gap-3">
-                  <input
-                    type="checkbox"
-                    id="contact-consent"
-                    checked={form.marketing_consent}
-                    onChange={handleConsentChange}
-                    disabled={isDisabled}
-                    aria-invalid={!!errors.marketing_consent}
-                    aria-describedby={errors.marketing_consent ? 'error-consent' : undefined}
-                    className="mt-0.5 h-4 w-4 shrink-0 cursor-pointer accent-[var(--color-rose)] disabled:cursor-not-allowed"
-                  />
-                  <span
-                    className="text-sm leading-relaxed"
-                    style={{ color: 'var(--color-charcoal)' }}
-                  >
-                    Я погоджуюся з обробкою персональних даних та отриманням сповіщень
-                    про статус запису на вказаний телефон/email
-                    <span aria-hidden="true" className="ml-1 text-red-500">*</span>
-                  </span>
-                </label>
-                {errors.marketing_consent && (
-                  <p id="error-consent" role="alert" className="mt-1 text-xs text-red-500">
-                    {errors.marketing_consent}
-                  </p>
-                )}
-              </div>
-
-              <Button
-                type="submit"
-                variant="primary"
-                size="lg"
-                disabled={isDisabled}
-                className="mt-2 w-full"
+            {/* First name */}
+            <div>
+              <label
+                htmlFor="contact-first-name"
+                className="mb-1.5 block text-sm font-medium"
+                style={{ color: 'var(--color-charcoal)' }}
               >
-                {loading ? 'Бронювання...' : 'Забронювати'}
-              </Button>
-            </>
+                {t('first_name_label')} <span aria-hidden="true" className="text-red-500">*</span>
+              </label>
+              <input
+                id="contact-first-name"
+                type="text"
+                autoComplete="given-name"
+                value={form.firstName}
+                onChange={handleChange('firstName')}
+                onBlur={handleBlur('firstName')}
+                disabled={isDisabled}
+                required
+                minLength={2}
+                placeholder={t('first_name_placeholder')}
+                aria-invalid={!!errors.firstName}
+                aria-describedby={errors.firstName ? 'error-first-name' : undefined}
+                className={`${INPUT_BASE} ${errors.firstName ? INPUT_ERROR : INPUT_NORMAL}`}
+              />
+              {errors.firstName && (
+                <p id="error-first-name" role="alert" className="mt-1 text-xs text-red-500">
+                  {errors.firstName}
+                </p>
+              )}
+            </div>
+
+            {/* Last name */}
+            <div>
+              <label
+                htmlFor="contact-last-name"
+                className="mb-1.5 block text-sm font-medium"
+                style={{ color: 'var(--color-charcoal)' }}
+              >
+                {t('last_name_label')} <span aria-hidden="true" className="text-red-500">*</span>
+              </label>
+              <input
+                id="contact-last-name"
+                type="text"
+                autoComplete="family-name"
+                value={form.lastName}
+                onChange={handleChange('lastName')}
+                onBlur={handleBlur('lastName')}
+                disabled={isDisabled}
+                required
+                minLength={2}
+                placeholder={t('last_name_placeholder')}
+                aria-invalid={!!errors.lastName}
+                aria-describedby={errors.lastName ? 'error-last-name' : undefined}
+                className={`${INPUT_BASE} ${errors.lastName ? INPUT_ERROR : INPUT_NORMAL}`}
+              />
+              {errors.lastName && (
+                <p id="error-last-name" role="alert" className="mt-1 text-xs text-red-500">
+                  {errors.lastName}
+                </p>
+              )}
+            </div>
+
+            {/* Email */}
+            <div>
+              <label
+                htmlFor="contact-email"
+                className="mb-1.5 block text-sm font-medium"
+                style={{ color: 'var(--color-charcoal)' }}
+              >
+                Email <span aria-hidden="true" className="text-red-500">*</span>
+              </label>
+              <input
+                id="contact-email"
+                type="email"
+                autoComplete="email"
+                value={form.email}
+                onChange={handleChange('email')}
+                onBlur={handleBlur('email')}
+                disabled={isDisabled}
+                required
+                placeholder={t('email_placeholder')}
+                aria-invalid={!!errors.email}
+                aria-describedby={errors.email ? 'error-email' : undefined}
+                className={`${INPUT_BASE} ${errors.email ? INPUT_ERROR : INPUT_NORMAL}`}
+              />
+              {errors.email && (
+                <p id="error-email" role="alert" className="mt-1 text-xs text-red-500">
+                  {errors.email}
+                </p>
+              )}
+            </div>
+
+            {/* Comment */}
+            <div>
+              <label
+                htmlFor="contact-comment"
+                className="mb-1.5 block text-sm font-medium"
+                style={{ color: 'var(--color-charcoal)' }}
+              >
+                {t('comment_label')}
+              </label>
+              <textarea
+                id="contact-comment"
+                value={form.comment ?? ''}
+                onChange={handleChange('comment')}
+                disabled={isDisabled}
+                rows={3}
+                placeholder={t('comment_placeholder')}
+                className={`${TEXTAREA_BASE} ${INPUT_NORMAL}`}
+              />
+            </div>
+
+            {/* Consent */}
+            <div>
+              <label className="flex cursor-pointer items-start gap-3">
+                <input
+                  type="checkbox"
+                  id="contact-consent"
+                  checked={form.marketing_consent}
+                  onChange={handleConsentChange}
+                  disabled={isDisabled}
+                  aria-invalid={!!errors.marketing_consent}
+                  aria-describedby={errors.marketing_consent ? 'error-consent' : undefined}
+                  className="mt-0.5 h-4 w-4 shrink-0 cursor-pointer accent-[var(--color-rose)] disabled:cursor-not-allowed"
+                />
+                <span
+                  className="text-sm leading-relaxed"
+                  style={{ color: 'var(--color-charcoal)' }}
+                >
+                  {t('consent_text')}
+                  <span aria-hidden="true" className="ml-1 text-red-500">*</span>
+                </span>
+              </label>
+              {errors.marketing_consent && (
+                <p id="error-consent" role="alert" className="mt-1 text-xs text-red-500">
+                  {errors.marketing_consent}
+                </p>
+              )}
+            </div>
+
+            <Button
+              type="submit"
+              variant="primary"
+              size="lg"
+              disabled={isDisabled}
+              className="mt-2 w-full"
+            >
+              {loading ? tb('booking_loading') : tb('book_now')}
+            </Button>
+          </>
         </div>
       </div>
     </form>

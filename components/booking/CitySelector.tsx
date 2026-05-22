@@ -1,5 +1,6 @@
 'use client'
 
+import { useTranslations } from 'next-intl'
 import { MapPin } from 'lucide-react'
 import type { PublicStudioDTO } from '@/lib/types'
 
@@ -11,6 +12,8 @@ interface CitySelectorProps {
 }
 
 export default function CitySelector({ studios, value, onChange, loading = false }: CitySelectorProps) {
+  const t = useTranslations('booking')
+
   if (loading) {
     return (
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
@@ -30,7 +33,7 @@ export default function CitySelector({ studios, value, onChange, loading = false
 
   return (
     <fieldset>
-      <legend className="sr-only">Виберіть студію</legend>
+      <legend className="sr-only">{t('city_selector_aria')}</legend>
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
         {studios.map((studio) => {
           const isSelected = value === studio.id

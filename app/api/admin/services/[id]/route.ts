@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { supabaseAdmin } from '@/lib/supabase'
 import { isValidUUID } from '@/lib/validation'
 import { BookingStatus } from '@/lib/types'
-import type { ApiError, ServiceDTO, UpdateServiceRequest } from '@/lib/types'
+import type { ApiError, ServiceDTO, ServiceTranslations, UpdateServiceRequest } from '@/lib/types'
 
 const LOG_PREFIX = '[api/admin/services/[id]]'
 
@@ -85,6 +85,22 @@ export async function PUT(
   if (updates.studio_id !== undefined) patch.studio_id = updates.studio_id
   if (updates.is_active !== undefined) patch.is_active = updates.is_active
 
+  if (updates.translations !== undefined) {
+    patch.translations = updates.translations
+  } else if (updates.name !== undefined || updates.description !== undefined) {
+    // Sync uk locale in translations when name/description changes without explicit translations
+    const { data: current } = await supabaseAdmin
+      .from('services').select('translations').eq('id', id).maybeSingle()
+    const existing = (current?.translations ?? {}) as ServiceTranslations
+    patch.translations = {
+      ...existing,
+      uk: {
+        name: updates.name ?? existing.uk?.name ?? '',
+        description: updates.description ?? existing.uk?.description ?? '',
+      },
+    }
+  }
+
   if (Object.keys(patch).length === 0) {
     return NextResponse.json<ApiError>(
       { error: { code: 'INVALID_PARAMS', message: 'No valid fields to update.' } },
@@ -96,7 +112,7 @@ export async function PUT(
     .from('services')
     .update(patch)
     .eq('id', id)
-    .select('id, studio_id, icon, name, description, price, duration_minutes, sort_order')
+    .select('id, studio_id, icon, name, description, price, duration_minutes, sort_order, translations')
     .maybeSingle()
 
   if (error) {

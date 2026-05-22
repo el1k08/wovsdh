@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { supabaseAdmin } from '@/lib/supabase'
 import { isNonEmptyString } from '@/lib/validation'
-import type { ApiError, GetServicesResponse, ServiceDTO, CreateServiceRequest } from '@/lib/types'
+import type { ApiError, GetServicesResponse, ServiceDTO, ServiceTranslations, CreateServiceRequest } from '@/lib/types'
 
 const LOG_PREFIX = '[api/admin/services]'
 
@@ -20,7 +20,7 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
 
   const { data, error } = await supabaseAdmin
     .from('services')
-    .select('id, studio_id, icon, name, description, price, duration_minutes, sort_order, is_active, created_at')
+    .select('id, studio_id, icon, name, description, price, duration_minutes, sort_order, is_active, created_at, translations')
     .order('sort_order', { ascending: true })
 
   if (error) {
@@ -40,6 +40,7 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
     price: row.price as number,
     duration_minutes: row.duration_minutes as number,
     sort_order: row.sort_order as number,
+    translations: (row.translations ?? {}) as ServiceTranslations,
   }))
 
   return NextResponse.json<GetServicesResponse>({ services })
@@ -99,20 +100,30 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
   }
 
   const req = body as CreateServiceRequest
+  const trimmedName = (req.name as string).trim()
+  const trimmedDescription = typeof description === 'string' && description.trim() ? description.trim() : null
+
+  // Seed translations from name/description if not explicitly provided
+  const translations: ServiceTranslations = req.translations ?? {
+    uk: { name: trimmedName, description: trimmedDescription ?? '' },
+    en: { name: trimmedName, description: trimmedDescription ?? '' },
+    he: { name: trimmedName, description: trimmedDescription ?? '' },
+  }
 
   const { data, error } = await supabaseAdmin
     .from('services')
     .insert({
-      name: (req.name as string).trim(),
+      name: trimmedName,
       price: req.price,
       duration_minutes: req.duration_minutes,
-      description: typeof description === 'string' && description.trim() ? description.trim() : null,
+      description: trimmedDescription,
       icon: typeof icon === 'string' && icon.trim() ? icon.trim() : null,
       studio_id: typeof studio_id === 'string' && studio_id.trim() ? studio_id.trim() : null,
       sort_order: typeof sort_order === 'number' ? sort_order : 0,
       is_active: true,
+      translations,
     })
-    .select('id, studio_id, icon, name, description, price, duration_minutes, sort_order')
+    .select('id, studio_id, icon, name, description, price, duration_minutes, sort_order, translations')
     .single()
 
   if (error) {

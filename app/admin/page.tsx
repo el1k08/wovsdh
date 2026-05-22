@@ -1,6 +1,7 @@
 'use client'
 
 import React, { useState, useEffect, useCallback, useRef } from 'react'
+import { useTranslations } from 'next-intl'
 import { Building2, Settings, Users, Pencil, CalendarDays } from 'lucide-react'
 import { Switch } from '@/components/ui/Switch'
 import type {
@@ -13,6 +14,10 @@ import type {
   Studio,
   StudioScheduleTemplate,
   GetMasterScheduleResponse,
+  Locale,
+  ServiceTranslations,
+  ServiceTranslation,
+  StudioTranslations,
 } from '@/lib/types'
 
 // Admin services endpoint returns ServiceDTO + is_active field
@@ -78,8 +83,32 @@ interface InlineMessage {
   text: string
 }
 
-// Day labels index 0=Sun..6=Sat
-const DAY_LABELS = ['Нд', 'Пн', 'Вт', 'Ср', 'Чт', 'Пт', 'Сб']
+// ---------------------------------------------------------------------------
+// LangTabs component
+// ---------------------------------------------------------------------------
+
+const LOCALES: Locale[] = ['uk', 'en', 'he']
+
+function LangTabs({ value, onChange }: { value: Locale; onChange: (l: Locale) => void }) {
+  return (
+    <div className="flex gap-1 mb-3">
+      {LOCALES.map((lang) => (
+        <button
+          key={lang}
+          type="button"
+          onClick={() => onChange(lang)}
+          className={`px-3 py-1 text-xs rounded-md font-medium transition-colors ${
+            value === lang
+              ? 'bg-[var(--color-rose)] text-white'
+              : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+          }`}
+        >
+          {lang.toUpperCase()}
+        </button>
+      ))}
+    </div>
+  )
+}
 
 function formatDuration(minutes: number): string {
   if (minutes < 60) return `${minutes} хв`
@@ -102,13 +131,14 @@ const DURATION_OPTIONS: { value: number; label: string }[] = Array.from(
 // ---------------------------------------------------------------------------
 
 function AuthGate({ onAuth }: { onAuth: (secret: string) => void }) {
+  const t = useTranslations('admin.login')
   const [input, setInput] = useState('')
   const [error, setError] = useState('')
 
   function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
     if (!input.trim()) {
-      setError('Введіть пароль')
+      setError(t('error_empty'))
       return
     }
     localStorage.setItem('admin_secret', input.trim())
@@ -119,12 +149,12 @@ function AuthGate({ onAuth }: { onAuth: (secret: string) => void }) {
     <main className="min-h-screen flex items-center justify-center bg-[var(--color-cream)]">
       <div className="bg-white border border-[var(--color-blush)] rounded-xl p-8 w-full max-w-sm shadow-sm">
         <h1 className="text-xl font-semibold text-[var(--color-charcoal)] mb-6 text-center">
-          Вхід до панелі управління
+          {t('heading')}
         </h1>
         <form onSubmit={handleSubmit} className="flex flex-col gap-4">
           <input
             type="password"
-            placeholder="Пароль адміністратора"
+            placeholder={t('password_placeholder')}
             value={input}
             onChange={(e) => setInput(e.target.value)}
             className="border border-gray-300 rounded-lg px-4 py-2 text-sm focus:outline-none focus:border-[var(--color-rose)]"
@@ -135,7 +165,7 @@ function AuthGate({ onAuth }: { onAuth: (secret: string) => void }) {
             type="submit"
             className="bg-[var(--color-rose)] text-white rounded-lg px-4 py-2 text-sm font-medium hover:opacity-90 transition-opacity"
           >
-            Увійти
+            {t('submit')}
           </button>
         </form>
       </div>
@@ -148,25 +178,25 @@ function AuthGate({ onAuth }: { onAuth: (secret: string) => void }) {
 // ---------------------------------------------------------------------------
 
 function StatusBadge({ status }: { status: string }) {
-  const config: Record<string, { label: string; className: string }> = {
+  const t = useTranslations('admin.slot_status')
+  const config: Record<string, { labelKey: string; className: string }> = {
     available: {
-      label: 'Вільний',
+      labelKey: 'available',
       className: 'bg-green-50 text-green-700 border border-green-200',
     },
     booked: {
-      label: 'Заброньований',
+      labelKey: 'booked',
       className: 'bg-red-50 text-red-700 border border-red-200',
     },
     blocked: {
-      label: 'Заблокований',
+      labelKey: 'blocked',
       className: 'bg-gray-100 text-gray-600 border border-gray-300',
     },
   }
 
-  const { label, className } = config[status] ?? {
-    label: status,
-    className: 'bg-gray-100 text-gray-600 border border-gray-300',
-  }
+  const found = config[status]
+  const label = found ? t(found.labelKey as 'available' | 'booked' | 'blocked') : status
+  const className = found?.className ?? 'bg-gray-100 text-gray-600 border border-gray-300'
 
   return (
     <span className={`inline-block px-2 py-0.5 rounded text-xs font-medium ${className}`}>
@@ -180,25 +210,25 @@ function StatusBadge({ status }: { status: string }) {
 // ---------------------------------------------------------------------------
 
 function BookingStatusBadge({ status }: { status: string }) {
-  const config: Record<string, { label: string; className: string }> = {
+  const t = useTranslations('admin.booking_status')
+  const config: Record<string, { labelKey: string; className: string }> = {
     PENDING: {
-      label: 'Очікує',
+      labelKey: 'pending',
       className: 'bg-yellow-50 text-yellow-700 border border-yellow-200',
     },
     CONFIRMED: {
-      label: 'Підтверджено',
+      labelKey: 'confirmed',
       className: 'bg-green-50 text-green-700 border border-green-200',
     },
     CANCELLED: {
-      label: 'Скасовано',
+      labelKey: 'cancelled',
       className: 'bg-gray-100 text-gray-500 border border-gray-300',
     },
   }
 
-  const { label, className } = config[status] ?? {
-    label: status,
-    className: 'bg-gray-100 text-gray-600 border border-gray-300',
-  }
+  const found = config[status]
+  const label = found ? t(found.labelKey as 'pending' | 'confirmed' | 'cancelled') : status
+  const className = found?.className ?? 'bg-gray-100 text-gray-600 border border-gray-300'
 
   return (
     <span className={`inline-block px-2 py-0.5 rounded text-xs font-medium ${className}`}>
@@ -218,31 +248,48 @@ interface ServicesTabProps {
 }
 
 function ServicesTab({ studio, apiFetch, onUnauth }: ServicesTabProps) {
+  const t = useTranslations('admin.services_panel')
+  const tCommon = useTranslations('common')
+
   const [services, setServices] = useState<AdminServiceDTO[]>([])
   const [loading, setLoading] = useState(false)
   const [message, setMessage] = useState<InlineMessage | null>(null)
   const [showForm, setShowForm] = useState(false)
 
+  // Translation helpers
+  const emptyServiceTranslations = (): ServiceTranslations => ({
+    uk: { name: '', description: '' },
+    en: { name: '', description: '' },
+    he: { name: '', description: '' },
+  })
+
   // New service form state
   const [newIcon, setNewIcon] = useState('')
-  const [newName, setNewName] = useState('')
-  const [newDescription, setNewDescription] = useState('')
   const [newPrice, setNewPrice] = useState('')
   const [newDuration, setNewDuration] = useState(60)
   const [formLoading, setFormLoading] = useState(false)
+  const [formLang, setFormLang] = useState<Locale>('uk')
+  const [newTranslations, setNewTranslations] = useState<ServiceTranslations>(emptyServiceTranslations())
 
   // Edit form state
   const [editingId, setEditingId] = useState<string | null>(null)
   const [editIcon, setEditIcon] = useState('')
-  const [editName, setEditName] = useState('')
-  const [editDescription, setEditDescription] = useState('')
   const [editPrice, setEditPrice] = useState('')
   const [editDuration, setEditDuration] = useState(60)
   const [editLoading, setEditLoading] = useState(false)
+  const [editLang, setEditLang] = useState<Locale>('uk')
+  const [editTranslations, setEditTranslations] = useState<ServiceTranslations>(emptyServiceTranslations())
 
   // Delete confirmation
   const [deleteTarget, setDeleteTarget] = useState<string | null>(null)
   const [deleting, setDeleting] = useState(false)
+
+  function updateNewTr(field: keyof ServiceTranslation, value: string) {
+    setNewTranslations(prev => ({ ...prev, [formLang]: { ...prev[formLang], [field]: value } }))
+  }
+  function updateEditTr(field: keyof ServiceTranslation, value: string) {
+    setEditTranslations(prev => ({ ...prev, [editLang]: { ...prev[editLang], [field]: value } }))
+  }
 
   // Drag-and-drop
   const dragItem = useRef<number | null>(null)
@@ -257,17 +304,17 @@ function ServicesTab({ studio, apiFetch, onUnauth }: ServicesTabProps) {
       if (res.status === 401) { onUnauth(); return }
       if (!res.ok) {
         const body = await res.json() as { error?: { message?: string } }
-        setMessage({ type: 'error', text: body.error?.message ?? 'Помилка завантаження послуг' })
+        setMessage({ type: 'error', text: body.error?.message ?? t('error_load') })
         return
       }
       const data = await res.json() as { services: AdminServiceDTO[] }
       setServices(data.services ?? [])
     } catch {
-      setMessage({ type: 'error', text: 'Мережева помилка під час завантаження послуг' })
+      setMessage({ type: 'error', text: t('error_network_load') })
     } finally {
       setLoading(false)
     }
-  }, [studio, apiFetch, onUnauth])
+  }, [studio, apiFetch, onUnauth, t])
 
   useEffect(() => {
     loadServices()
@@ -275,7 +322,8 @@ function ServicesTab({ studio, apiFetch, onUnauth }: ServicesTabProps) {
 
   async function handleCreate(e: React.FormEvent) {
     e.preventDefault()
-    if (!newName.trim() || !newPrice) return
+    const ukName = newTranslations.uk.name.trim() || newTranslations.en.name.trim() || newTranslations.he.name.trim()
+    if (!ukName || !newPrice) return
     setFormLoading(true)
     setMessage(null)
     try {
@@ -284,24 +332,30 @@ function ServicesTab({ studio, apiFetch, onUnauth }: ServicesTabProps) {
         body: JSON.stringify({
           studio_id: studio,
           icon: newIcon.trim() || undefined,
-          name: newName.trim(),
-          description: newDescription.trim() || undefined,
+          name: ukName,
+          description: newTranslations.uk.description.trim() || undefined,
           price: Number(newPrice),
           duration_minutes: newDuration,
+          translations: {
+            uk: { name: newTranslations.uk.name.trim(), description: newTranslations.uk.description.trim() },
+            en: { name: newTranslations.en.name.trim(), description: newTranslations.en.description.trim() },
+            he: { name: newTranslations.he.name.trim(), description: newTranslations.he.description.trim() },
+          },
         }),
       })
       if (res.status === 401) { onUnauth(); return }
       if (!res.ok) {
         const body = await res.json() as { error?: { message?: string } }
-        setMessage({ type: 'error', text: body.error?.message ?? 'Помилка створення послуги' })
+        setMessage({ type: 'error', text: body.error?.message ?? t('error_create') })
         return
       }
-      setMessage({ type: 'success', text: 'Послугу створено' })
+      setMessage({ type: 'success', text: t('success_create') })
       setShowForm(false)
-      setNewIcon(''); setNewName(''); setNewDescription(''); setNewPrice(''); setNewDuration(60)
+      setNewIcon(''); setNewPrice(''); setNewDuration(60)
+      setNewTranslations(emptyServiceTranslations()); setFormLang('uk')
       await loadServices()
     } catch {
-      setMessage({ type: 'error', text: 'Мережева помилка під час створення послуги' })
+      setMessage({ type: 'error', text: t('error_network_create') })
     } finally {
       setFormLoading(false)
     }
@@ -310,12 +364,16 @@ function ServicesTab({ studio, apiFetch, onUnauth }: ServicesTabProps) {
   function startEdit(svc: AdminServiceDTO) {
     setEditingId(svc.id)
     setEditIcon(svc.icon ?? '')
-    setEditName(svc.name)
-    setEditDescription(svc.description ?? '')
     setEditPrice(String(svc.price))
     setEditDuration(svc.duration_minutes)
     setDeleteTarget(null)
     setShowForm(false)
+    setEditLang('uk')
+    setEditTranslations({
+      uk: { name: svc.translations?.uk?.name ?? svc.name, description: svc.translations?.uk?.description ?? svc.description ?? '' },
+      en: { name: svc.translations?.en?.name ?? svc.name, description: svc.translations?.en?.description ?? svc.description ?? '' },
+      he: { name: svc.translations?.he?.name ?? svc.name, description: svc.translations?.he?.description ?? svc.description ?? '' },
+    })
   }
 
   async function handleEdit(e: React.FormEvent) {
@@ -328,23 +386,24 @@ function ServicesTab({ studio, apiFetch, onUnauth }: ServicesTabProps) {
         method: 'PUT',
         body: JSON.stringify({
           icon: editIcon.trim() || null,
-          name: editName.trim(),
-          description: editDescription.trim() || null,
+          name: editTranslations.uk.name.trim(),
+          description: editTranslations.uk.description.trim() || null,
           price: Number(editPrice),
           duration_minutes: editDuration,
+          translations: editTranslations,
         }),
       })
       if (res.status === 401) { onUnauth(); return }
       if (!res.ok) {
         const body = await res.json() as { error?: { message?: string } }
-        setMessage({ type: 'error', text: body.error?.message ?? 'Помилка оновлення послуги' })
+        setMessage({ type: 'error', text: body.error?.message ?? t('error_update') })
         return
       }
-      setMessage({ type: 'success', text: 'Послугу оновлено' })
+      setMessage({ type: 'success', text: t('success_update') })
       setEditingId(null)
       await loadServices()
     } catch {
-      setMessage({ type: 'error', text: 'Мережева помилка під час оновлення послуги' })
+      setMessage({ type: 'error', text: t('error_network_update') })
     } finally {
       setEditLoading(false)
     }
@@ -358,15 +417,15 @@ function ServicesTab({ studio, apiFetch, onUnauth }: ServicesTabProps) {
       if (res.status === 401) { onUnauth(); return }
       if (!res.ok) {
         const body = await res.json() as { error?: { message?: string } }
-        setMessage({ type: 'error', text: body.error?.message ?? 'Помилка видалення послуги' })
+        setMessage({ type: 'error', text: body.error?.message ?? t('error_delete') })
         setDeleteTarget(null)
         return
       }
-      setMessage({ type: 'success', text: 'Послугу видалено' })
+      setMessage({ type: 'success', text: t('success_delete') })
       setDeleteTarget(null)
       await loadServices()
     } catch {
-      setMessage({ type: 'error', text: 'Мережева помилка під час видалення послуги' })
+      setMessage({ type: 'error', text: t('error_network_delete') })
     } finally {
       setDeleting(false)
     }
@@ -414,12 +473,12 @@ function ServicesTab({ studio, apiFetch, onUnauth }: ServicesTabProps) {
   return (
     <div>
       <div className="flex items-center justify-between mb-4">
-        <h2 className="text-lg font-semibold text-[var(--color-charcoal)]">Послуги</h2>
+        <h2 className="text-lg font-semibold text-[var(--color-charcoal)]">{t('add_heading')}</h2>
         <button
           onClick={() => { setShowForm((v) => !v); setEditingId(null) }}
           className="bg-[var(--color-rose)] text-white rounded-lg px-4 py-2 text-sm font-medium hover:opacity-90 transition-opacity"
         >
-          {showForm ? 'Сховати форму' : 'Додати послугу'}
+          {showForm ? t('hide_form_btn') : t('add_btn')}
         </button>
       </div>
 
@@ -429,8 +488,11 @@ function ServicesTab({ studio, apiFetch, onUnauth }: ServicesTabProps) {
           onSubmit={handleCreate}
           className="mb-6 border border-[var(--color-blush)] rounded-xl p-5 bg-white grid grid-cols-1 sm:grid-cols-2 gap-4"
         >
+          <div className="sm:col-span-2">
+            <LangTabs value={formLang} onChange={setFormLang} />
+          </div>
           <label className="flex flex-col gap-1 text-sm text-gray-600">
-            Іконка (emoji)
+            {t('icon_label')} (emoji)
             <input
               type="text"
               value={newIcon}
@@ -441,30 +503,27 @@ function ServicesTab({ studio, apiFetch, onUnauth }: ServicesTabProps) {
             />
           </label>
           <label className="flex flex-col gap-1 text-sm text-gray-600">
-            <span className='flex'>Назва <span className="text-red-500">*</span></span>
+            <span className="flex">{t('name_label')} <span className="text-red-500">*</span></span>
             <input
               type="text"
-              value={newName}
-              onChange={(e) => setNewName(e.target.value)}
-              placeholder="Манікюр"
-              required
+              value={newTranslations[formLang].name}
+              onChange={(e) => updateNewTr('name', e.target.value)}
               className={INPUT_CLS}
               disabled={formLoading}
             />
           </label>
           <label className="flex flex-col gap-1 text-sm text-gray-600 sm:col-span-2">
-            Опис
+            {t('description_label')}
             <input
               type="text"
-              value={newDescription}
-              onChange={(e) => setNewDescription(e.target.value)}
-              placeholder="Короткий опис послуги"
+              value={newTranslations[formLang].description}
+              onChange={(e) => updateNewTr('description', e.target.value)}
               className={INPUT_CLS}
               disabled={formLoading}
             />
           </label>
           <label className="flex flex-col gap-1 text-sm text-gray-600">
-            <span className='flex'>Ціна (₪) <span className="text-red-500">*</span></span>
+            <span className="flex">{t('price_label')} <span className="text-red-500">*</span></span>
             <input
               type="number"
               min={0}
@@ -477,7 +536,7 @@ function ServicesTab({ studio, apiFetch, onUnauth }: ServicesTabProps) {
             />
           </label>
           <label className="flex flex-col gap-1 text-sm text-gray-600">
-            Тривалість
+            {t('duration_label')}
             <select
               value={newDuration}
               onChange={(e) => setNewDuration(Number(e.target.value))}
@@ -495,14 +554,14 @@ function ServicesTab({ studio, apiFetch, onUnauth }: ServicesTabProps) {
               disabled={formLoading}
               className="bg-[var(--color-rose)] text-white rounded-lg px-6 py-2 text-sm font-medium hover:opacity-90 transition-opacity disabled:opacity-50"
             >
-              {formLoading ? 'Збереження...' : 'Зберегти'}
+              {formLoading ? tCommon('saving') : tCommon('save')}
             </button>
             <button
               type="button"
               onClick={() => setShowForm(false)}
               className="border border-gray-300 text-gray-600 rounded-lg px-4 py-2 text-sm font-medium hover:bg-gray-50 transition-colors"
             >
-              Скасувати
+              {tCommon('cancel')}
             </button>
           </div>
         </form>
@@ -515,10 +574,13 @@ function ServicesTab({ studio, apiFetch, onUnauth }: ServicesTabProps) {
           className="mb-6 border border-[var(--color-blush)] rounded-xl p-5 bg-white grid grid-cols-1 sm:grid-cols-2 gap-4"
         >
           <h3 className="sm:col-span-2 text-sm font-semibold text-[var(--color-charcoal)]">
-            Редагувати послугу
+            {t('edit_heading')}
           </h3>
+          <div className="sm:col-span-2">
+            <LangTabs value={editLang} onChange={setEditLang} />
+          </div>
           <label className="flex flex-col gap-1 text-sm text-gray-600">
-            Іконка (emoji)
+            {t('icon_label')} (emoji)
             <input
               type="text"
               value={editIcon}
@@ -529,28 +591,28 @@ function ServicesTab({ studio, apiFetch, onUnauth }: ServicesTabProps) {
             />
           </label>
           <label className="flex flex-col gap-1 text-sm text-gray-600">
-            <span className='flex'>Назва <span className="text-red-500">*</span></span>
+            <span className="flex">{t('name_label')} <span className="text-red-500">*</span></span>
             <input
               type="text"
-              value={editName}
-              onChange={(e) => setEditName(e.target.value)}
-              required
+              value={editTranslations[editLang].name}
+              onChange={(e) => updateEditTr('name', e.target.value)}
+              required={editLang === 'uk'}
               className={INPUT_CLS}
               disabled={editLoading}
             />
           </label>
           <label className="flex flex-col gap-1 text-sm text-gray-600 sm:col-span-2">
-            Опис
+            {t('description_label')}
             <input
               type="text"
-              value={editDescription}
-              onChange={(e) => setEditDescription(e.target.value)}
+              value={editTranslations[editLang].description}
+              onChange={(e) => updateEditTr('description', e.target.value)}
               className={INPUT_CLS}
               disabled={editLoading}
             />
           </label>
           <label className="flex flex-col gap-1 text-sm text-gray-600">
-            <span className='flex'>Ціна (₪) <span className="text-red-500">*</span></span>
+            <span className="flex">{t('price_label')} <span className="text-red-500">*</span></span>
             <input
               type="number"
               min={0}
@@ -562,7 +624,7 @@ function ServicesTab({ studio, apiFetch, onUnauth }: ServicesTabProps) {
             />
           </label>
           <label className="flex flex-col gap-1 text-sm text-gray-600">
-            Тривалість
+            {t('duration_label')}
             <select
               value={editDuration}
               onChange={(e) => setEditDuration(Number(e.target.value))}
@@ -580,14 +642,14 @@ function ServicesTab({ studio, apiFetch, onUnauth }: ServicesTabProps) {
               disabled={editLoading}
               className="bg-[var(--color-rose)] text-white rounded-lg px-6 py-2 text-sm font-medium hover:opacity-90 transition-opacity disabled:opacity-50"
             >
-              {editLoading ? 'Збереження...' : 'Зберегти'}
+              {editLoading ? tCommon('saving') : tCommon('save')}
             </button>
             <button
               type="button"
               onClick={() => setEditingId(null)}
               className="border border-gray-300 text-gray-600 rounded-lg px-4 py-2 text-sm font-medium hover:bg-gray-50 transition-colors"
             >
-              Скасувати
+              {tCommon('cancel')}
             </button>
           </div>
         </form>
@@ -600,21 +662,21 @@ function ServicesTab({ studio, apiFetch, onUnauth }: ServicesTabProps) {
       )}
 
       {loading ? (
-        <p className="text-sm text-gray-400 py-4">Завантаження...</p>
+        <p className="text-sm text-gray-400 py-4">{tCommon('loading')}</p>
       ) : services.length === 0 ? (
-        <p className="text-sm text-gray-400 py-4">Послуги не знайдено</p>
+        <p className="text-sm text-gray-400 py-4">{t('error_load')}</p>
       ) : (
         <div className="overflow-x-auto">
           <table className="w-full text-sm border-collapse">
             <thead>
               <tr className="border-b border-gray-200 text-left text-gray-500">
                 <th className="py-2 pr-2 w-6"></th>
-                <th className="py-2 pr-4 font-medium">Іконка</th>
-                <th className="py-2 pr-4 font-medium">Назва</th>
-                <th className="py-2 pr-4 font-medium">Тривалість</th>
-                <th className="py-2 pr-4 font-medium">Ціна</th>
-                <th className="py-2 pr-4 font-medium">Статус</th>
-                <th className="py-2 font-medium text-right">Дії</th>
+                <th className="py-2 pr-4 font-medium">{t('icon_label')}</th>
+                <th className="py-2 pr-4 font-medium">{t('name_label')}</th>
+                <th className="py-2 pr-4 font-medium">{t('duration_label')}</th>
+                <th className="py-2 pr-4 font-medium">{t('price_label')}</th>
+                <th className="py-2 pr-4 font-medium">{t('active_label')}</th>
+                <th className="py-2 font-medium text-right">{tCommon('edit')}</th>
               </tr>
             </thead>
             <tbody>
@@ -643,7 +705,7 @@ function ServicesTab({ studio, apiFetch, onUnauth }: ServicesTabProps) {
                           ? 'bg-green-50 text-green-700 border border-green-200'
                           : 'bg-gray-100 text-gray-500 border border-gray-300'
                       }`}>
-                        {svc.is_active ? 'Активна' : 'Неактивна'}
+                        {svc.is_active ? t('active_label') : t('inactive_label')}
                       </span>
                     </td>
                     <td className="py-3 text-right">
@@ -652,13 +714,13 @@ function ServicesTab({ studio, apiFetch, onUnauth }: ServicesTabProps) {
                           onClick={() => startEdit(svc)}
                           className="px-3 py-1 rounded text-xs border border-gray-300 text-[var(--color-charcoal)] hover:bg-gray-50"
                         >
-                          Змінити
+                          {tCommon('edit')}
                         </button>
                         <button
                           onClick={() => setDeleteTarget((prev) => prev === svc.id ? null : svc.id)}
                           className="px-3 py-1 rounded text-xs border border-red-200 text-red-600 bg-red-50 hover:bg-red-100"
                         >
-                          Видалити
+                          {tCommon('delete')}
                         </button>
                       </div>
                     </td>
@@ -668,7 +730,7 @@ function ServicesTab({ studio, apiFetch, onUnauth }: ServicesTabProps) {
                       <td colSpan={7} className="px-4 py-3">
                         <div className="flex items-center justify-between gap-4">
                           <p className="text-sm text-red-700">
-                            Видалити послугу <strong>{svc.name}</strong>? Якщо до неї прив'язані активні записи, вона буде деактивована.
+                            {t('delete_confirm', { name: svc.name })}
                           </p>
                           <div className="flex gap-2 shrink-0">
                             <button
@@ -676,13 +738,13 @@ function ServicesTab({ studio, apiFetch, onUnauth }: ServicesTabProps) {
                               disabled={deleting}
                               className="px-3 py-1 rounded text-xs bg-red-600 text-white hover:bg-red-700 disabled:opacity-50 disabled:cursor-not-allowed"
                             >
-                              {deleting ? 'Видалення...' : 'Підтвердити'}
+                              {deleting ? tCommon('deleting') : tCommon('confirm')}
                             </button>
                             <button
                               onClick={() => setDeleteTarget(null)}
                               className="px-3 py-1 rounded text-xs border border-gray-300 text-gray-600 hover:bg-white"
                             >
-                              Скасувати
+                              {tCommon('cancel')}
                             </button>
                           </div>
                         </div>
@@ -711,6 +773,8 @@ interface StudioServicesAssignmentTabProps {
 }
 
 function StudioServicesAssignmentTab({ studio, apiFetch, onUnauth }: StudioServicesAssignmentTabProps) {
+  const t = useTranslations('admin.services_panel')
+  const tCommon = useTranslations('common')
   const [services, setServices] = useState<AdminServiceDTO[]>([])
   const [assignedIds, setAssignedIds] = useState<Set<string>>(new Set())
   const [loading, setLoading] = useState(false)
@@ -727,7 +791,7 @@ function StudioServicesAssignmentTab({ studio, apiFetch, onUnauth }: StudioServi
       ])
       if (svcRes.status === 401 || assignRes.status === 401) { onUnauth(); return }
       if (!svcRes.ok) {
-        setMessage({ type: 'error', text: 'Помилка завантаження послуг' })
+        setMessage({ type: 'error', text: t('error_load') })
         return
       }
       const svcData = await svcRes.json() as { services: AdminServiceDTO[] }
@@ -737,11 +801,11 @@ function StudioServicesAssignmentTab({ studio, apiFetch, onUnauth }: StudioServi
         setAssignedIds(new Set(assignData.service_ids))
       }
     } catch {
-      setMessage({ type: 'error', text: 'Мережева помилка' })
+      setMessage({ type: 'error', text: tCommon('network_error') })
     } finally {
       setLoading(false)
     }
-  }, [studio, apiFetch, onUnauth])
+  }, [studio, apiFetch, onUnauth, t, tCommon])
 
   useEffect(() => { load() }, [load])
 
@@ -762,11 +826,11 @@ function StudioServicesAssignmentTab({ studio, apiFetch, onUnauth }: StudioServi
       if (res.status === 401) { onUnauth(); return }
       if (!res.ok) {
         setAssignedIds(assignedIds)
-        setMessage({ type: 'error', text: 'Помилка збереження' })
+        setMessage({ type: 'error', text: t('error_update') })
       }
     } catch {
       setAssignedIds(assignedIds)
-      setMessage({ type: 'error', text: 'Мережева помилка під час збереження' })
+      setMessage({ type: 'error', text: tCommon('network_error') })
     } finally {
       setSavingId(null)
     }
@@ -776,9 +840,9 @@ function StudioServicesAssignmentTab({ studio, apiFetch, onUnauth }: StudioServi
     <div>
       <div className="flex items-center justify-between mb-6">
         <div>
-          <h2 className="text-lg font-semibold text-[var(--color-charcoal)]">Послуги студії</h2>
+          <h2 className="text-lg font-semibold text-[var(--color-charcoal)]">{t('assignment_heading')}</h2>
           <p className="text-xs text-gray-400 mt-0.5">
-            Позначте послуги, доступні в цій студії
+            {t('assignment_subtitle')}
           </p>
         </div>
         {message && (
@@ -789,9 +853,9 @@ function StudioServicesAssignmentTab({ studio, apiFetch, onUnauth }: StudioServi
       </div>
 
       {loading ? (
-        <p className="text-sm text-gray-400 py-8 text-center">Завантаження...</p>
+        <p className="text-sm text-gray-400 py-8 text-center">{tCommon('loading')}</p>
       ) : services.length === 0 ? (
-        <p className="text-sm text-gray-400 py-8 text-center">Послуги не знайдено</p>
+        <p className="text-sm text-gray-400 py-8 text-center">{t('error_load')}</p>
       ) : (
         <ul className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3" role="list">
           {services.map((svc) => {
@@ -850,7 +914,7 @@ function StudioServicesAssignmentTab({ studio, apiFetch, onUnauth }: StudioServi
                 {/* Price + duration */}
                 <div className="flex items-center justify-between mt-auto">
                   <span className="text-sm font-semibold" style={{ color: 'var(--color-rose)' }}>
-                    від {svc.price} ₪
+                    {t('price_from', { price: svc.price })}
                   </span>
                   <span className="text-xs text-gray-400">{formatDuration(svc.duration_minutes)}</span>
                 </div>
@@ -913,6 +977,8 @@ function templateToRows(templates: StudioScheduleTemplate[]): ScheduleRow[] {
 }
 
 function ScheduleTab({ studio, apiFetch, onUnauth }: ScheduleTabProps) {
+  const t = useTranslations('admin.schedule_panel')
+  const tCommon = useTranslations('common')
   const [rows, setRows] = useState<ScheduleRow[]>(buildDefaultSchedule())
   const [loading, setLoading] = useState(false)
   const [saving, setSaving] = useState(false)
@@ -981,17 +1047,17 @@ function ScheduleTab({ studio, apiFetch, onUnauth }: ScheduleTabProps) {
       if (res.status === 401) { onUnauth(); return }
       if (!res.ok) {
         const body = await res.json() as { error?: { message?: string } }
-        setMessage({ type: 'error', text: body.error?.message ?? 'Помилка завантаження розкладу' })
+        setMessage({ type: 'error', text: body.error?.message ?? t('error_load') })
         return
       }
       const data = await res.json() as GetMasterScheduleResponse
       setRows(templateToRows(data.schedule))
     } catch {
-      setMessage({ type: 'error', text: 'Мережева помилка під час завантаження розкладу' })
+      setMessage({ type: 'error', text: t('error_network_load') })
     } finally {
       setLoading(false)
     }
-  }, [studio, apiFetch, onUnauth])
+  }, [studio, apiFetch, onUnauth, t])
 
   const loadSlots = useCallback(async () => {
     setSlotsLoading(true)
@@ -1052,18 +1118,18 @@ function ScheduleTab({ studio, apiFetch, onUnauth }: ScheduleTabProps) {
       if (res.status === 401) { onUnauth(); return }
       const data = await res.json() as GenerateSlotsFromTemplateResponse & { error?: { message?: string } }
       if (!res.ok) {
-        setGenerateMsg({ type: 'error', text: data.error?.message ?? 'Помилка генерації слотів' })
+        setGenerateMsg({ type: 'error', text: data.error?.message ?? t('error_generate') })
         return
       }
       setSlotModal(null)
       setPendingGenerate(null)
       setGenerateMsg({
         type: 'success',
-        text: `Створено ${data.created} слотів` + (data.skipped > 0 ? `, пропущено ${data.skipped}` : ''),
+        text: t('slots_created', { count: data.created }) + (data.skipped > 0 ? t('slots_skipped', { count: data.skipped }) : ''),
       })
       await loadSlots()
     } catch {
-      setGenerateMsg({ type: 'error', text: 'Мережева помилка' })
+      setGenerateMsg({ type: 'error', text: t('error_network_generate') })
     } finally {
       setGenerating(false)
     }
@@ -1093,12 +1159,12 @@ function ScheduleTab({ studio, apiFetch, onUnauth }: ScheduleTabProps) {
       if (res.status === 401) { onUnauth(); return }
       if (!res.ok) {
         const body = await res.json() as { error?: { message?: string } }
-        setMessage({ type: 'error', text: body.error?.message ?? 'Помилка збереження розкладу' })
+        setMessage({ type: 'error', text: body.error?.message ?? t('error_save') })
         return
       }
-      setMessage({ type: 'success', text: 'Збережено!' })
+      setMessage({ type: 'success', text: t('success_save') })
     } catch {
-      setMessage({ type: 'error', text: 'Мережева помилка під час збереження розкладу' })
+      setMessage({ type: 'error', text: t('error_network_save') })
     } finally {
       setSaving(false)
     }
@@ -1117,14 +1183,16 @@ function ScheduleTab({ studio, apiFetch, onUnauth }: ScheduleTabProps) {
       {/* Left: Schedule editor (1/3) */}
       <div className="w-1/3 shrink-0">
         <h2 className="text-lg font-semibold text-[var(--color-charcoal)] mb-4">
-          Розклад роботи
+          {t('heading')}
         </h2>
 
         {loading ? (
-          <p className="text-sm text-gray-400 py-4">Завантаження...</p>
+          <p className="text-sm text-gray-400 py-4">{tCommon('loading')}</p>
         ) : (
           <div className="flex flex-col gap-2">
-            {rows.map((row) => (
+            {(() => {
+              const dayLabels = t.raw('day_labels') as string[]
+              return rows.map((row) => (
               <div
                 key={row.day_of_week}
                 className="flex flex-wrap items-center gap-4 rounded-xl border border-gray-100 bg-white px-4 py-3"
@@ -1137,7 +1205,7 @@ function ScheduleTab({ studio, apiFetch, onUnauth }: ScheduleTabProps) {
                   className="w-8 text-sm font-semibold text-center shrink-0"
                   style={{ color: 'var(--color-charcoal)' }}
                 >
-                  {DAY_LABELS[row.day_of_week]}
+                  {dayLabels[row.day_of_week]}
                 </span>
                 <div className="flex items-center gap-2">
                   <select
@@ -1163,7 +1231,8 @@ function ScheduleTab({ studio, apiFetch, onUnauth }: ScheduleTabProps) {
                   </select>
                 </div>
               </div>
-            ))}
+              ))
+            })()}
           </div>
         )}
 
@@ -1173,7 +1242,7 @@ function ScheduleTab({ studio, apiFetch, onUnauth }: ScheduleTabProps) {
             disabled={saving || loading}
             className="bg-[var(--color-rose)] text-white rounded-lg px-6 py-2 text-sm font-medium hover:opacity-90 transition-opacity disabled:opacity-50"
           >
-            {saving ? 'Збереження...' : 'Зберегти розклад'}
+            {saving ? tCommon('saving') : t('save_btn')}
           </button>
           {message && (
             <p className={`text-sm ${message.type === 'success' ? 'text-green-600' : 'text-red-500'}`}>
@@ -1190,13 +1259,13 @@ function ScheduleTab({ studio, apiFetch, onUnauth }: ScheduleTabProps) {
       <div className="flex-1 min-w-0">
         {/* Header with dropdown */}
         <div className="flex items-center justify-between mb-4">
-          <h2 className="text-lg font-semibold text-[var(--color-charcoal)]">Слоти</h2>
+          <h2 className="text-lg font-semibold text-[var(--color-charcoal)]">{t('add_slots_btn')}</h2>
           <div className="relative" ref={dropdownRef}>
             <button
               onClick={() => setDropdownOpen(v => !v)}
               className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-gray-200 bg-white text-sm text-[var(--color-charcoal)] hover:border-[var(--color-rose)] transition-colors"
             >
-              Додати слоти
+              {t('add_slots_btn')}
               <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
                 <path d="M2 4.5l5 5 5-5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
               </svg>
@@ -1212,7 +1281,7 @@ function ScheduleTab({ studio, apiFetch, onUnauth }: ScheduleTabProps) {
                   }}
                   className="w-full text-left px-4 py-2.5 text-sm text-[var(--color-charcoal)] hover:bg-gray-50 transition-colors"
                 >
-                  На поточний день
+                  {t('add_slots_for')} ({t('selected_day')})
                 </button>
                 <button
                   onClick={() => {
@@ -1223,7 +1292,7 @@ function ScheduleTab({ studio, apiFetch, onUnauth }: ScheduleTabProps) {
                   }}
                   className="w-full text-left px-4 py-2.5 text-sm text-[var(--color-charcoal)] hover:bg-gray-50 transition-colors"
                 >
-                  На наступні 7 днів
+                  {t('add_slots_for')} +7
                 </button>
                 <button
                   onClick={() => {
@@ -1234,7 +1303,7 @@ function ScheduleTab({ studio, apiFetch, onUnauth }: ScheduleTabProps) {
                   }}
                   className="w-full text-left px-4 py-2.5 text-sm text-[var(--color-charcoal)] hover:bg-gray-50 transition-colors"
                 >
-                  На наступні 14 днів
+                  {t('add_slots_for')} +14
                 </button>
                 <div className="my-1 border-t border-gray-100" />
                 <button
@@ -1246,7 +1315,7 @@ function ScheduleTab({ studio, apiFetch, onUnauth }: ScheduleTabProps) {
                   }}
                   className="w-full text-left px-4 py-2.5 text-sm text-[var(--color-charcoal)] hover:bg-gray-50 transition-colors"
                 >
-                  Між датами
+                  {t('add_range_heading')}
                 </button>
               </div>
             )}
@@ -1258,7 +1327,7 @@ function ScheduleTab({ studio, apiFetch, onUnauth }: ScheduleTabProps) {
           <button
             onClick={() => navigateMonth(-1)}
             className="w-8 h-8 flex items-center justify-center rounded-lg border border-gray-200 bg-white text-gray-500 hover:border-[var(--color-rose)] hover:text-[var(--color-rose)] transition-colors"
-            aria-label="Попередній місяць"
+            aria-label={t('prev_month')}
           >
             <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
               <path d="M10 12L6 8l4-4" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
@@ -1268,7 +1337,7 @@ function ScheduleTab({ studio, apiFetch, onUnauth }: ScheduleTabProps) {
           <button
             onClick={() => navigateMonth(1)}
             className="w-8 h-8 flex items-center justify-center rounded-lg border border-gray-200 bg-white text-gray-500 hover:border-[var(--color-rose)] hover:text-[var(--color-rose)] transition-colors"
-            aria-label="Наступний місяць"
+            aria-label={t('next_month')}
           >
             <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
               <path d="M6 4l4 4-4 4" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
@@ -1318,11 +1387,11 @@ function ScheduleTab({ studio, apiFetch, onUnauth }: ScheduleTabProps) {
 
         {/* Slot cubes */}
         {slotsLoading ? (
-          <p className="text-sm text-gray-400 py-4">Завантаження слотів...</p>
+          <p className="text-sm text-gray-400 py-4">{tCommon('loading')}</p>
         ) : !selectedDay ? (
-          <p className="text-sm text-gray-400 py-4 text-center">Виберіть день для перегляду слотів</p>
+          <p className="text-sm text-gray-400 py-4 text-center">{t('selected_day')}</p>
         ) : slotsForDay.length === 0 ? (
-          <p className="text-sm text-gray-400 py-4">Слоти не знайдено</p>
+          <p className="text-sm text-gray-400 py-4">{t('error_load')}</p>
         ) : (
           <div className="grid grid-cols-4 sm:grid-cols-6 lg:grid-cols-8 gap-2">
             {slotsForDay.map((slot) => (
@@ -1342,10 +1411,10 @@ function ScheduleTab({ studio, apiFetch, onUnauth }: ScheduleTabProps) {
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/30 backdrop-blur-sm">
           <div className="bg-white rounded-2xl shadow-xl p-6 w-full max-w-sm mx-4">
             <h3 className="text-base font-semibold text-[var(--color-charcoal)] mb-4">
-              Додати слоти на{' '}
+              {t('add_slots_for')}{' '}
               {selectedDay
                 ? new Date(selectedDay + 'T12:00:00').toLocaleDateString('uk-UA', { day: 'numeric', month: 'long' })
-                : 'вибраний день'}
+                : t('selected_day')}
             </h3>
 
             <div className="flex flex-col gap-3 mb-3">
@@ -1356,7 +1425,7 @@ function ScheduleTab({ studio, apiFetch, onUnauth }: ScheduleTabProps) {
                     onChange={e => setCustomRanges(prev => prev.map((r, j) => j === i ? { ...r, from: e.target.value } : r))}
                     className={INPUT_CLS}
                   >
-                    {TIME_OPTIONS.map(t => <option key={t} value={t}>{t}</option>)}
+                    {TIME_OPTIONS.map(time => <option key={time} value={time}>{time}</option>)}
                   </select>
                   <span className="text-sm text-gray-400 shrink-0">—</span>
                   <select
@@ -1364,7 +1433,7 @@ function ScheduleTab({ studio, apiFetch, onUnauth }: ScheduleTabProps) {
                     onChange={e => setCustomRanges(prev => prev.map((r, j) => j === i ? { ...r, to: e.target.value } : r))}
                     className={INPUT_CLS}
                   >
-                    {TIME_OPTIONS.map(t => <option key={t} value={t}>{t}</option>)}
+                    {TIME_OPTIONS.map(time => <option key={time} value={time}>{time}</option>)}
                   </select>
                   {customRanges.length > 1 && (
                     <button
@@ -1382,7 +1451,7 @@ function ScheduleTab({ studio, apiFetch, onUnauth }: ScheduleTabProps) {
               onClick={() => setCustomRanges(prev => [...prev, { from: '09:00', to: '18:00' }])}
               className="text-sm text-[var(--color-rose)] hover:opacity-80 transition-opacity mb-5 flex items-center gap-1"
             >
-              + Додати проміжок
+              {t('add_interval_btn')}
             </button>
 
             {generateMsg && (
@@ -1396,14 +1465,14 @@ function ScheduleTab({ studio, apiFetch, onUnauth }: ScheduleTabProps) {
                 onClick={() => { setSlotModal(null); setGenerateMsg(null) }}
                 className="px-4 py-2 text-sm text-gray-500 hover:text-gray-700 transition-colors"
               >
-                Скасувати
+                {tCommon('cancel')}
               </button>
               <button
                 onClick={() => handleGenerateSlots(selectedDay ?? todayStr, selectedDay ?? todayStr, customRanges)}
                 disabled={generating}
                 className="px-4 py-2 bg-[var(--color-rose)] text-white rounded-lg text-sm font-medium hover:opacity-90 transition-opacity disabled:opacity-50"
               >
-                {generating ? 'Додавання...' : 'Додати'}
+                {generating ? t('generating') : tCommon('add')}
               </button>
             </div>
           </div>
@@ -1415,18 +1484,18 @@ function ScheduleTab({ studio, apiFetch, onUnauth }: ScheduleTabProps) {
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/30 backdrop-blur-sm">
           <div className="bg-white rounded-2xl shadow-xl p-6 w-full max-w-sm mx-4">
             <h3 className="text-base font-semibold text-[var(--color-charcoal)] mb-2">
-              Підтвердіть створення слотів
+              {tCommon('confirm')}
             </h3>
             <p className="text-sm text-gray-500 mb-5">
-              {'Створити слоти за розкладом з '}
+              {t('add_slots_for')}{' '}
               <span className="font-medium text-[var(--color-charcoal)]">
                 {new Date(pendingGenerate.dateFrom + 'T12:00:00').toLocaleDateString('uk-UA', { day: 'numeric', month: 'long' })}
               </span>
-              {' по '}
+              {' — '}
               <span className="font-medium text-[var(--color-charcoal)]">
                 {new Date(pendingGenerate.dateTo + 'T12:00:00').toLocaleDateString('uk-UA', { day: 'numeric', month: 'long', year: 'numeric' })}
               </span>
-              {' включно? '}
+              {' '}
               <span className="text-gray-400">
                 {'('}
                 {Math.round(
@@ -1434,7 +1503,7 @@ function ScheduleTab({ studio, apiFetch, onUnauth }: ScheduleTabProps) {
                     new Date(pendingGenerate.dateFrom + 'T12:00:00').getTime()) /
                     86400000,
                 ) + 1}
-                {' дн.)'}
+                {')'}
               </span>
             </p>
 
@@ -1450,14 +1519,14 @@ function ScheduleTab({ studio, apiFetch, onUnauth }: ScheduleTabProps) {
                 disabled={generating}
                 className="px-4 py-2 text-sm text-gray-500 hover:text-gray-700 transition-colors disabled:opacity-50"
               >
-                Скасувати
+                {tCommon('cancel')}
               </button>
               <button
                 onClick={() => handleGenerateSlots(pendingGenerate.dateFrom, pendingGenerate.dateTo)}
                 disabled={generating}
                 className="px-4 py-2 bg-[var(--color-rose)] text-white rounded-lg text-sm font-medium hover:opacity-90 transition-opacity disabled:opacity-50"
               >
-                {generating ? 'Створення...' : 'Створити'}
+                {generating ? t('creating') : tCommon('create')}
               </button>
             </div>
           </div>
@@ -1469,13 +1538,12 @@ function ScheduleTab({ studio, apiFetch, onUnauth }: ScheduleTabProps) {
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/30 backdrop-blur-sm">
           <div className="bg-white rounded-2xl shadow-xl p-6 w-full max-w-sm mx-4">
             <h3 className="text-base font-semibold text-[var(--color-charcoal)] mb-4">
-              Додати слоти між датами
+              {t('add_range_heading')}
             </h3>
-            <p className="text-xs text-gray-400 mb-4">Використовується розклад роботи студії</p>
 
             <div className="flex flex-col gap-3 mb-5">
               <div className="flex items-center gap-3">
-                <label className="text-sm text-gray-500 w-5 shrink-0">З</label>
+                <label className="text-sm text-gray-500 w-5 shrink-0">Z</label>
                 <input
                   type="date"
                   value={rangeFrom}
@@ -1484,7 +1552,7 @@ function ScheduleTab({ studio, apiFetch, onUnauth }: ScheduleTabProps) {
                 />
               </div>
               <div className="flex items-center gap-3">
-                <label className="text-sm text-gray-500 w-5 shrink-0">До</label>
+                <label className="text-sm text-gray-500 w-5 shrink-0">—</label>
                 <input
                   type="date"
                   value={rangeTo}
@@ -1505,7 +1573,7 @@ function ScheduleTab({ studio, apiFetch, onUnauth }: ScheduleTabProps) {
                 onClick={() => { setSlotModal(null); setGenerateMsg(null) }}
                 className="px-4 py-2 text-sm text-gray-500 hover:text-gray-700 transition-colors"
               >
-                Скасувати
+                {tCommon('cancel')}
               </button>
               <button
                 onClick={() => {
@@ -1516,7 +1584,7 @@ function ScheduleTab({ studio, apiFetch, onUnauth }: ScheduleTabProps) {
                 disabled={!rangeFrom || !rangeTo || rangeTo < rangeFrom}
                 className="px-4 py-2 bg-[var(--color-rose)] text-white rounded-lg text-sm font-medium hover:opacity-90 transition-opacity disabled:opacity-50"
               >
-                Далі
+                {tCommon('confirm')}
               </button>
             </div>
           </div>
@@ -1558,12 +1626,13 @@ function ScheduleEditor({
   onChange: (rows: ScheduleRow[]) => void
   disabled?: boolean
 }) {
-  const STUDIO_DAY_LABELS = ['Нд', 'Пн', 'Вт', 'Ср', 'Чт', 'Пт', 'Сб']
+  const tAdmin = useTranslations('admin')
   const updateRow = (index: number, patch: Partial<ScheduleRow>) => {
     const next = rows.map((r, i) => (i === index ? { ...r, ...patch } : r))
     onChange(next)
   }
   const SELECT_CLS = 'border border-gray-300 rounded-lg px-2 py-1 text-sm text-[var(--color-charcoal)] focus:outline-none focus:border-[var(--color-rose)] disabled:opacity-40'
+  const dayLabels = tAdmin.raw('day_labels') as string[]
   return (
     <div className="space-y-2">
       {rows.map((row, i) => (
@@ -1574,7 +1643,7 @@ function ScheduleEditor({
             onChange={checked => updateRow(i, { is_working: checked })}
           />
           <span className="w-6 text-sm text-[var(--color-charcoal)] font-medium">
-            {STUDIO_DAY_LABELS[row.day_of_week]}
+            {dayLabels[row.day_of_week]}
           </span>
           <select
             value={row.work_start}
@@ -1602,7 +1671,7 @@ function ScheduleEditor({
             ))}
           </select>
           {!row.is_working && (
-            <span className="text-xs text-gray-400">Вихідний</span>
+            <span className="text-xs text-gray-400">{tAdmin('slot_status.blocked')}</span>
           )}
         </div>
       ))}
@@ -1611,28 +1680,38 @@ function ScheduleEditor({
 }
 
 function StudiosTab({ apiFetch, onUnauth, onStudiosChanged, secret }: StudiosTabProps) {
+  const t = useTranslations('admin.studios_panel')
+  const tCommon = useTranslations('common')
+
   const [studiosList, setStudiosList] = useState<Studio[]>([])
   const [loading, setLoading] = useState(true)
   const [message, setMessage] = useState<InlineMessage | null>(null)
 
+  // Translation helpers
+  const emptyStudioTranslations = (): StudioTranslations => ({
+    uk: { name: '', schedule_text: '' },
+    en: { name: '', schedule_text: '' },
+    he: { name: '', schedule_text: '' },
+  })
+
   // Create form
   const [showCreate, setShowCreate] = useState(false)
   const [newId, setNewId] = useState('')
-  const [newName, setNewName] = useState('')
   const [newStreet, setNewStreet] = useState('')
   const [newCity, setNewCity] = useState('')
   const [newTimezone, setNewTimezone] = useState('Asia/Jerusalem')
-  const [newScheduleText, setNewScheduleText] = useState('')
   const [newSchedule, setNewSchedule] = useState<ScheduleRow[]>(buildStudioDefaultSchedule())
   const [formLoading, setFormLoading] = useState(false)
+  const [createLang, setCreateLang] = useState<Locale>('uk')
+  const [createTranslations, setCreateTranslations] = useState<StudioTranslations>(emptyStudioTranslations())
 
   // Edit form
   const [editingId, setEditingId] = useState<string | null>(null)
-  const [editName, setEditName] = useState('')
   const [editStreet, setEditStreet] = useState('')
   const [editCity, setEditCity] = useState('')
-  const [editScheduleText, setEditScheduleText] = useState('')
   const [editLoading, setEditLoading] = useState(false)
+  const [editLang, setEditLang] = useState<Locale>('uk')
+  const [editTranslations, setEditTranslations] = useState<StudioTranslations>(emptyStudioTranslations())
 
   // Delete confirm
   const [deleteTarget, setDeleteTarget] = useState<string | null>(null)
@@ -1669,22 +1748,23 @@ function StudiosTab({ apiFetch, onUnauth, onStudiosChanged, secret }: StudiosTab
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
         id: newId.trim(),
-        name: newName.trim(),
+        name: createTranslations.uk.name.trim(),
         street: newStreet.trim(),
         city: newCity.trim(),
         timezone: newTimezone.trim(),
-        schedule_text: newScheduleText,
         schedule: newSchedule,
+        translations: createTranslations,
       }),
     })
     const data = await res.json() as { error?: { message?: string } }
     if (!res.ok) {
-      setMessage({ type: 'error', text: data.error?.message ?? 'Помилка створення студії' })
+      setMessage({ type: 'error', text: data.error?.message ?? t('error_create') })
     } else {
-      setMessage({ type: 'success', text: 'Студію створено' })
+      setMessage({ type: 'success', text: t('success_create') })
       setShowCreate(false)
-      setNewId(''); setNewName(''); setNewStreet(''); setNewCity('')
-      setNewTimezone('Asia/Jerusalem'); setNewScheduleText(''); setNewSchedule(buildStudioDefaultSchedule())
+      setNewId(''); setNewStreet(''); setNewCity('')
+      setNewTimezone('Asia/Jerusalem'); setNewSchedule(buildStudioDefaultSchedule())
+      setCreateTranslations(emptyStudioTranslations()); setCreateLang('uk')
       await load(true)
       onStudiosChanged()
     }
@@ -1693,11 +1773,15 @@ function StudiosTab({ apiFetch, onUnauth, onStudiosChanged, secret }: StudiosTab
 
   const startEdit = (s: Studio) => {
     setEditingId(s.id)
-    setEditName(s.name)
     setEditStreet(s.street ?? '')
     setEditCity(s.city)
-    setEditScheduleText(s.schedule_text ?? '')
     setDeleteTarget(null)
+    setEditLang('uk')
+    setEditTranslations({
+      uk: { name: s.translations?.uk?.name ?? s.name, schedule_text: s.translations?.uk?.schedule_text ?? s.schedule_text ?? '' },
+      en: { name: s.translations?.en?.name ?? s.name, schedule_text: s.translations?.en?.schedule_text ?? s.schedule_text ?? '' },
+      he: { name: s.translations?.he?.name ?? s.name, schedule_text: s.translations?.he?.schedule_text ?? s.schedule_text ?? '' },
+    })
   }
 
   const handleEdit = async (e: React.FormEvent) => {
@@ -1708,13 +1792,19 @@ function StudiosTab({ apiFetch, onUnauth, onStudiosChanged, secret }: StudiosTab
     const res = await apiFetch(`/api/admin/studios/${editingId}`, {
       method: 'PUT',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ name: editName.trim(), street: (editStreet ?? '').trim(), city: editCity.trim(), schedule_text: (editScheduleText ?? '') }),
+      body: JSON.stringify({
+        name: editTranslations.uk.name.trim(),
+        street: (editStreet ?? '').trim(),
+        city: editCity.trim(),
+        schedule_text: editTranslations.uk.schedule_text,
+        translations: editTranslations,
+      }),
     })
     const data = await res.json() as { error?: { message?: string } }
     if (!res.ok) {
-      setMessage({ type: 'error', text: data.error?.message ?? 'Помилка оновлення студії' })
+      setMessage({ type: 'error', text: data.error?.message ?? t('error_update') })
     } else {
-      setMessage({ type: 'success', text: 'Студію оновлено' })
+      setMessage({ type: 'success', text: t('success_update') })
       setEditingId(null)
       await load(true)
       onStudiosChanged()
@@ -1728,10 +1818,10 @@ function StudiosTab({ apiFetch, onUnauth, onStudiosChanged, secret }: StudiosTab
     const res = await apiFetch(`/api/admin/studios/${studioId}`, { method: 'DELETE' })
     const data = await res.json() as { error?: { message?: string } }
     if (!res.ok) {
-      setMessage({ type: 'error', text: data.error?.message ?? 'Помилка видалення студії' })
+      setMessage({ type: 'error', text: data.error?.message ?? t('error_delete') })
       setDeleteTarget(null)
     } else {
-      setMessage({ type: 'success', text: 'Студію видалено' })
+      setMessage({ type: 'success', text: t('success_delete') })
       setDeleteTarget(null)
       await load(true)
       onStudiosChanged()
@@ -1753,14 +1843,14 @@ function StudiosTab({ apiFetch, onUnauth, onStudiosChanged, secret }: StudiosTab
       })
       const data = await res.json() as { image_url?: string; error?: { message?: string } }
       if (!res.ok) {
-        setImageError(data.error?.message ?? 'Помилка завантаження фото')
+        setImageError(data.error?.message ?? t('error_upload_photo'))
       } else {
         setImageError(null)
         await load(true)
         onStudiosChanged()
       }
     } catch {
-      setImageError('Мережева помилка під час завантаження фото')
+      setImageError(t('error_network_upload'))
     }
     setUploadingImage(false)
   }
@@ -1772,14 +1862,14 @@ function StudiosTab({ apiFetch, onUnauth, onStudiosChanged, secret }: StudiosTab
       const res = await apiFetch(`/api/admin/studios/${studioId}/image`, { method: 'DELETE' })
       if (!res.ok) {
         const data = await res.json() as { error?: { message?: string } }
-        setImageError(data.error?.message ?? 'Помилка видалення фото')
+        setImageError(data.error?.message ?? t('error_delete_photo'))
       } else {
         setImageError(null)
         await load(true)
         onStudiosChanged()
       }
     } catch {
-      setImageError('Мережева помилка під час видалення фото')
+      setImageError(t('error_network_delete_photo'))
     }
     setUploadingImage(false)
   }
@@ -1830,12 +1920,12 @@ function StudiosTab({ apiFetch, onUnauth, onStudiosChanged, secret }: StudiosTab
   return (
     <div>
       <div className="flex items-center justify-between mb-6">
-        <h2 className="text-xl font-semibold text-[var(--color-charcoal)]">Студії</h2>
+        <h2 className="text-xl font-semibold text-[var(--color-charcoal)]">{t('edit_heading')}</h2>
         <button
           onClick={() => { setShowCreate(v => !v); setEditingId(null); setDeleteTarget(null) }}
           className="px-4 py-2 rounded-lg text-sm font-medium bg-[var(--color-rose)] text-white hover:opacity-90 transition-opacity"
         >
-          {showCreate ? 'Скасувати' : '+ Додати студію'}
+          {showCreate ? t('cancel_btn') : t('add_btn')}
         </button>
       </div>
 
@@ -1860,43 +1950,46 @@ function StudiosTab({ apiFetch, onUnauth, onStudiosChanged, secret }: StudiosTab
               />
               <p className="mt-1 text-xs text-gray-400">Малі літери, цифри та дефіси</p>
             </div>
-            <div>
-              <label className="block text-xs text-gray-500 mb-1">Назва *</label>
+            <div className="sm:col-span-2">
+              <div className="flex items-center justify-between mb-1">
+                <label className="block text-xs text-gray-500">{t('name_label')} *</label>
+                <LangTabs value={createLang} onChange={setCreateLang} />
+              </div>
               <input
-                value={newName} onChange={e => setNewName(e.target.value)}
-                placeholder="Студія манікюру Тель-Авів"
-                required
+                value={createTranslations[createLang].name}
+                onChange={e => setCreateTranslations(prev => ({ ...prev, [createLang]: { ...prev[createLang], name: e.target.value } }))}
+                placeholder={t('name_placeholder')}
+                required={createLang === 'uk'}
                 className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm text-[var(--color-charcoal)] focus:outline-none focus:border-[var(--color-rose)]"
               />
             </div>
             <div>
-              <label className="block text-xs text-gray-500 mb-1">Вулиця</label>
+              <label className="block text-xs text-gray-500 mb-1">{t('street_label')}</label>
               <input
                 value={newStreet} onChange={e => setNewStreet(e.target.value)}
-                placeholder="вул. Дізенгоф, 99"
+                placeholder={t('street_placeholder')}
                 className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm text-[var(--color-charcoal)] focus:outline-none focus:border-[var(--color-rose)]"
               />
             </div>
             <div>
-              <label className="block text-xs text-gray-500 mb-1">Місто *</label>
+              <label className="block text-xs text-gray-500 mb-1">{t('city_label')} *</label>
               <input
                 value={newCity} onChange={e => setNewCity(e.target.value)}
-                placeholder="Тель-Авів"
+                placeholder={t('city_placeholder')}
                 required
                 className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm text-[var(--color-charcoal)] focus:outline-none focus:border-[var(--color-rose)]"
               />
             </div>
           </div>
           <div className="sm:col-span-2">
-            <label className="block text-xs text-gray-500 mb-1">Розклад (текст для сайту)</label>
+            <label className="block text-xs text-gray-500 mb-1">{t('schedule_label')} [{createLang.toUpperCase()}]</label>
             <textarea
-              value={newScheduleText}
-              onChange={e => setNewScheduleText(e.target.value)}
-              placeholder={"Неділя — четвер: 9:00–20:00\nП'ятниця: 9:00–15:00\nСубота: вихідний"}
+              value={createTranslations[createLang].schedule_text}
+              onChange={e => setCreateTranslations(prev => ({ ...prev, [createLang]: { ...prev[createLang], schedule_text: e.target.value } }))}
+              placeholder={t('schedule_placeholder')}
               rows={3}
               className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm text-[var(--color-charcoal)] focus:outline-none focus:border-[var(--color-rose)] resize-none"
             />
-            <p className="mt-1 text-xs text-gray-400">Відображається на головній сторінці сайту. Кожен рядок — окремий рядок розкладу.</p>
           </div>
           <div className="sm:col-span-2">
             <label className="block text-xs text-gray-500 mb-2">Розклад роботи</label>
@@ -1908,17 +2001,16 @@ function StudiosTab({ apiFetch, onUnauth, onStudiosChanged, secret }: StudiosTab
               disabled={formLoading}
               className="px-4 py-2 rounded-lg text-sm font-medium bg-[var(--color-rose)] text-white hover:opacity-90 transition-opacity disabled:opacity-50 disabled:cursor-not-allowed"
             >
-              {formLoading ? 'Збереження...' : 'Створити студію'}
+              {formLoading ? tCommon('saving') : t('create_heading')}
             </button>
             <button
               type="button"
               onClick={() => setShowCreate(false)}
               className="px-4 py-2 rounded-lg text-sm font-medium border border-gray-300 text-[var(--color-charcoal)] hover:bg-gray-50"
             >
-              Скасувати
+              {t('cancel_btn')}
             </button>
           </div>
-          <p className="text-xs text-gray-400">Фото можна додати після створення студії.</p>
         </form>
       )}
 
@@ -1941,7 +2033,7 @@ function StudiosTab({ apiFetch, onUnauth, onStudiosChanged, secret }: StudiosTab
                   {/* eslint-disable-next-line @next/next/no-img-element */}
                   <img
                     src={currentStudio!.image_url!}
-                    alt="Фото студії"
+                    alt={t('photo_alt')}
                     className="w-24 h-16 object-cover rounded-lg border border-[var(--color-blush)]"
                   />
                   <button
@@ -1950,13 +2042,13 @@ function StudiosTab({ apiFetch, onUnauth, onStudiosChanged, secret }: StudiosTab
                     disabled={uploadingImage}
                     className="px-3 py-1.5 rounded text-xs border border-red-200 text-red-600 bg-red-50 hover:bg-red-100 disabled:opacity-50 disabled:cursor-not-allowed"
                   >
-                    {uploadingImage ? 'Видалення...' : 'Видалити фото'}
+                    {uploadingImage ? t('deleting_photo') : t('delete_photo')}
                   </button>
                 </div>
               ) : (
                 <div className="flex items-center gap-3">
                   <label className={`cursor-pointer flex items-center gap-2 px-3 py-1.5 rounded text-xs border border-gray-300 text-[var(--color-charcoal)] hover:bg-gray-50 ${uploadingImage ? 'opacity-50 pointer-events-none' : ''}`}>
-                    {uploadingImage ? 'Завантаження...' : '+ Завантажити фото'}
+                    {uploadingImage ? t('uploading_photo') : t('upload_photo')}
                     <input
                       type="file"
                       accept="image/jpeg,image/png,image/webp"
@@ -1976,23 +2068,27 @@ function StudiosTab({ apiFetch, onUnauth, onStudiosChanged, secret }: StudiosTab
           </div>
 
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-            <div>
-              <label className="block text-xs text-gray-500 mb-1">Назва *</label>
+            <div className="sm:col-span-2">
+              <div className="flex items-center justify-between mb-1">
+                <label className="block text-xs text-gray-500">{t('name_label')} *</label>
+                <LangTabs value={editLang} onChange={setEditLang} />
+              </div>
               <input
-                value={editName} onChange={e => setEditName(e.target.value)}
-                required
+                value={editTranslations[editLang].name}
+                onChange={e => setEditTranslations(prev => ({ ...prev, [editLang]: { ...prev[editLang], name: e.target.value } }))}
+                required={editLang === 'uk'}
                 className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm text-[var(--color-charcoal)] focus:outline-none focus:border-[var(--color-rose)]"
               />
             </div>
             <div>
-              <label className="block text-xs text-gray-500 mb-1">Вулиця</label>
+              <label className="block text-xs text-gray-500 mb-1">{t('street_label')}</label>
               <input
                 value={editStreet} onChange={e => setEditStreet(e.target.value)}
                 className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm text-[var(--color-charcoal)] focus:outline-none focus:border-[var(--color-rose)]"
               />
             </div>
             <div>
-              <label className="block text-xs text-gray-500 mb-1">Місто *</label>
+              <label className="block text-xs text-gray-500 mb-1">{t('city_label')} *</label>
               <input
                 value={editCity} onChange={e => setEditCity(e.target.value)}
                 required
@@ -2001,14 +2097,13 @@ function StudiosTab({ apiFetch, onUnauth, onStudiosChanged, secret }: StudiosTab
             </div>
           </div>
           <div className="sm:col-span-2">
-            <label className="block text-xs text-gray-500 mb-1">Розклад (текст для сайту)</label>
+            <label className="block text-xs text-gray-500 mb-1">{t('schedule_label')} [{editLang.toUpperCase()}]</label>
             <textarea
-              value={editScheduleText}
-              onChange={e => setEditScheduleText(e.target.value)}
+              value={editTranslations[editLang].schedule_text}
+              onChange={e => setEditTranslations(prev => ({ ...prev, [editLang]: { ...prev[editLang], schedule_text: e.target.value } }))}
               rows={3}
               className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm text-[var(--color-charcoal)] focus:outline-none focus:border-[var(--color-rose)] resize-none"
             />
-            <p className="mt-1 text-xs text-gray-400">Відображається на головній сторінці сайту. Кожен рядок — окремий рядок розкладу.</p>
           </div>
           <div className="flex gap-2">
             <button
@@ -2016,14 +2111,14 @@ function StudiosTab({ apiFetch, onUnauth, onStudiosChanged, secret }: StudiosTab
               disabled={editLoading}
               className="px-4 py-2 rounded-lg text-sm font-medium bg-[var(--color-rose)] text-white hover:opacity-90 transition-opacity disabled:opacity-50 disabled:cursor-not-allowed"
             >
-              {editLoading ? 'Збереження...' : 'Зберегти'}
+              {editLoading ? tCommon('saving') : tCommon('save')}
             </button>
             <button
               type="button"
               onClick={() => setEditingId(null)}
               className="px-4 py-2 rounded-lg text-sm font-medium border border-gray-300 text-[var(--color-charcoal)] hover:bg-gray-50"
             >
-              Скасувати
+              {t('cancel_btn')}
             </button>
           </div>
         </form>
@@ -2031,20 +2126,20 @@ function StudiosTab({ apiFetch, onUnauth, onStudiosChanged, secret }: StudiosTab
 
       {/* Studios list */}
       {loading ? (
-        <p className="text-sm text-gray-400">Завантаження студій...</p>
+        <p className="text-sm text-gray-400">{tCommon('loading')}</p>
       ) : studiosList.length === 0 ? (
-        <p className="text-sm text-gray-400">Студії не знайдено.</p>
+        <p className="text-sm text-gray-400">{t('edit_heading')}</p>
       ) : (
         <div className="overflow-x-auto">
           <table className="w-full text-sm">
             <thead>
               <tr className="border-b border-[var(--color-blush)]">
                 <th className="py-2 pr-2 w-6"></th>
-                <th className="text-left py-2 pr-4 text-xs font-medium text-gray-500">Назва</th>
-                <th className="text-left py-2 pr-4 text-xs font-medium text-gray-500">Вулиця</th>
-                <th className="text-left py-2 pr-4 text-xs font-medium text-gray-500">Місто</th>
-                <th className="text-left py-2 pr-4 text-xs font-medium text-gray-500">ID</th>
-                <th className="text-right py-2 text-xs font-medium text-gray-500">Дії</th>
+                <th className="text-left py-2 pr-4 text-xs font-medium text-gray-500">{t('name_label')}</th>
+                <th className="text-left py-2 pr-4 text-xs font-medium text-gray-500">{t('street_label')}</th>
+                <th className="text-left py-2 pr-4 text-xs font-medium text-gray-500">{t('city_label')}</th>
+                <th className="text-left py-2 pr-4 text-xs font-medium text-gray-500">{t('id_label')}</th>
+                <th className="text-right py-2 text-xs font-medium text-gray-500"></th>
               </tr>
             </thead>
             <tbody>
@@ -2073,13 +2168,13 @@ function StudiosTab({ apiFetch, onUnauth, onStudiosChanged, secret }: StudiosTab
                           onClick={() => startEdit(s)}
                           className="px-3 py-1 rounded text-xs border border-gray-300 text-[var(--color-charcoal)] hover:bg-gray-50"
                         >
-                          Змінити
+                          {tCommon('edit')}
                         </button>
                         <button
                           onClick={() => setDeleteTarget(prev => prev === s.id ? null : s.id)}
                           className="px-3 py-1 rounded text-xs border border-red-200 text-red-600 bg-red-50 hover:bg-red-100"
                         >
-                          Видалити
+                          {tCommon('delete')}
                         </button>
                       </div>
                     </td>
@@ -2089,7 +2184,7 @@ function StudiosTab({ apiFetch, onUnauth, onStudiosChanged, secret }: StudiosTab
                       <td colSpan={6} className="px-4 py-3">
                         <div className="flex items-center justify-between gap-4">
                           <p className="text-sm text-red-700">
-                            Видалити студію <strong>{s.name}</strong>? Будуть видалені всі пов'язані дані: розклад, слоти, послуги та скасовані записи. Активні записи блокують видалення.
+                            {t('delete_confirm', { name: s.name })}
                           </p>
                           <div className="flex gap-2 shrink-0">
                             <button
@@ -2097,13 +2192,13 @@ function StudiosTab({ apiFetch, onUnauth, onStudiosChanged, secret }: StudiosTab
                               disabled={deleting}
                               className="px-3 py-1 rounded text-xs bg-red-600 text-white hover:bg-red-700 disabled:opacity-50 disabled:cursor-not-allowed"
                             >
-                              {deleting ? 'Видалення...' : 'Підтвердити'}
+                              {deleting ? tCommon('deleting') : tCommon('confirm')}
                             </button>
                             <button
                               onClick={() => setDeleteTarget(null)}
                               className="px-3 py-1 rounded text-xs border border-gray-300 text-gray-600 hover:bg-white"
                             >
-                              Скасувати
+                              {tCommon('cancel')}
                             </button>
                           </div>
                         </div>
@@ -2153,6 +2248,8 @@ interface ClientsSectionProps {
 }
 
 function ClientsSection({ apiFetch, onUnauth, onEditBooking, hideBookingsModal }: ClientsSectionProps) {
+  const t = useTranslations('admin.clients_panel')
+  const tCommon = useTranslations('common')
   const [clients, setClients] = useState<AdminClientDTO[]>([])
   const [total, setTotal] = useState(0)
   const [loading, setLoading] = useState(false)
@@ -2193,14 +2290,14 @@ function ClientsSection({ apiFetch, onUnauth, onEditBooking, hideBookingsModal }
       const res = await apiFetch(`/api/admin/clients?${params.toString()}`)
       if (!res.ok) {
         const body = await res.json() as { error?: { message?: string } }
-        setError(body.error?.message ?? 'Помилка завантаження клієнтів')
+        setError(body.error?.message ?? t('error_load'))
         return
       }
       const data = await res.json() as { clients: AdminClientDTO[]; total: number }
       setClients(data.clients ?? [])
       setTotal(data.total ?? 0)
     } catch {
-      setError('Мережева помилка під час завантаження клієнтів')
+      setError(t('error_network_load'))
     } finally {
       setLoading(false)
     }
@@ -2263,13 +2360,13 @@ function ClientsSection({ apiFetch, onUnauth, onEditBooking, hideBookingsModal }
       })
       if (!res.ok) {
         const body = await res.json() as { error?: { message?: string } }
-        setEditError(body.error?.message ?? 'Помилка збереження')
+        setEditError(body.error?.message ?? t('error_save'))
         return
       }
       setEditingClient(null)
       void loadClients(search)
     } catch {
-      setEditError('Мережева помилка під час збереження')
+      setEditError(t('error_network_save'))
     } finally {
       setEditSaving(false)
     }
@@ -2282,14 +2379,14 @@ function ClientsSection({ apiFetch, onUnauth, onEditBooking, hideBookingsModal }
       const res = await apiFetch(`/api/admin/clients/${clientId}`, { method: 'DELETE' })
       if (!res.ok) {
         const body = await res.json() as { error?: { message?: string } }
-        setDeleteError(body.error?.message ?? 'Помилка видалення клієнта')
+        setDeleteError(body.error?.message ?? t('error_delete'))
         setDeleteTarget(null)
         return
       }
       setDeleteTarget(null)
       void loadClients(search)
     } catch {
-      setDeleteError('Мережева помилка під час видалення клієнта')
+      setDeleteError(t('error_network_delete'))
     } finally {
       setDeleting(false)
     }
@@ -2309,13 +2406,13 @@ function ClientsSection({ apiFetch, onUnauth, onEditBooking, hideBookingsModal }
       }
       if (!res.ok) {
         const body = await res.json() as { error?: { message?: string } }
-        setBookingsError(body.error?.message ?? 'Помилка завантаження записів')
+        setBookingsError(body.error?.message ?? t('error_load_bookings'))
         return
       }
       const data = await res.json() as { client: AdminClientDTO; bookings: ClientBookingDTO[] }
       setClientDetail(data)
     } catch {
-      setBookingsError('Помилка під час завантаження записів')
+      setBookingsError(t('error_network_load_bookings'))
     } finally {
       setBookingsLoading(false)
     }
@@ -2332,13 +2429,13 @@ function ClientsSection({ apiFetch, onUnauth, onEditBooking, hideBookingsModal }
       }
       if (!res.ok) {
         const body = await res.json() as { error?: { message?: string } }
-        setFetchBookingError(body.error?.message ?? 'Помилка завантаження запису')
+        setFetchBookingError(body.error?.message ?? t('error_load_booking'))
         return
       }
       const data = await res.json() as { booking: AdminBookingDTO }
       onEditBooking(data.booking)
     } catch {
-      setFetchBookingError('Помилка під час завантаження запису')
+      setFetchBookingError(t('error_network_load_booking'))
     } finally {
       setFetchingBookingId(null)
     }
@@ -2349,7 +2446,7 @@ function ClientsSection({ apiFetch, onUnauth, onEditBooking, hideBookingsModal }
       {/* Section header */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6">
         <div className="flex items-center gap-3">
-          <h2 className="text-lg font-semibold text-[var(--color-charcoal)]">Клієнти</h2>
+          <h2 className="text-lg font-semibold text-[var(--color-charcoal)]">{t('heading')}</h2>
           {!loading && (
             <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-600 border border-gray-200">
               {total}
@@ -2361,18 +2458,18 @@ function ClientsSection({ apiFetch, onUnauth, onEditBooking, hideBookingsModal }
           disabled={loading}
           className="border border-[var(--color-rose)] text-[var(--color-rose)] rounded-lg px-4 py-2 text-sm font-medium hover:bg-[var(--color-blush)] transition-colors disabled:opacity-50 self-start sm:self-auto"
         >
-          {loading ? 'Завантаження...' : 'Оновити список'}
+          {loading ? tCommon('loading') : t('refresh_btn')}
         </button>
       </div>
 
       {/* Search / filter bar */}
       <div className="flex flex-wrap gap-4 mb-4">
         <div className="flex flex-col gap-1 text-sm text-gray-600 w-full sm:w-auto">
-          <label htmlFor="clients-search" className="sr-only">Пошук клієнта</label>
+          <label htmlFor="clients-search" className="sr-only">{t('search_label')}</label>
           <input
             id="clients-search"
             type="text"
-            placeholder="Пошук за ім'ям або номером телефону"
+            placeholder={t('search_placeholder')}
             value={searchInput}
             onChange={handleSearchChange}
             className={INPUT_CLS + ' w-full sm:w-80'}
@@ -2393,12 +2490,12 @@ function ClientsSection({ apiFetch, onUnauth, onEditBooking, hideBookingsModal }
         <table className="w-full text-sm border-collapse">
           <thead>
             <tr className="border-b border-gray-200 text-left text-gray-500">
-              <th className="py-2 pr-4 font-medium">Ім'я</th>
-              <th className="py-2 pr-4 font-medium">Телефон</th>
+              <th className="py-2 pr-4 font-medium">{t('col_name')}</th>
+              <th className="py-2 pr-4 font-medium">{t('col_phone')}</th>
               <th className="py-2 pr-4 font-medium">Email</th>
-              <th className="py-2 pr-4 font-medium">Місто</th>
-              <th className="py-2 pr-4 font-medium">Дата реєстрації</th>
-              <th className="py-2 font-medium">Дії</th>
+              <th className="py-2 pr-4 font-medium">{t('col_city')}</th>
+              <th className="py-2 pr-4 font-medium">{t('col_reg_date')}</th>
+              <th className="py-2 font-medium">{t('col_actions')}</th>
             </tr>
           </thead>
           <tbody>
@@ -2418,7 +2515,7 @@ function ClientsSection({ apiFetch, onUnauth, onEditBooking, hideBookingsModal }
             {!loading && clients.length === 0 && (
               <tr>
                 <td colSpan={6} className="py-10 text-center text-gray-400">
-                  {search ? 'Клієнтів за запитом не знайдено' : 'Клієнтів не знайдено'}
+                  {search ? t('no_clients_search') : t('no_clients')}
                 </td>
               </tr>
             )}
@@ -2446,19 +2543,19 @@ function ClientsSection({ apiFetch, onUnauth, onEditBooking, hideBookingsModal }
                         onClick={() => openEditModal(client)}
                         className="px-3 py-1 rounded text-xs font-medium bg-blue-50 text-blue-600 border border-blue-200 hover:bg-blue-100 transition-colors"
                       >
-                        Змінити
+                        {t('change_btn')}
                       </button>
                       <button
                         onClick={() => void openBookingsModal(client)}
                         className="px-3 py-1 rounded text-xs font-medium border border-gray-300 text-[var(--color-charcoal)] hover:bg-gray-50 transition-colors"
                       >
-                        Записи
+                        {t('view_bookings')}
                       </button>
                       <button
                         onClick={() => setDeleteTarget((prev) => prev === client.id ? null : client.id)}
                         className="px-3 py-1 rounded text-xs font-medium border border-red-200 text-red-600 bg-red-50 hover:bg-red-100 transition-colors"
                       >
-                        Видалити
+                        {t('delete_btn')}
                       </button>
                     </div>
                   </td>
@@ -2468,7 +2565,7 @@ function ClientsSection({ apiFetch, onUnauth, onEditBooking, hideBookingsModal }
                     <td colSpan={6} className="px-4 py-3">
                       <div className="flex items-center justify-between gap-4">
                         <p className="text-sm text-red-700">
-                          Видалити клієнта <strong>{client.first_name} {client.last_name}</strong>? Цю дію неможливо скасувати.
+                          {t('delete_confirm', { name: `${client.first_name} ${client.last_name}` })}
                         </p>
                         <div className="flex gap-2 shrink-0">
                           <button
@@ -2476,13 +2573,13 @@ function ClientsSection({ apiFetch, onUnauth, onEditBooking, hideBookingsModal }
                             disabled={deleting}
                             className="px-3 py-1 rounded text-xs bg-red-600 text-white hover:bg-red-700 disabled:opacity-50 disabled:cursor-not-allowed"
                           >
-                            {deleting ? 'Видалення...' : 'Підтвердити'}
+                            {deleting ? tCommon('deleting') : tCommon('confirm')}
                           </button>
                           <button
                             onClick={() => setDeleteTarget(null)}
                             className="px-3 py-1 rounded text-xs border border-gray-300 text-gray-600 hover:bg-white"
                           >
-                            Скасувати
+                            {tCommon('cancel')}
                           </button>
                         </div>
                       </div>
@@ -2506,13 +2603,13 @@ function ClientsSection({ apiFetch, onUnauth, onEditBooking, hideBookingsModal }
             onClick={(e) => e.stopPropagation()}
           >
             <h3 className="text-lg font-semibold text-[var(--color-charcoal)] mb-1">
-              Редагувати клієнта
+              {t('edit_heading')}
             </h3>
-            <p className="text-sm text-gray-500 mb-4">Телефон: {editingClient.phone}</p>
+            <p className="text-sm text-gray-500 mb-4">{t('phone_label')}: {editingClient.phone}</p>
 
             <div className="flex flex-col gap-3 mb-4">
               <label className="flex flex-col gap-1 text-sm text-gray-600">
-                Ім'я
+                {t('first_name_label')}
                 <input
                   type="text"
                   value={editForm.first_name}
@@ -2521,7 +2618,7 @@ function ClientsSection({ apiFetch, onUnauth, onEditBooking, hideBookingsModal }
                 />
               </label>
               <label className="flex flex-col gap-1 text-sm text-gray-600">
-                Прізвище
+                {t('last_name_label')}
                 <input
                   type="text"
                   value={editForm.last_name}
@@ -2539,7 +2636,7 @@ function ClientsSection({ apiFetch, onUnauth, onEditBooking, hideBookingsModal }
                 />
               </label>
               <label className="flex flex-col gap-1 text-sm text-gray-600">
-                Місто
+                {t('city_label')}
                 <input
                   type="text"
                   value={editForm.city}
@@ -2558,14 +2655,14 @@ function ClientsSection({ apiFetch, onUnauth, onEditBooking, hideBookingsModal }
                 onClick={() => setEditingClient(null)}
                 className="px-4 py-2 text-sm border border-gray-300 text-gray-600 rounded-lg hover:bg-gray-50 transition-colors"
               >
-                Скасувати
+                {tCommon('cancel')}
               </button>
               <button
                 onClick={() => void handleEditSave()}
                 disabled={editSaving}
                 className="px-4 py-2 text-sm bg-[var(--color-rose)] text-white rounded-lg font-medium hover:opacity-90 transition-opacity disabled:opacity-50"
               >
-                {editSaving ? 'Збереження...' : 'Зберегти'}
+                {editSaving ? tCommon('saving') : tCommon('save')}
               </button>
             </div>
           </div>
@@ -2584,7 +2681,7 @@ function ClientsSection({ apiFetch, onUnauth, onEditBooking, hideBookingsModal }
           >
             {bookingsLoading ? (
               <div className="flex-1 flex items-center justify-center py-8">
-                <p className="text-sm text-gray-400">Завантаження...</p>
+                <p className="text-sm text-gray-400">{tCommon('loading')}</p>
               </div>
             ) : bookingsError ? (
               <div className="flex-1 flex flex-col items-center justify-center py-8 gap-4">
@@ -2593,18 +2690,18 @@ function ClientsSection({ apiFetch, onUnauth, onEditBooking, hideBookingsModal }
                   onClick={() => { setViewingClientId(null); setBookingsError(null) }}
                   className="px-4 py-2 rounded-lg text-sm border border-gray-300 text-gray-600 hover:bg-gray-50 transition-colors"
                 >
-                  Закрити
+                  {tCommon('close')}
                 </button>
               </div>
             ) : !clientDetail ? (
               <div className="flex-1 flex items-center justify-center py-8">
-                <p className="text-sm text-gray-400">Не вдалося завантажити дані</p>
+                <p className="text-sm text-gray-400">{t('error_no_data')}</p>
               </div>
             ) : (
               <>
                 <div className="mb-4 shrink-0">
                   <h3 className="text-lg font-semibold text-[var(--color-charcoal)]">
-                    Записи клієнта
+                    {t('client_bookings_heading')}
                   </h3>
                   <p className="text-sm text-gray-500 mt-0.5">
                     {clientDetail.client.first_name} {clientDetail.client.last_name} · {clientDetail.client.phone}
@@ -2613,7 +2710,7 @@ function ClientsSection({ apiFetch, onUnauth, onEditBooking, hideBookingsModal }
 
                 <div className="flex-1 overflow-y-auto -mx-1 px-1">
                   {clientDetail.bookings.length === 0 ? (
-                    <p className="text-sm text-gray-400 text-center py-6">Записів немає</p>
+                    <p className="text-sm text-gray-400 text-center py-6">{t('no_bookings')}</p>
                   ) : (
                     <>
                     {fetchBookingError && (
@@ -2642,7 +2739,7 @@ function ClientsSection({ apiFetch, onUnauth, onEditBooking, hideBookingsModal }
                               disabled={fetchingBookingId === booking.id}
                               className="px-3 py-1 rounded text-xs font-medium bg-blue-50 text-blue-600 border border-blue-200 hover:bg-blue-100 transition-colors disabled:opacity-50"
                             >
-                              {fetchingBookingId === booking.id ? '...' : 'Змінити'}
+                              {fetchingBookingId === booking.id ? '...' : t('change_btn')}
                             </button>
                           </div>
                         </li>
@@ -2657,7 +2754,7 @@ function ClientsSection({ apiFetch, onUnauth, onEditBooking, hideBookingsModal }
                     onClick={() => { setViewingClientId(null); setBookingsError(null) }}
                     className="px-4 py-2 rounded-lg text-sm border border-gray-300 text-gray-600 hover:bg-gray-50 transition-colors"
                   >
-                    Закрити
+                    {tCommon('close')}
                   </button>
                 </div>
               </>
@@ -2674,6 +2771,8 @@ function ClientsSection({ apiFetch, onUnauth, onEditBooking, hideBookingsModal }
 // ---------------------------------------------------------------------------
 
 export default function AdminPage() {
+  const t = useTranslations('admin')
+  const tCommon = useTranslations('common')
   const [secret, setSecret] = useState<string | null>(null)
   const [studio, setStudio] = useState<string>('rishon')
   const [studios, setStudios] = useState<Studio[]>([])
@@ -2761,13 +2860,13 @@ export default function AdminPage() {
       }
       if (!res.ok) {
         const body = await res.json() as { error?: { message?: string } }
-        setBookingsMessage({ type: 'error', text: body.error?.message ?? 'Помилка завантаження записів' })
+        setBookingsMessage({ type: 'error', text: body.error?.message ?? t('bookings_panel.error_load') })
         return
       }
       const data = await res.json() as GetAdminBookingsResponse
       setBookings(data.bookings)
     } catch {
-      setBookingsMessage({ type: 'error', text: 'Мережева помилка під час завантаження записів' })
+      setBookingsMessage({ type: 'error', text: t('bookings_panel.error_network_load') })
     } finally {
       setBookingsLoading(false)
     }
@@ -2807,20 +2906,20 @@ export default function AdminPage() {
       }
       if (!res.ok) {
         const body = await res.json() as { error?: { message?: string } }
-        setGenMessage({ type: 'error', text: body.error?.message ?? 'Помилка генерації слотів' })
+        setGenMessage({ type: 'error', text: body.error?.message ?? t('bookings_panel.error_generate') })
         return
       }
       const data = await res.json() as GenerateSlotsFromTemplateResponse
       setGenMessage({
         type: 'success',
-        text: `Створено ${data.created} слотів${data.skipped > 0 ? `, пропущено ${data.skipped} (вже існують)` : ''}`,
+        text: t('bookings_panel.slots_created', { created: data.created }) + (data.skipped > 0 ? t('bookings_panel.slots_skipped', { skipped: data.skipped }) : ''),
       })
       // Refresh bookings list if date ranges overlap
       if (genDateFrom <= listDateTo && genDateTo >= listDateFrom) {
         await loadBookings()
       }
     } catch {
-      setGenMessage({ type: 'error', text: 'Мережева помилка під час генерації слотів' })
+      setGenMessage({ type: 'error', text: t('bookings_panel.error_network_generate') })
     } finally {
       setGenLoading(false)
     }
@@ -2845,14 +2944,14 @@ export default function AdminPage() {
       }
       if (!res.ok) {
         const body = await res.json() as { error?: { message?: string } }
-        setBookingsMessage({ type: 'error', text: body.error?.message ?? 'Помилка скасування запису' })
+        setBookingsMessage({ type: 'error', text: body.error?.message ?? t('bookings_panel.error_cancel') })
         return
       }
       setBookings((prev) =>
         prev.map((b) => b.id === id ? { ...b, status: 'CANCELLED' as AdminBookingDTO['status'] } : b),
       )
     } catch {
-      setBookingsMessage({ type: 'error', text: 'Мережева помилка під час скасування запису' })
+      setBookingsMessage({ type: 'error', text: t('bookings_panel.error_network_cancel') })
     } finally {
       setCancellingId(null)
     }
@@ -2873,9 +2972,9 @@ export default function AdminPage() {
   const INPUT_CLS = 'border border-gray-300 rounded-lg px-3 py-2 text-sm text-[var(--color-charcoal)] focus:outline-none focus:border-[var(--color-rose)]'
 
   const TABS: { key: AdminTab; label: string }[] = [
-    { key: 'bookings', label: 'Записи' },
-    { key: 'schedule', label: 'Розклад' },
-    { key: 'services', label: 'Послуги' },
+    { key: 'bookings', label: t('tabs.bookings') },
+    { key: 'schedule', label: t('tabs.schedule') },
+    { key: 'services', label: t('tabs.services') },
   ]
 
   return (
@@ -2884,7 +2983,7 @@ export default function AdminPage() {
         {/* Header */}
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-8">
           <h1 className="text-2xl font-semibold text-[var(--color-charcoal)]">
-            Управління — WOVSDH Nails
+            {t('page_title')}
           </h1>
           <div className="flex items-center gap-4 self-start sm:self-auto">
             <button
@@ -2894,7 +2993,7 @@ export default function AdminPage() {
               }}
               className="text-sm text-gray-500 underline"
             >
-              Вийти
+              {t('logout_btn')}
             </button>
           </div>
         </div>
@@ -2910,7 +3009,7 @@ export default function AdminPage() {
             }`}
           >
             <Building2 size={16} />
-            Студії
+            {t('tabs.studios')}
           </button>
           <button
             onClick={() => setTopSection('settings')}
@@ -2921,7 +3020,7 @@ export default function AdminPage() {
             }`}
           >
             <Settings size={16} />
-            Налаштування
+            {t('tabs.settings')}
           </button>
           <button
             onClick={() => setTopSection('clients')}
@@ -2932,7 +3031,7 @@ export default function AdminPage() {
             }`}
           >
             <Users size={16} />
-            Клієнти
+            {t('tabs.clients')}
           </button>
         </div>
 
@@ -2942,8 +3041,8 @@ export default function AdminPage() {
             {/* Settings sub-tab navigation */}
             <div className="flex gap-2 mb-6 border-b border-gray-100 pb-1">
               {([
-                { key: 'studios', label: 'Студії' },
-                { key: 'services', label: 'Послуги' },
+                { key: 'studios', label: t('tabs.studios') },
+                { key: 'services', label: t('tabs.services') },
               ] as { key: SettingsSubTab; label: string }[]).map((sub) => (
                 <button
                   key={sub.key}
@@ -3024,13 +3123,13 @@ export default function AdminPage() {
             {/* Bookings list */}
             <section className="bg-white border border-[var(--color-blush)] rounded-xl p-6">
               <h2 className="text-lg font-semibold text-[var(--color-charcoal)] mb-4">
-                Список записів
+                {t('bookings_panel.list_heading')}
               </h2>
 
               {/* Date range filters */}
               <div className="flex flex-wrap gap-4 mb-4">
                 <label className="flex flex-col gap-1 text-sm text-gray-600">
-                  Дата з
+                  {t('bookings_panel.date_from')}
                   <input
                     type="date"
                     value={listDateFrom}
@@ -3039,7 +3138,7 @@ export default function AdminPage() {
                   />
                 </label>
                 <label className="flex flex-col gap-1 text-sm text-gray-600">
-                  Дата по
+                  {t('bookings_panel.date_to')}
                   <input
                     type="date"
                     value={listDateTo}
@@ -3053,7 +3152,7 @@ export default function AdminPage() {
                     disabled={bookingsLoading}
                     className="border border-[var(--color-rose)] text-[var(--color-rose)] rounded-lg px-4 py-2 text-sm font-medium hover:bg-[var(--color-blush)] transition-colors disabled:opacity-50"
                   >
-                    {bookingsLoading ? 'Завантаження...' : 'Оновити список'}
+                    {bookingsLoading ? tCommon('loading') : t('bookings_panel.refresh_btn')}
                   </button>
                 </div>
               </div>
@@ -3069,26 +3168,26 @@ export default function AdminPage() {
                 <table className="w-full text-sm border-collapse">
                   <thead>
                     <tr className="border-b border-gray-200 text-left text-gray-500">
-                      <th className="py-2 pr-4 font-medium">Дата</th>
-                      <th className="py-2 pr-4 font-medium">Час</th>
-                      <th className="py-2 pr-4 font-medium">Статус</th>
-                      <th className="py-2 pr-4 font-medium">Клієнт</th>
-                      <th className="py-2 pr-4 font-medium">Послуга</th>
-                      <th className="py-2 font-medium">Дії</th>
+                      <th className="py-2 pr-4 font-medium">{t('bookings_panel.col_date')}</th>
+                      <th className="py-2 pr-4 font-medium">{t('bookings_panel.col_time')}</th>
+                      <th className="py-2 pr-4 font-medium">{t('bookings_panel.col_status')}</th>
+                      <th className="py-2 pr-4 font-medium">{t('bookings_panel.col_client')}</th>
+                      <th className="py-2 pr-4 font-medium">{t('bookings_panel.col_service')}</th>
+                      <th className="py-2 font-medium">{t('bookings_panel.col_actions')}</th>
                     </tr>
                   </thead>
                   <tbody>
                     {bookings.length === 0 && !bookingsLoading && (
                       <tr>
                         <td colSpan={6} className="py-8 text-center text-gray-400">
-                          Записів не знайдено
+                          {t('bookings_panel.no_bookings')}
                         </td>
                       </tr>
                     )}
                     {bookingsLoading && (
                       <tr>
                         <td colSpan={6} className="py-8 text-center text-gray-400">
-                          Завантаження...
+                          {tCommon('loading')}
                         </td>
                       </tr>
                     )}
@@ -3128,19 +3227,19 @@ export default function AdminPage() {
                                 onClick={() => setEditingBooking(booking)}
                                 className="px-3 py-1 rounded text-xs font-medium bg-blue-50 text-blue-600 border border-blue-200 hover:bg-blue-100 transition-colors"
                               >
-                                Змінити
+                                {t('bookings_panel.edit_btn')}
                               </button>
                               <button
                                 onClick={() => handleCancelBooking(booking.id)}
                                 disabled={isCancelled || isCancelling}
-                                title={isCancelled ? 'Запис вже скасовано' : 'Скасувати запис'}
+                                title={isCancelled ? t('bookings_panel.already_cancelled') : t('bookings_panel.cancel_booking')}
                                 className={`px-3 py-1 rounded text-xs font-medium transition-colors ${
                                   !isCancelled && !isCancelling
                                     ? 'bg-red-50 text-red-600 border border-red-200 hover:bg-red-100'
                                     : 'bg-gray-100 text-gray-400 border border-gray-200 cursor-not-allowed'
                                 }`}
                               >
-                                {isCancelling ? '...' : 'Скасувати'}
+                                {isCancelling ? t('bookings_panel.cancelling') : t('bookings_panel.cancel_booking')}
                               </button>
                             </div>
                           </td>
@@ -3183,38 +3282,38 @@ export default function AdminPage() {
             onClick={(e) => e.stopPropagation()}
           >
             <h3 className="text-lg font-semibold text-[var(--color-charcoal)] mb-4">
-              Деталі запису
+              {t('bookings_panel.detail_heading')}
             </h3>
             <dl className="grid grid-cols-[auto_1fr] gap-x-4 gap-y-2 text-sm mb-6">
-              <dt className="text-gray-500 self-center">Клієнт</dt>
+              <dt className="text-gray-500 self-center">{t('bookings_panel.detail_client')}</dt>
               <dd className="text-[var(--color-charcoal)]">
                 {editingBooking.client_first_name} {editingBooking.client_last_name}
               </dd>
-              <dt className="text-gray-500 self-center">Телефон</dt>
+              <dt className="text-gray-500 self-center">{t('bookings_panel.detail_phone')}</dt>
               <dd className="text-[var(--color-charcoal)]">{editingBooking.client_phone}</dd>
               <dt className="text-gray-500 self-center">Email</dt>
               <dd className="text-[var(--color-charcoal)]">{editingBooking.client_email}</dd>
-              <dt className="text-gray-500 self-center">Дата</dt>
+              <dt className="text-gray-500 self-center">{t('bookings_panel.detail_date')}</dt>
               <dd className="text-[var(--color-charcoal)]">
                 {editingBooking.start_at ? formatLocalDate(editingBooking.start_at) : '—'}
               </dd>
-              <dt className="text-gray-500 self-center">Час</dt>
+              <dt className="text-gray-500 self-center">{t('bookings_panel.detail_time')}</dt>
               <dd className="text-[var(--color-charcoal)]">
                 {editingBooking.start_at && editingBooking.end_at
                   ? `${formatLocalTime(editingBooking.start_at)}–${formatLocalTime(editingBooking.end_at)}`
                   : '—'}
               </dd>
-              <dt className="text-gray-500 self-center">Послуга</dt>
+              <dt className="text-gray-500 self-center">{t('bookings_panel.detail_service')}</dt>
               <dd className="text-[var(--color-charcoal)]">
                 {typeof (editingBooking.service_snapshot as { name?: string }).name === 'string'
                   ? (editingBooking.service_snapshot as { name?: string }).name
                   : '—'}
               </dd>
-              <dt className="text-gray-500 self-center">Статус</dt>
+              <dt className="text-gray-500 self-center">{t('bookings_panel.detail_status')}</dt>
               <dd><BookingStatusBadge status={editingBooking.status} /></dd>
               {editingBooking.comment && (
                 <>
-                  <dt className="text-gray-500 self-start pt-0.5">Коментар</dt>
+                  <dt className="text-gray-500 self-start pt-0.5">{t('bookings_panel.detail_comment')}</dt>
                   <dd className="text-[var(--color-charcoal)]">{editingBooking.comment}</dd>
                 </>
               )}
@@ -3224,7 +3323,7 @@ export default function AdminPage() {
                 onClick={() => setEditingBooking(null)}
                 className="px-4 py-2 rounded-lg text-sm border border-gray-300 text-gray-600 hover:bg-gray-50 transition-colors"
               >
-                Закрити
+                {tCommon('close')}
               </button>
             </div>
           </div>

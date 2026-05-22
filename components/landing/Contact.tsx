@@ -1,21 +1,5 @@
+import { getTranslations } from 'next-intl/server'
 import { Phone, Mail, MessageCircle } from 'lucide-react'
-
-const contactItems = [
-  {
-    icon: Phone,
-    label: 'Телефон',
-    value: '+972-XX-XXX-XXXX',
-    href: 'tel:+972XXXXXXXXX',
-    ariaLabel: 'Зателефонувати до студії',
-  },
-  {
-    icon: Mail,
-    label: 'Email',
-    value: 'hello@wovsdh-nails.com',
-    href: 'mailto:hello@wovsdh-nails.com',
-    ariaLabel: 'Написати нам на email',
-  },
-]
 
 function InstagramIcon({ className }: { className?: string }) {
   return (
@@ -39,7 +23,26 @@ function InstagramIcon({ className }: { className?: string }) {
   )
 }
 
-export default function Contact() {
+export default async function Contact() {
+  const t = await getTranslations('contact')
+
+  const contactItems = [
+    {
+      icon: Phone,
+      label: t('phone_label'),
+      value: '+972-XX-XXX-XXXX',
+      href: 'tel:+972XXXXXXXXX',
+      ariaLabel: t('phone_aria'),
+    },
+    {
+      icon: Mail,
+      label: t('email_label'),
+      value: 'hello@wovsdh-nails.com',
+      href: 'mailto:hello@wovsdh-nails.com',
+      ariaLabel: t('email_aria'),
+    },
+  ]
+
   return (
     <section
       id="contact"
@@ -51,7 +54,7 @@ export default function Contact() {
         {/* Section header */}
         <div className="mb-14 text-center">
           <p className="mb-3 text-sm font-medium uppercase tracking-[0.2em] text-[var(--color-rose)]">
-            Ми завжди на зв'язку
+            {t('eyebrow')}
           </p>
           <h2
             id="contact-heading"
@@ -61,10 +64,10 @@ export default function Contact() {
               fontSize: 'clamp(2rem, 5vw, 3.5rem)',
             }}
           >
-            Контакти
+            {t('heading')}
           </h2>
           <p className="mx-auto max-w-xl text-base text-[var(--color-charcoal)] opacity-70 leading-relaxed">
-            Зв'яжіться з нами будь-яким зручним способом — ми відповімо швидко
+            {t('subtitle')}
           </p>
         </div>
 
@@ -73,7 +76,7 @@ export default function Contact() {
           <ul
             className="grid grid-cols-1 gap-5 sm:grid-cols-2 w-full max-w-2xl"
             role="list"
-            aria-label="Контактна інформація"
+            aria-label={t('contact_info_aria')}
           >
             {contactItems.map((item) => {
               const Icon = item.icon
@@ -115,7 +118,7 @@ export default function Contact() {
               href="https://wa.me/972XXXXXXXXX"
               target="_blank"
               rel="noopener noreferrer"
-              aria-label="Написати нам у WhatsApp (відкривається у новій вкладці)"
+              aria-label={t('whatsapp_aria')}
               className="inline-flex items-center gap-3 rounded-full px-6 py-3 text-sm font-medium text-white shadow-sm transition-all duration-200 hover:opacity-90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-[#25D366]"
               style={{ background: '#25D366' }}
             >
@@ -128,7 +131,7 @@ export default function Contact() {
               href="https://instagram.com"
               target="_blank"
               rel="noopener noreferrer"
-              aria-label="Наш Instagram (відкривається у новій вкладці)"
+              aria-label={t('instagram_aria')}
               className="inline-flex items-center gap-3 rounded-full px-6 py-3 text-sm font-medium text-white shadow-sm transition-all duration-200 hover:opacity-90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-[var(--color-rose)]"
               style={{
                 background:

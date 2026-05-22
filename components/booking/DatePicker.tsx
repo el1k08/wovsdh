@@ -1,6 +1,7 @@
 'use client'
 
 import { useMemo } from 'react'
+import { useLocale, useTranslations } from 'next-intl'
 
 interface DatePickerProps {
   value: string | null
@@ -9,10 +10,14 @@ interface DatePickerProps {
 }
 
 const TZ = 'Asia/Jerusalem'
-const LOCALE = 'uk-IL'
+
+const LOCALE_MAP: Record<string, string> = {
+  uk: 'uk-IL',
+  en: 'en-IL',
+  he: 'he-IL',
+}
 
 function toLocalDateString(date: Date): string {
-  // Returns YYYY-MM-DD in Asia/Jerusalem timezone
   const parts = new Intl.DateTimeFormat('en-CA', {
     timeZone: TZ,
     year: 'numeric',
@@ -26,36 +31,47 @@ function toLocalDateString(date: Date): string {
 
 function buildDateList(count = 14): { dateStr: string; date: Date }[] {
   const result: { dateStr: string; date: Date }[] = []
-  // Get today's date in Jerusalem timezone
   const nowStr = toLocalDateString(new Date())
   const [y, m, d] = nowStr.split('-').map(Number)
-  // Build dates starting from today in local calendar
   for (let i = 0; i < count; i++) {
-    const candidate = new Date(y, m - 1, d + i, 12, 0, 0) // noon avoids DST edge cases
+    const candidate = new Date(y, m - 1, d + i, 12, 0, 0)
     result.push({ dateStr: toLocalDateString(candidate), date: candidate })
   }
   return result
 }
 
-const DAY_FORMATTER = new Intl.DateTimeFormat(LOCALE, { weekday: 'short', timeZone: TZ })
-const DAY_NUM_FORMATTER = new Intl.DateTimeFormat(LOCALE, { day: 'numeric', timeZone: TZ })
-const MONTH_FORMATTER = new Intl.DateTimeFormat(LOCALE, { month: 'short', timeZone: TZ })
-
 export default function DatePicker({ value, onChange, disabled = false }: DatePickerProps) {
+  const t = useTranslations('booking')
+  const locale = useLocale()
+  const intlLocale = LOCALE_MAP[locale] ?? 'uk-IL'
+
+  const dayFormatter = useMemo(
+    () => new Intl.DateTimeFormat(intlLocale, { weekday: 'short', timeZone: TZ }),
+    [intlLocale],
+  )
+  const dayNumFormatter = useMemo(
+    () => new Intl.DateTimeFormat(intlLocale, { day: 'numeric', timeZone: TZ }),
+    [intlLocale],
+  )
+  const monthFormatter = useMemo(
+    () => new Intl.DateTimeFormat(intlLocale, { month: 'short', timeZone: TZ }),
+    [intlLocale],
+  )
+
   const dates = useMemo(() => buildDateList(14), [])
 
   return (
     <div
       className="overflow-x-auto pb-2 -mx-1"
       role="group"
-      aria-label="Виберіть дату"
+      aria-label={t('date_picker_aria')}
     >
       <div className="flex gap-2 px-1 min-w-max">
         {dates.map(({ dateStr, date }) => {
           const isSelected = value === dateStr
-          const weekday = DAY_FORMATTER.format(date)
-          const dayNum = DAY_NUM_FORMATTER.format(date)
-          const month = MONTH_FORMATTER.format(date)
+          const weekday = dayFormatter.format(date)
+          const dayNum = dayNumFormatter.format(date)
+          const month = monthFormatter.format(date)
 
           return (
             <button

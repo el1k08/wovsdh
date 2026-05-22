@@ -4,6 +4,25 @@
 // =============================================================================
 
 // ---------------------------------------------------------------------------
+// i18n Translation Types
+// ---------------------------------------------------------------------------
+
+export type Locale = 'uk' | 'en' | 'he'
+
+export interface ServiceTranslation {
+  name: string;
+  description: string;
+}
+
+export interface StudioTranslation {
+  name: string;
+  schedule_text: string;
+}
+
+export type ServiceTranslations = Record<Locale, ServiceTranslation>
+export type StudioTranslations = Record<Locale, StudioTranslation>
+
+// ---------------------------------------------------------------------------
 // Enums
 // ---------------------------------------------------------------------------
 
@@ -40,6 +59,7 @@ export interface Studio {
   sort_order: number;
   image_url: string | null;
   created_at: string;              // TIMESTAMPTZ as ISO string
+  translations: StudioTranslations;
 }
 
 export interface Slot {
@@ -61,6 +81,7 @@ export interface Service {
   is_active: boolean;
   sort_order: number;
   created_at: string;
+  translations: ServiceTranslations;
 }
 
 export interface StudioScheduleTemplate {
@@ -149,6 +170,7 @@ export interface CreateBookingRequest {
   comment?: string;
   marketing_consent: boolean;
   client_id?: string;      // UUID FK → clients.id — omitted for legacy/anonymous bookings
+  language?: string;       // 'uk' | 'en' | 'he' — used for email localisation
 }
 
 export interface CancelBookingRequest {
@@ -188,6 +210,7 @@ export interface CreateServiceRequest {
   price: number;
   duration_minutes: number;
   sort_order?: number;
+  translations?: ServiceTranslations;
 }
 
 export interface UpdateServiceRequest extends Partial<CreateServiceRequest> {
@@ -206,6 +229,7 @@ export interface CreateStudioRequest {
     work_start: string;
     work_end: string;
   }>;
+  translations?: StudioTranslations;
 }
 
 export interface UpdateStudioRequest {
@@ -214,6 +238,7 @@ export interface UpdateStudioRequest {
   city?: string;
   timezone?: string;
   schedule_text?: string;
+  translations?: StudioTranslations;
 }
 
 export interface CreateClientRequest {
@@ -272,6 +297,7 @@ export interface ServiceDTO {
   price: number;
   duration_minutes: number;
   sort_order: number;
+  translations: ServiceTranslations;
 }
 
 export interface GetServicesResponse {
@@ -283,6 +309,7 @@ export interface PublicStudioDTO {
   name: string;
   city: string;
   street: string;
+  translations: StudioTranslations;
 }
 
 export interface GetStudiosResponse {

@@ -1,7 +1,9 @@
+import { getTranslations, getLocale } from 'next-intl/server'
 import Image from 'next/image'
 import { MapPin, Clock } from 'lucide-react'
 import { supabaseAdmin } from '@/lib/supabase'
-import type { Studio } from '@/lib/types'
+import { resolveLocale } from '@/lib/locale-utils'
+import type { Studio, StudioTranslations } from '@/lib/types'
 
 const IMAGE_SEEDS: Record<string, string> = {
   rishon: 'salon1',
@@ -9,11 +11,15 @@ const IMAGE_SEEDS: Record<string, string> = {
 }
 
 export default async function Studios() {
+  const [t, locale] = await Promise.all([getTranslations('studios'), getLocale()])
+  const language = resolveLocale(locale)
+
   const { data: studiosData } = await supabaseAdmin
     .from('studios')
-    .select('id, name, city, street, schedule_text, image_url, sort_order')
+    .select('id, name, city, street, schedule_text, image_url, sort_order, translations')
     .order('sort_order', { ascending: true })
   const studios = (studiosData ?? []) as Array<Studio & { name: string }>
+
   return (
     <section
       id="studios"
@@ -25,7 +31,7 @@ export default async function Studios() {
         {/* Section header */}
         <div className="mb-14 text-center">
           <p className="mb-3 text-sm font-medium uppercase tracking-[0.2em] text-[var(--color-rose)]">
-            Два міста — одна якість
+            {t('eyebrow')}
           </p>
           <h2
             id="studios-heading"
@@ -35,10 +41,10 @@ export default async function Studios() {
               fontSize: 'clamp(2rem, 5vw, 3.5rem)',
             }}
           >
-            Наші студії
+            {t('heading')}
           </h2>
           <p className="mx-auto max-w-xl text-base text-[var(--color-charcoal)] opacity-70 leading-relaxed">
-            Затишні студії в центрі міста з комфортною атмосферою та професійними майстрами
+            {t('subtitle')}
           </p>
         </div>
 
@@ -46,12 +52,15 @@ export default async function Studios() {
         <div className="grid grid-cols-1 gap-8 lg:grid-cols-2">
           {studios.map((studio) => {
             const imageSeed = IMAGE_SEEDS[studio.id] ?? studio.id
-            const imageAlt = `Інтер'єр студії WOVSDH Nails у ${studio.city}`
+            const imageAlt = t('image_alt', { city: studio.city })
+            const tr = (studio.translations as StudioTranslations | null)?.[language]
+            const displayName = tr?.name || studio.name
+            const displayScheduleText = tr?.schedule_text || studio.schedule_text
             return (
               <article
                 key={studio.id}
                 className="overflow-hidden rounded-2xl border border-[var(--color-blush)] bg-white shadow-sm"
-                aria-label={`Студія у ${studio.city}`}
+                aria-label={t('article_aria', { city: studio.city })}
               >
                 {/* Studio photo */}
                 <div className="relative h-56 w-full sm:h-64">
@@ -99,7 +108,7 @@ export default async function Studios() {
                         {studio.street}
                       </p>
                       <p className="text-sm text-[var(--color-charcoal)] opacity-60">
-                        {studio.city}, Ізраїль
+                        {studio.city}, {t('israel')}
                       </p>
                     </div>
                   </div>
@@ -113,25 +122,25 @@ export default async function Studios() {
                     />
                     <ul
                       className="text-sm text-[var(--color-charcoal)] opacity-70 space-y-0.5"
-                      aria-label="Години роботи"
+                      aria-label={t('schedule_aria')}
                     >
-                      {studio.schedule_text
-                        ? studio.schedule_text.split('\n').map((line, i) => (
+                      {displayScheduleText
+                        ? displayScheduleText.split('\n').map((line, i) => (
                             <li key={i}>{line}</li>
                           ))
-                        : <li className="text-gray-400">Розклад не вказано</li>
+                        : <li className="text-gray-400">{t('schedule_empty')}</li>
                       }
                     </ul>
                   </div>
 
                   {/* CTA button */}
                   <a
-                    href={`#booking`}
+                    href="#booking"
                     data-studio={studio.id}
                     className="inline-flex w-full items-center justify-center gap-2 rounded-full border border-[var(--color-rose)] px-6 py-3 text-sm font-medium text-[var(--color-rose)] transition-all duration-200 hover:bg-gradient-to-r hover:from-[var(--color-rose)] hover:to-[var(--color-gold)] hover:text-white hover:border-transparent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-rose)] focus-visible:ring-offset-2"
-                    aria-label={`Записатись до студії ${studio.city}`}
+                    aria-label={t('book_aria', { city: studio.city })}
                   >
-                    Записатись до цієї студії
+                    {t('cta')}
                   </a>
                 </div>
               </article>

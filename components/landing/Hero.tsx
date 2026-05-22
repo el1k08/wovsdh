@@ -1,6 +1,9 @@
+import { getTranslations } from 'next-intl/server'
 import Button from '@/components/ui/Button'
 
-export default function Hero() {
+export default async function Hero() {
+  const t = await getTranslations('hero')
+
   return (
     <section
       className="relative min-h-screen flex items-center justify-center overflow-hidden"
@@ -8,7 +11,7 @@ export default function Hero() {
         background:
           'linear-gradient(135deg, var(--color-cream) 0%, var(--color-blush) 50%, #EDD9D5 100%)',
       }}
-      aria-label="Головний банер"
+      aria-label={t('banner_aria')}
     >
       {/* Decorative SVG — top-right petal cluster */}
       <svg
@@ -62,14 +65,14 @@ export default function Hero() {
         {/* Eyebrow */}
         <p
           className="mb-4 inline-flex items-center gap-2 text-sm font-medium uppercase tracking-[0.2em] text-[var(--color-rose)]"
-          aria-label="Професійний догляд за нігтями"
+          aria-label={t('eyebrow_aria')}
         >
           <span
             className="h-px w-8 inline-block"
             style={{ background: 'var(--color-rose)' }}
             aria-hidden="true"
           />
-          Професійний догляд
+          {t('eyebrow')}
           <span
             className="h-px w-8 inline-block"
             style={{ background: 'var(--color-rose)' }}
@@ -86,23 +89,23 @@ export default function Hero() {
             letterSpacing: '0.02em',
           }}
         >
-          Ідеальні нігті
+          {t('title_line1')}
           <br />
-          <span style={{ color: 'var(--color-rose)' }}>в Ізраїлі</span>
+          <span style={{ color: 'var(--color-rose)' }}>{t('title_line2')}</span>
         </h1>
 
         {/* Subheading */}
         <p className="mx-auto mb-10 max-w-2xl text-lg leading-relaxed text-[var(--color-charcoal)] opacity-80 sm:text-xl">
-          Студії манікюру в Рішон-ле-Ціон та Ашдоді —<br className="hidden sm:block" /> турбота про кожну деталь
+          {t('subtitle')}
         </p>
 
         {/* CTA buttons */}
         <div className="flex flex-col items-center gap-4 sm:flex-row sm:justify-center">
           <Button as="a" href="#booking" variant="primary" size="lg">
-            Записатись онлайн
+            {t('cta_primary')}
           </Button>
           <Button as="a" href="#gallery" variant="secondary" size="lg">
-            Дивитись роботи
+            {t('cta_secondary')}
           </Button>
         </div>
 
@@ -110,15 +113,15 @@ export default function Hero() {
         <div className="mt-14 flex flex-col items-center gap-2 sm:flex-row sm:justify-center sm:gap-8">
           <div className="flex items-center gap-1.5 text-sm text-[var(--color-charcoal)] opacity-70">
             <span aria-hidden="true">★★★★★</span>
-            <span>Понад 500 задоволених клієнток</span>
+            <span>{t('social_proof_clients')}</span>
           </div>
           <span className="hidden sm:block h-4 w-px bg-[var(--color-rose)] opacity-40" aria-hidden="true" />
           <div className="text-sm text-[var(--color-charcoal)] opacity-70">
-            Дві студії — Рішон і Ашдод
+            {t('social_proof_studios')}
           </div>
           <span className="hidden sm:block h-4 w-px bg-[var(--color-rose)] opacity-40" aria-hidden="true" />
           <div className="text-sm text-[var(--color-charcoal)] opacity-70">
-            Онлайн-запис 24/7
+            {t('social_proof_online')}
           </div>
         </div>
       </div>
@@ -128,7 +131,7 @@ export default function Hero() {
         className="absolute bottom-8 left-1/2 -translate-x-1/2 flex flex-col items-center gap-1 opacity-40"
         aria-hidden="true"
       >
-        <span className="text-xs tracking-widest uppercase text-[var(--color-charcoal)]">Гортати</span>
+        <span className="text-xs tracking-widest uppercase text-[var(--color-charcoal)]">{t('scroll_label')}</span>
         <svg width="20" height="28" viewBox="0 0 20 28" fill="none">
           <rect x="1" y="1" width="18" height="26" rx="9" stroke="var(--color-rose)" strokeWidth="1.5" />
           <circle cx="10" cy="8" r="3" fill="var(--color-rose)">

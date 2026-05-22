@@ -1,12 +1,15 @@
 import Image from 'next/image'
+import { getTranslations } from 'next-intl/server'
 
-const galleryImages = Array.from({ length: 9 }, (_, i) => ({
-  id: i + 1,
-  src: `https://picsum.photos/seed/nails${i + 10}/400/400`,
-  alt: `Робота студії WOVSDH Nails — приклад манікюру ${i + 1}`,
-}))
+export default async function Gallery() {
+  const t = await getTranslations('gallery')
 
-export default function Gallery() {
+  const galleryImages = Array.from({ length: 9 }, (_, i) => ({
+    id: i + 1,
+    src: `https://picsum.photos/seed/nails${i + 10}/400/400`,
+    alt: t('image_alt', { n: i + 1 }),
+  }))
+
   return (
     <section
       id="gallery"
@@ -18,7 +21,7 @@ export default function Gallery() {
         {/* Section header */}
         <div className="mb-14 text-center">
           <p className="mb-3 text-sm font-medium uppercase tracking-[0.2em] text-[var(--color-rose)]">
-            Портфоліо
+            {t('eyebrow')}
           </p>
           <h2
             id="gallery-heading"
@@ -28,10 +31,10 @@ export default function Gallery() {
               fontSize: 'clamp(2rem, 5vw, 3.5rem)',
             }}
           >
-            Наші роботи
+            {t('heading')}
           </h2>
           <p className="mx-auto max-w-xl text-base text-[var(--color-charcoal)] opacity-70 leading-relaxed">
-            Кожен манікюр — це витвір мистецтва. Подивіться приклади наших робіт
+            {t('subtitle')}
           </p>
         </div>
 
@@ -39,7 +42,7 @@ export default function Gallery() {
         <ul
           className="grid grid-cols-2 gap-3 sm:gap-4 md:grid-cols-3"
           role="list"
-          aria-label="Галерея робіт"
+          aria-label={t('aria_list')}
         >
           {galleryImages.map((image) => (
             <li key={image.id} className="group relative aspect-square overflow-hidden rounded-xl">
@@ -67,14 +70,14 @@ export default function Gallery() {
         {/* CTA below gallery */}
         <div className="mt-12 text-center">
           <p className="mb-4 text-sm text-[var(--color-charcoal)] opacity-60">
-            Більше робіт у нашому Instagram
+            {t('instagram_cta')}
           </p>
           <a
             href="https://instagram.com"
             target="_blank"
             rel="noopener noreferrer"
             className="inline-flex items-center gap-2 rounded-full border border-[var(--color-rose)] px-6 py-3 text-sm font-medium text-[var(--color-rose)] hover:bg-[var(--color-blush)] transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-rose)]"
-            aria-label="Переглянути більше робіт в Instagram (відкривається у новій вкладці)"
+            aria-label={t('instagram_aria')}
           >
             {/* Instagram inline SVG */}
             <svg
@@ -93,7 +96,7 @@ export default function Gallery() {
               <circle cx="12" cy="12" r="4" />
               <circle cx="17.5" cy="6.5" r="1" fill="currentColor" stroke="none" />
             </svg>
-            Дивитись в Instagram
+            {t('instagram_btn')}
           </a>
         </div>
       </div>

@@ -1,3 +1,4 @@
+import { getTranslations } from 'next-intl/server'
 import { Phone, Mail, MessageCircle } from 'lucide-react'
 
 function InstagramIcon() {
@@ -21,13 +22,23 @@ function InstagramIcon() {
   )
 }
 
-export default function Footer() {
+export default async function Footer() {
+  const t = await getTranslations('footer')
+
+  const navLinks = [
+    { label: t('nav.services'), href: '#services' },
+    { label: t('nav.gallery'), href: '#gallery' },
+    { label: t('nav.studios'), href: '#studios' },
+    { label: t('nav.booking'), href: '#booking' },
+    { label: t('nav.contact'), href: '#contact' },
+  ]
+
   return (
     <footer
       className="py-12 md:py-16"
       style={{ background: 'var(--color-charcoal)' }}
       role="contentinfo"
-      aria-label="Підвал сайту"
+      aria-label={t('footer_aria')}
     >
       <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
         <div className="grid grid-cols-1 gap-8 md:grid-cols-3 md:gap-12">
@@ -52,23 +63,17 @@ export default function Footer() {
               </span>
             </div>
             <p className="text-sm leading-relaxed text-white opacity-50">
-              Професійний манікюр та педикюр в Ізраїлі. Студії в Рішон-ле-Ціон та Ашдоді.
+              {t('description')}
             </p>
           </div>
 
           {/* Navigation column */}
-          <nav aria-label="Навігація у підвалі">
+          <nav aria-label={t('nav_aria')}>
             <p className="mb-4 text-xs font-semibold uppercase tracking-widest text-white opacity-40">
-              Навігація
+              {t('nav_heading')}
             </p>
             <ul className="space-y-2 text-sm">
-              {[
-                { label: 'Послуги', href: '#services' },
-                { label: 'Галерея', href: '#gallery' },
-                { label: 'Студії', href: '#studios' },
-                { label: 'Запис', href: '#booking' },
-                { label: 'Контакти', href: '#contact' },
-              ].map((link) => (
+              {navLinks.map((link) => (
                 <li key={link.href}>
                   <a
                     href={link.href}
@@ -84,14 +89,14 @@ export default function Footer() {
           {/* Social & Legal column */}
           <div>
             <p className="mb-4 text-xs font-semibold uppercase tracking-widest text-white opacity-40">
-              Ми в соцмережах
+              {t('social_heading')}
             </p>
             <div className="mb-6 flex gap-3">
               <a
                 href="https://wa.me/972XXXXXXXXX"
                 target="_blank"
                 rel="noopener noreferrer"
-                aria-label="WhatsApp (відкривається у новій вкладці)"
+                aria-label={t('whatsapp_aria')}
                 className="flex h-10 w-10 items-center justify-center rounded-full bg-white/10 text-white transition-colors hover:bg-white/20 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-rose)]"
               >
                 <MessageCircle className="h-4 w-4" aria-hidden="true" />
@@ -100,21 +105,21 @@ export default function Footer() {
                 href="https://instagram.com"
                 target="_blank"
                 rel="noopener noreferrer"
-                aria-label="Instagram (відкривається у новій вкладці)"
+                aria-label={t('instagram_aria')}
                 className="flex h-10 w-10 items-center justify-center rounded-full bg-white/10 text-white transition-colors hover:bg-white/20 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-rose)]"
               >
                 <InstagramIcon />
               </a>
               <a
                 href="tel:+972XXXXXXXXX"
-                aria-label="Зателефонувати нам"
+                aria-label={t('phone_aria')}
                 className="flex h-10 w-10 items-center justify-center rounded-full bg-white/10 text-white transition-colors hover:bg-white/20 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-rose)]"
               >
                 <Phone className="h-4 w-4" aria-hidden="true" />
               </a>
               <a
                 href="mailto:hello@wovsdh-nails.com"
-                aria-label="Написати нам на email"
+                aria-label={t('email_aria')}
                 className="flex h-10 w-10 items-center justify-center rounded-full bg-white/10 text-white transition-colors hover:bg-white/20 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-rose)]"
               >
                 <Mail className="h-4 w-4" aria-hidden="true" />
@@ -126,13 +131,13 @@ export default function Footer() {
                 href="/privacy"
                 className="hover:opacity-100 transition-opacity focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-[var(--color-rose)] rounded"
               >
-                Політика конфіденційності
+                {t('privacy')}
               </a>
               <a
                 href="/terms"
                 className="hover:opacity-100 transition-opacity focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-[var(--color-rose)] rounded"
               >
-                Умови використання
+                {t('terms')}
               </a>
             </div>
           </div>
@@ -143,7 +148,7 @@ export default function Footer() {
           className="mt-10 border-t pt-6 text-center text-xs text-white opacity-30"
           style={{ borderColor: 'rgba(255,255,255,0.1)' }}
         >
-          <p>© 2025 WOVSDH Nails. Всі права захищені.</p>
+          <p>{t('copyright')}</p>
         </div>
       </div>
     </footer>

@@ -1,19 +1,22 @@
 'use client'
 
 import { useState, useEffect, useCallback } from 'react'
+import { useTranslations } from 'next-intl'
 import { Menu, X } from 'lucide-react'
 import Button from '@/components/ui/Button'
-
-const navLinks = [
-  { label: 'Послуги', href: '#services' },
-  { label: 'Галерея', href: '#gallery' },
-  { label: 'Про нас', href: '#studios' },
-  { label: 'Контакти', href: '#contact' },
-]
+import { LanguageSwitcher } from '@/components/LanguageSwitcher'
 
 export default function Header() {
+  const t = useTranslations('header')
   const [isScrolled, setIsScrolled] = useState(false)
   const [isMobileOpen, setIsMobileOpen] = useState(false)
+
+  const navLinks = [
+    { label: t('nav.services'), href: '#services' },
+    { label: t('nav.gallery'), href: '#gallery' },
+    { label: t('nav.studios'), href: '#studios' },
+    { label: t('nav.contact'), href: '#contact' },
+  ]
 
   const handleScroll = useCallback(() => {
     setIsScrolled(window.scrollY > 20)
@@ -54,7 +57,7 @@ export default function Header() {
           <a
             href="/"
             className="flex items-center gap-2 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-rose)] rounded"
-            aria-label="WOVSDH Nails — головна сторінка"
+            aria-label={t('logo_aria')}
           >
             <span
               className="font-cormorant text-2xl font-semibold tracking-widest text-[var(--color-charcoal)]"
@@ -73,7 +76,7 @@ export default function Header() {
           {/* Desktop Navigation */}
           <nav
             className="hidden md:flex items-center gap-6"
-            aria-label="Основна навігація"
+            aria-label={t('main_nav_aria')}
           >
             {navLinks.map((link) => (
               <a
@@ -85,6 +88,7 @@ export default function Header() {
                 {link.label}
               </a>
             ))}
+            <LanguageSwitcher />
             <Button
               as="a"
               href="#booking"
@@ -92,7 +96,7 @@ export default function Header() {
               variant="primary"
               size="sm"
             >
-              Записатись
+              {t('book_now')}
             </Button>
           </nav>
 
@@ -102,7 +106,7 @@ export default function Header() {
             className="md:hidden inline-flex items-center justify-center p-2 rounded-md text-[var(--color-charcoal)] hover:bg-[var(--color-blush)] transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-rose)]"
             aria-expanded={isMobileOpen}
             aria-controls="mobile-menu"
-            aria-label={isMobileOpen ? 'Закрити меню' : 'Відкрити меню'}
+            aria-label={isMobileOpen ? t('close_menu') : t('open_menu')}
             onClick={() => setIsMobileOpen((prev) => !prev)}
           >
             {isMobileOpen ? (
@@ -120,7 +124,7 @@ export default function Header() {
           id="mobile-menu"
           className="md:hidden bg-white/95 backdrop-blur-md border-t border-[var(--color-blush)]"
           role="navigation"
-          aria-label="Мобільна навігація"
+          aria-label={t('mobile_nav_aria')}
         >
           <div className="px-4 py-4 flex flex-col gap-2">
             {navLinks.map((link) => (
@@ -133,16 +137,16 @@ export default function Header() {
                 {link.label}
               </a>
             ))}
-            <div className="pt-2">
+            <div className="pt-2 flex items-center justify-between">
+              <LanguageSwitcher />
               <Button
                 as="a"
                 href="#booking"
                 onClick={(e) => handleNavClick(e, '#booking')}
                 variant="primary"
                 size="md"
-                className="w-full justify-center"
               >
-                Записатись
+                {t('book_now')}
               </Button>
             </div>
           </div>

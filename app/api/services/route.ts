@@ -1,17 +1,35 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { supabaseAdmin } from '@/lib/supabase'
-import type { ApiError, GetServicesResponse, ServiceDTO } from '@/lib/types'
+import { resolveLocale } from '@/lib/locale-utils'
+import type { ApiError, GetServicesResponse, ServiceDTO, ServiceTranslations } from '@/lib/types'
 
 const LOG_PREFIX = '[api/services]'
 
-// GET /api/services?studio_id=rishon  (studio_id optional)
+function mapRow(row: Record<string, unknown>, language: ReturnType<typeof resolveLocale>): ServiceDTO {
+  const translations = (row.translations ?? {}) as ServiceTranslations
+  const tr = translations[language]
+  return {
+    id: row.id as string,
+    studio_id: row.studio_id as string | null,
+    icon: row.icon as string | null,
+    name: tr?.name || (row.name as string),
+    description: tr?.description || (row.description as string | null),
+    price: row.price as number,
+    duration_minutes: row.duration_minutes as number,
+    sort_order: row.sort_order as number,
+    translations,
+  }
+}
+
+// GET /api/services?studio_id=rishon&language=uk
 // When studio_id is provided, returns only services assigned to that studio via studio_services.
 // When omitted, returns all active services (used by landing page).
+// language param (uk|en|he, default uk) controls which locale is used for name/description.
 export async function GET(request: NextRequest): Promise<NextResponse> {
   const studioId = request.nextUrl.searchParams.get('studio_id')
+  const language = resolveLocale(request.nextUrl.searchParams.get('language'))
 
   if (studioId) {
-    // Look up which service IDs are assigned to this studio
     const { data: assignments, error: assignError } = await supabaseAdmin
       .from('studio_services')
       .select('service_id')
@@ -33,7 +51,7 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
 
     const { data, error } = await supabaseAdmin
       .from('services')
-      .select('id, studio_id, icon, name, description, price, duration_minutes, sort_order')
+      .select('id, studio_id, icon, name, description, price, duration_minutes, sort_order, translations')
       .eq('is_active', true)
       .in('id', serviceIds)
       .order('sort_order', { ascending: true })
@@ -46,24 +64,14 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
       )
     }
 
-    const services: ServiceDTO[] = (data ?? []).map((row) => ({
-      id: row.id as string,
-      studio_id: row.studio_id as string | null,
-      icon: row.icon as string | null,
-      name: row.name as string,
-      description: row.description as string | null,
-      price: row.price as number,
-      duration_minutes: row.duration_minutes as number,
-      sort_order: row.sort_order as number,
-    }))
-
-    return NextResponse.json<GetServicesResponse>({ services })
+    return NextResponse.json<GetServicesResponse>({
+      services: (data ?? []).map((row) => mapRow(row as Record<string, unknown>, language)),
+    })
   }
 
-  // No studio_id — return all active services (landing page)
   const { data, error } = await supabaseAdmin
     .from('services')
-    .select('id, studio_id, icon, name, description, price, duration_minutes, sort_order')
+    .select('id, studio_id, icon, name, description, price, duration_minutes, sort_order, translations')
     .eq('is_active', true)
     .order('sort_order', { ascending: true })
 
@@ -75,16 +83,7 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
     )
   }
 
-  const services: ServiceDTO[] = (data ?? []).map((row) => ({
-    id: row.id as string,
-    studio_id: row.studio_id as string | null,
-    icon: row.icon as string | null,
-    name: row.name as string,
-    description: row.description as string | null,
-    price: row.price as number,
-    duration_minutes: row.duration_minutes as number,
-    sort_order: row.sort_order as number,
-  }))
-
-  return NextResponse.json<GetServicesResponse>({ services })
+  return NextResponse.json<GetServicesResponse>({
+    services: (data ?? []).map((row) => mapRow(row as Record<string, unknown>, language)),
+  })
 }

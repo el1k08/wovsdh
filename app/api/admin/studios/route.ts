@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { supabaseAdmin } from '@/lib/supabase'
-import type { ApiError, Studio, CreateStudioRequest } from '@/lib/types'
+import type { ApiError, Studio, CreateStudioRequest, StudioTranslations } from '@/lib/types'
 import { isNonEmptyString, isValidStudioSlug } from '@/lib/validation'
 
 function requireAdminAuth(request: NextRequest): boolean {
@@ -86,9 +86,16 @@ export async function POST(request: NextRequest) {
     )
   }
 
+  // Seed translations from name if not explicitly provided; schedule_text starts empty
+  const translations: StudioTranslations = body.translations ?? {
+    uk: { name, schedule_text: '' },
+    en: { name, schedule_text: '' },
+    he: { name, schedule_text: '' },
+  }
+
   const { data: studio, error: studioErr } = await supabaseAdmin
     .from('studios')
-    .insert({ id, name, street: street ?? '', city, timezone })
+    .insert({ id, name, street: street ?? '', city, timezone, translations })
     .select()
     .single()
   if (studioErr || !studio) {

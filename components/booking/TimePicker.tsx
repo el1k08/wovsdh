@@ -1,20 +1,21 @@
 'use client'
 
+import { useLocale, useTranslations } from 'next-intl'
 import type { AvailableStartTime } from '@/lib/types'
 
 interface TimePickerProps {
   startTimes: AvailableStartTime[]
-  value: string | null       // ISO UTC string of selected start_at
+  value: string | null
   onChange: (startAt: string) => void
   loading: boolean
   disabled?: boolean
 }
 
-const TIME_FORMATTER = new Intl.DateTimeFormat('uk-IL', {
-  hour: '2-digit',
-  minute: '2-digit',
-  timeZone: 'Asia/Jerusalem',
-})
+const LOCALE_MAP: Record<string, string> = {
+  uk: 'uk-IL',
+  en: 'en-IL',
+  he: 'he-IL',
+}
 
 function SkeletonBlock() {
   return (
@@ -29,17 +30,27 @@ export default function TimePicker({
   loading,
   disabled = false,
 }: TimePickerProps) {
+  const t = useTranslations('booking')
+  const locale = useLocale()
+  const intlLocale = LOCALE_MAP[locale] ?? 'uk-IL'
+
+  const timeFormatter = new Intl.DateTimeFormat(intlLocale, {
+    hour: '2-digit',
+    minute: '2-digit',
+    timeZone: 'Asia/Jerusalem',
+  })
+
   if (loading) {
     return (
       <div
         role="status"
-        aria-label="Завантаження доступних слотів"
+        aria-label={t('slot_loading_aria')}
         className="flex flex-wrap gap-3 pt-1"
       >
         {Array.from({ length: 4 }).map((_, i) => (
           <SkeletonBlock key={i} />
         ))}
-        <span className="sr-only">Завантаження...</span>
+        <span className="sr-only">{t('common_loading', { defaultValue: '...' })}</span>
       </div>
     )
   }
@@ -47,7 +58,7 @@ export default function TimePicker({
   if (startTimes.length === 0) {
     return (
       <p className="text-sm py-2" style={{ color: 'var(--color-charcoal)', opacity: 0.6 }}>
-        На вибрану дату немає вільних слотів
+        {t('no_slots')}
       </p>
     )
   }
@@ -55,12 +66,12 @@ export default function TimePicker({
   return (
     <div
       role="group"
-      aria-label="Виберіть час"
+      aria-label={t('time_picker_aria')}
       className="flex flex-wrap gap-3 pt-1"
     >
       {startTimes.map((item) => {
         const isSelected = value === item.start_at
-        const timeLabel = TIME_FORMATTER.format(new Date(item.start_at))
+        const timeLabel = timeFormatter.format(new Date(item.start_at))
 
         return (
           <button
@@ -69,7 +80,7 @@ export default function TimePicker({
             onClick={() => !disabled && onChange(item.start_at)}
             disabled={disabled}
             aria-pressed={isSelected}
-            aria-label={`Час ${timeLabel}`}
+            aria-label={`${t('step_time_heading')} ${timeLabel}`}
             className={[
               'rounded-xl px-4 py-2 text-sm font-medium transition-all duration-200',
               'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-1',

@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useCallback, useEffect } from 'react'
+import { useTranslations, useLocale } from 'next-intl'
 import CitySelector from './CitySelector'
 import DatePicker from './DatePicker'
 import TimePicker from './TimePicker'
@@ -25,17 +26,11 @@ import type { ContactFormData } from './ContactForm'
 
 type Step = 'city' | 'service' | 'datetime' | 'contacts' | 'success'
 
-
-const PROGRESS_STEPS: { key: Step; label: string }[] = [
-  { key: 'city', label: 'Студія' },
-  { key: 'service', label: 'Послуга' },
-  { key: 'datetime', label: 'Дата і час' },
-  { key: 'contacts', label: 'Контакти' },
-]
+const STEP_KEYS: Step[] = ['city', 'service', 'datetime', 'contacts']
 
 function getProgressIndex(step: Step): number {
-  if (step === 'success') return PROGRESS_STEPS.length
-  return PROGRESS_STEPS.findIndex((s) => s.key === step)
+  if (step === 'success') return STEP_KEYS.length
+  return STEP_KEYS.indexOf(step)
 }
 
 // ---------------------------------------------------------------------------
@@ -43,6 +38,16 @@ function getProgressIndex(step: Step): number {
 // ---------------------------------------------------------------------------
 
 export default function BookingForm() {
+  const t = useTranslations('booking')
+  const locale = useLocale()
+
+  const PROGRESS_STEPS: { key: Step; label: string }[] = [
+    { key: 'city', label: t('steps.city') },
+    { key: 'service', label: t('steps.service') },
+    { key: 'datetime', label: t('steps.datetime') },
+    { key: 'contacts', label: t('steps.contacts') },
+  ]
+
   const [step, setStep] = useState<Step>('city')
   const [selectedCity, setSelectedCity] = useState<string | null>(null)
   const [selectedDate, setSelectedDate] = useState<string | null>(null)
@@ -59,12 +64,12 @@ export default function BookingForm() {
   const [studiosLoading, setStudiosLoading] = useState(true)
 
   useEffect(() => {
-    fetch('/api/studios')
+    fetch(`/api/studios?language=${locale}`)
       .then(r => r.json())
       .then((data: GetStudiosResponse) => setStudios(data.studios ?? []))
       .catch(() => {/* use empty list */})
       .finally(() => setStudiosLoading(false))
-  }, [])
+  }, [locale])
 
   // -------------------------------------------------------------------------
   // Fetch services
@@ -74,12 +79,12 @@ export default function BookingForm() {
     setServicesLoading(true)
     setError(null)
     try {
-      const res = await fetch(`/api/services?studio_id=${encodeURIComponent(city)}`)
+      const res = await fetch(`/api/services?studio_id=${encodeURIComponent(city)}&language=${locale}`)
       if (!res.ok) throw new Error(`HTTP ${res.status}`)
       const json = (await res.json()) as { services: ServiceDTO[] }
       setServices(json.services ?? [])
     } catch {
-      setError('Сталася помилка під час завантаження послуг. Спробуйте ще раз.')
+      setError(t('error_services'))
       setServices([])
     } finally {
       setServicesLoading(false)
@@ -102,7 +107,7 @@ export default function BookingForm() {
         const json = (await res.json()) as { available_start_times: AvailableStartTime[] }
         setAvailableStartTimes(json.available_start_times ?? [])
       } catch {
-        setError('Сталася помилка під час завантаження доступного часу. Спробуйте ще раз.')
+        setError(t('error_slots'))
         setAvailableStartTimes([])
       } finally {
         setSlotsLoading(false)
@@ -221,6 +226,7 @@ export default function BookingForm() {
         client_email: data.email,
         comment: data.comment || undefined,
         marketing_consent: data.marketing_consent,
+        language: locale,
         ...(resolvedClientId && { client_id: resolvedClientId }),
       }
 
@@ -234,7 +240,7 @@ export default function BookingForm() {
         if (res.status === 409) {
           const json = (await res.json()) as { error: { code: string } }
           if (json.error?.code === 'SLOT_UNAVAILABLE') {
-            setError('На жаль, цей час вже зайнятий. Будь ласка, виберіть інший час.')
+            setError(t('error_slot_taken'))
             setStep('datetime')
             setSelectedStartAt(null)
             if (selectedCity && selectedDate && selectedService) {
@@ -274,7 +280,7 @@ export default function BookingForm() {
 
         setStep('success')
       } catch {
-        setError('Сталася помилка. Спробуйте ще раз.')
+        setError(t('error_generic'))
       } finally {
         setBookingLoading(false)
       }
@@ -305,7 +311,7 @@ export default function BookingForm() {
     <div className="flex flex-col gap-6">
       {/* Progress bar */}
       {showProgress && (
-        <nav aria-label="Прогрес бронювання">
+        <nav aria-label={t('progress_aria')}>
           <ol className="flex items-center justify-between gap-2">
             {PROGRESS_STEPS.map((s, idx) => {
               const isDone = idx < progressIndex
@@ -357,7 +363,7 @@ export default function BookingForm() {
             className="mb-4 text-base font-semibold"
             style={{ color: 'var(--color-charcoal)' }}
           >
-            Виберіть студію
+            {t('step_city_heading')}
           </h3>
           <CitySelector
             studios={studios}
@@ -376,7 +382,7 @@ export default function BookingForm() {
             className="mb-4 text-base font-semibold"
             style={{ color: 'var(--color-charcoal)' }}
           >
-            Виберіть послугу
+            {t('step_service_heading')}
           </h3>
           <ServicePicker
             services={services}
@@ -393,7 +399,7 @@ export default function BookingForm() {
                 setStep('city')
               }}
             >
-              Назад
+              {t('back')}
             </Button>
           </div>
         </section>
@@ -407,7 +413,7 @@ export default function BookingForm() {
             className="mb-1 text-base font-semibold"
             style={{ color: 'var(--color-charcoal)' }}
           >
-            Дата і час
+            {t('step_datetime_heading')}
           </h3>
           <p
             className="mb-4 text-sm"
@@ -427,7 +433,7 @@ export default function BookingForm() {
                 className="mb-3 text-base font-semibold"
                 style={{ color: 'var(--color-charcoal)' }}
               >
-                Виберіть час
+                {t('step_time_heading')}
               </h3>
               <TimePicker
                 startTimes={availableStartTimes}
@@ -447,7 +453,7 @@ export default function BookingForm() {
                 setStep('service')
               }}
             >
-              Назад
+              {t('back')}
             </Button>
             {selectedStartAt && (
               <Button
@@ -456,7 +462,7 @@ export default function BookingForm() {
                 onClick={handleGoToContacts}
                 className="flex-1"
               >
-                Далі — Ввести контакти
+                {t('next_to_contacts')}
               </Button>
             )}
           </div>
@@ -471,7 +477,7 @@ export default function BookingForm() {
             className="mb-4 text-base font-semibold"
             style={{ color: 'var(--color-charcoal)' }}
           >
-            Ваші контакти
+            {t('step_contacts_heading')}
           </h3>
           <ContactForm
             onSubmit={handleContactSubmit}
@@ -484,7 +490,7 @@ export default function BookingForm() {
               onClick={handleBackToDatetime}
               disabled={bookingLoading}
             >
-              Назад
+              {t('back')}
             </Button>
           </div>
         </section>

@@ -1,8 +1,11 @@
 'use client'
 
+import { useTranslations } from 'next-intl'
 import BookingForm from '@/components/booking/BookingForm'
 
 export default function BookingSection() {
+  const t = useTranslations('booking')
+
   return (
     <section
       id="booking"
@@ -14,7 +17,7 @@ export default function BookingSection() {
         {/* Section header */}
         <div className="mb-10 text-center">
           <p className="mb-3 text-sm font-medium uppercase tracking-[0.2em] text-[var(--color-rose)]">
-            Онлайн запис
+            {t('section_eyebrow')}
           </p>
           <h2
             id="booking-heading"
@@ -24,10 +27,10 @@ export default function BookingSection() {
               fontSize: 'clamp(2rem, 5vw, 3.5rem)',
             }}
           >
-            Запис онлайн
+            {t('section_heading')}
           </h2>
           <p className="mx-auto max-w-lg text-base text-[var(--color-charcoal)] opacity-70 leading-relaxed">
-            Оберіть студію, зручний час та залиште контакти
+            {t('section_subtitle')}
           </p>
         </div>
 
@@ -36,12 +39,12 @@ export default function BookingSection() {
           id="booking-form"
           className="rounded-2xl border border-[var(--color-rose)] border-opacity-30 bg-white p-6 sm:p-8 shadow-sm"
           role="region"
-          aria-label="Форма запису на прийом"
+          aria-label={t('form_aria')}
         >
           {/* No-JS fallback */}
           <noscript>
             <p className="rounded-xl bg-amber-50 border border-amber-200 px-4 py-3 text-sm text-amber-800 mb-6">
-              Для роботи форми необхідно увімкнути JavaScript. Зателефонуйте нам або напишіть у WhatsApp для запису.
+              {t('noscript')}
             </p>
           </noscript>
 
@@ -50,11 +53,11 @@ export default function BookingSection() {
 
         {/* Trust indicators */}
         <div className="mt-8 flex flex-col items-center gap-3 sm:flex-row sm:justify-center sm:gap-8 text-sm text-[var(--color-charcoal)] opacity-60">
-          <span>Підтвердження на Email</span>
+          <span>{t('trust_email')}</span>
           <span className="hidden sm:block h-3 w-px bg-current" aria-hidden="true" />
-          <span>Безкоштовне скасування</span>
+          <span>{t('trust_cancel')}</span>
           <span className="hidden sm:block h-3 w-px bg-current" aria-hidden="true" />
-          <span>Запис доступний 24/7</span>
+          <span>{t('trust_247')}</span>
         </div>
       </div>
     </section>

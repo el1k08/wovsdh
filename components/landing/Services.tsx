@@ -1,15 +1,17 @@
+import { getTranslations, getLocale } from 'next-intl/server'
 import { supabaseAdmin } from '@/lib/supabase'
+import { resolveLocale } from '@/lib/locale-utils'
 import { ServiceStudioBadge } from './ServiceStudioBadge'
-
-function formatPrice(price: number): string {
-  return `від ${price} ₪`
-}
+import type { ServiceTranslations } from '@/lib/types'
 
 export default async function Services() {
+  const [t, locale] = await Promise.all([getTranslations('services'), getLocale()])
+  const language = resolveLocale(locale)
+
   const [{ data: servicesRaw }, { data: assignmentsRaw }] = await Promise.all([
     supabaseAdmin
       .from('services')
-      .select('id, icon, name, description, price, duration_minutes, sort_order')
+      .select('id, icon, name, description, price, duration_minutes, sort_order, translations')
       .eq('is_active', true)
       .order('sort_order', { ascending: true }),
     supabaseAdmin
@@ -18,7 +20,6 @@ export default async function Services() {
   ])
 
   // Build service_id → studio names map
-  // Supabase returns the FK join as an array even for many-to-one relations
   type AssignmentRow = { service_id: string; studios: { name: string }[] | { name: string } | null }
   const studiosByService = new Map<string, string[]>()
   for (const row of ((assignmentsRaw as unknown as AssignmentRow[]) ?? [])) {
@@ -46,7 +47,7 @@ export default async function Services() {
         {/* Section header */}
         <div className="mb-14 text-center">
           <p className="mb-3 text-sm font-medium uppercase tracking-[0.2em] text-[var(--color-rose)]">
-            Що ми пропонуємо
+            {t('eyebrow')}
           </p>
           <h2
             id="services-heading"
@@ -56,10 +57,10 @@ export default async function Services() {
               fontSize: 'clamp(2rem, 5vw, 3.5rem)',
             }}
           >
-            Наші послуги
+            {t('heading')}
           </h2>
           <p className="mx-auto max-w-xl text-base text-[var(--color-charcoal)] opacity-70 leading-relaxed">
-            Повний спектр послуг по догляду за нігтями — від класичного манікюру до вишуканого нейл-арту
+            {t('subtitle')}
           </p>
         </div>
 
@@ -68,10 +69,13 @@ export default async function Services() {
           <ul
             className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3"
             role="list"
-            aria-label="Список послуг"
+            aria-label={t('list_aria')}
           >
             {services.map((service) => {
               const studioNames = studiosByService.get(service.id) ?? []
+              const tr = (service.translations as ServiceTranslations | null)?.[language]
+              const displayName = tr?.name || service.name
+              const displayDescription = tr?.description || service.description
               return (
                 <li
                   key={service.id}
@@ -97,15 +101,15 @@ export default async function Services() {
                         fontSize: '1.375rem',
                       }}
                     >
-                      {service.name}
+                      {displayName}
                     </h3>
                     <ServiceStudioBadge studios={studioNames} />
                   </div>
 
                   {/* Description */}
-                  {service.description && (
+                  {displayDescription && (
                     <p className="mb-4 text-sm leading-relaxed text-[var(--color-charcoal)] opacity-65">
-                      {service.description}
+                      {displayDescription}
                     </p>
                   )}
 
@@ -114,16 +118,16 @@ export default async function Services() {
                     <span
                       className="text-base font-semibold"
                       style={{ color: 'var(--color-rose)' }}
-                      aria-label={`Вартість: ${formatPrice(service.price)}`}
+                      aria-label={t('price_aria', { price: service.price })}
                     >
-                      {formatPrice(service.price)}
+                      {t('price_from', { price: service.price })}
                     </span>
                     <a
                       href="#booking"
                       className="text-sm font-medium text-[var(--color-gold)] hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-rose)] rounded"
-                      aria-label={`Записатись на ${service.name}`}
+                      aria-label={t('book_aria', { name: displayName })}
                     >
-                      Записатись →
+                      {t('book_link')}
                     </a>
                   </div>
 
@@ -142,7 +146,7 @@ export default async function Services() {
           </ul>
         ) : (
           <p className="text-center text-[var(--color-charcoal)] opacity-50">
-            Послуги з'являться тут після додавання в панелі керування
+            {t('empty')}
           </p>
         )}
       </div>

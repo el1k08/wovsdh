@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { supabaseAdmin } from '@/lib/supabase'
-import type { ApiError, UpdateStudioRequest } from '@/lib/types'
+import type { ApiError, UpdateStudioRequest, StudioTranslations } from '@/lib/types'
 import { isNonEmptyString } from '@/lib/validation'
 
 function requireAdminAuth(request: NextRequest): boolean {
@@ -77,6 +77,22 @@ export async function PUT(
   if (body.street !== undefined) updates.street = body.street
   if (body.timezone !== undefined) updates.timezone = body.timezone
   if (body.schedule_text !== undefined) updates.schedule_text = body.schedule_text
+
+  if (body.translations !== undefined) {
+    updates.translations = body.translations
+  } else if (body.name !== undefined || body.schedule_text !== undefined) {
+    // Sync uk locale in translations when name/schedule_text changes without explicit translations
+    const { data: current } = await supabaseAdmin
+      .from('studios').select('translations').eq('id', id).maybeSingle()
+    const existing = (current?.translations ?? {}) as StudioTranslations
+    updates.translations = {
+      ...existing,
+      uk: {
+        name: body.name ?? existing.uk?.name ?? '',
+        schedule_text: body.schedule_text ?? existing.uk?.schedule_text ?? '',
+      },
+    }
+  }
 
   if (Object.keys(updates).length === 0) {
     return NextResponse.json<ApiError>(

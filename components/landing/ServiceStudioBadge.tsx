@@ -2,12 +2,14 @@
 
 import { useState, useRef, useEffect } from 'react'
 import { MapPin } from 'lucide-react'
+import { useTranslations } from 'next-intl'
 
 interface Props {
   studios: string[]
 }
 
 export function ServiceStudioBadge({ studios }: Props) {
+  const t = useTranslations('services')
   const [open, setOpen] = useState(false)
   const containerRef = useRef<HTMLDivElement>(null)
 
@@ -35,7 +37,7 @@ export function ServiceStudioBadge({ studios }: Props) {
       <button
         type="button"
         onClick={() => setOpen((v) => !v)}
-        aria-label={`Доступно в ${studios.length} студ${studios.length === 1 ? 'ії' : 'іях'}`}
+        aria-label={studios.length === 1 ? t('studio_badge_aria_one') : t('studio_badge_aria_many', { count: studios.length })}
         aria-expanded={open}
         className="flex items-center justify-center w-6 h-6 rounded-full text-[var(--color-rose)] opacity-60 hover:opacity-100 hover:bg-[var(--color-blush)] transition-all"
       >
@@ -46,7 +48,7 @@ export function ServiceStudioBadge({ studios }: Props) {
         <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2.5 z-20 w-max max-w-[180px] pointer-events-none">
           <div className="rounded-xl border border-[var(--color-blush)] bg-white shadow-md px-3 py-2">
             <p className="text-[11px] font-semibold text-[var(--color-charcoal)] mb-1 uppercase tracking-wide opacity-60">
-              Доступно в:
+              {t('studio_badge_label')}
             </p>
             <ul className="space-y-0.5">
               {studios.map((name) => (

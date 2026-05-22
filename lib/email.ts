@@ -77,8 +77,9 @@ export async function sendBookingConfirmation(params: {
   endAt: string
   cancellationToken: string
   bookingId: string
+  locale?: string
 }): Promise<void> {
-  const { to, clientName, studioName, startAt, endAt, cancellationToken, bookingId } = params
+  const { to, clientName, studioName, startAt, endAt, cancellationToken, bookingId, locale } = params
 
   const { subject, html, text } = buildConfirmationEmail({
     clientName,
@@ -87,6 +88,7 @@ export async function sendBookingConfirmation(params: {
     endAt,
     cancellationToken,
     bookingId,
+    locale,
   })
 
   let sendError: string | undefined
@@ -130,14 +132,16 @@ export async function sendBookingCancellation(params: {
   startAt: string
   endAt: string
   bookingId: string
+  locale?: string
 }): Promise<void> {
-  const { to, clientName, studioName, startAt, endAt, bookingId } = params
+  const { to, clientName, studioName, startAt, endAt, bookingId, locale } = params
 
   const { subject, html, text } = buildCancellationEmail({
     clientName,
     studioName,
     startAt,
     endAt,
+    locale,
   })
 
   let sendError: string | undefined

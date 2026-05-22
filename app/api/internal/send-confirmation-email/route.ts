@@ -40,6 +40,7 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
       `
       id,
       status,
+      language,
       client_first_name,
       client_email,
       cancellation_token,
@@ -65,6 +66,7 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
   const raw = bookingData as unknown as {
     id: string
     status: BookingStatus
+    language: string
     client_first_name: string
     client_email: string
     cancellation_token: string
@@ -111,6 +113,7 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
       endAt,
       cancellationToken: raw.cancellation_token,
       bookingId: raw.id,
+      locale: raw.language,
     })
   } catch (emailErr) {
     // Error is already logged and persisted to email_logs inside sendBookingConfirmation.

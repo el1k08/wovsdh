@@ -1,6 +1,8 @@
 import type { Metadata } from 'next'
 import { Inter, Cormorant_Garamond } from 'next/font/google'
 import Script from 'next/script'
+import { NextIntlClientProvider } from 'next-intl'
+import { getLocale, getMessages } from 'next-intl/server'
 import './globals.css'
 
 const inter = Inter({
@@ -79,14 +81,18 @@ export const metadata: Metadata = {
   },
 }
 
-export default function RootLayout({
+export default async function RootLayout({
   children,
 }: Readonly<{
   children: React.ReactNode
 }>) {
+  const locale = await getLocale()
+  const messages = await getMessages()
+
   return (
     <html
-      lang="uk"
+      lang={locale}
+      dir={locale === 'he' ? 'rtl' : 'ltr'}
       className={`${inter.variable} ${cormorantGaramond.variable} h-full antialiased`}
     >
       <head>
@@ -128,7 +134,9 @@ gtag('config', '${gaId}');`}
             />
           </noscript>
         )}
-        {children}
+        <NextIntlClientProvider messages={messages}>
+          {children}
+        </NextIntlClientProvider>
       </body>
     </html>
   )
