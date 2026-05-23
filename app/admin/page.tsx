@@ -505,6 +505,7 @@ function ServicesTab({ studio, apiFetch, onUnauth }: ServicesTabProps) {
           <label className="flex flex-col gap-1 text-sm text-gray-600">
             <span className="flex">{t('name_label')} <span className="text-red-500">*</span></span>
             <input
+              key={formLang}
               type="text"
               value={newTranslations[formLang].name}
               onChange={(e) => updateNewTr('name', e.target.value)}
@@ -515,6 +516,7 @@ function ServicesTab({ studio, apiFetch, onUnauth }: ServicesTabProps) {
           <label className="flex flex-col gap-1 text-sm text-gray-600 sm:col-span-2">
             {t('description_label')}
             <input
+              key={formLang}
               type="text"
               value={newTranslations[formLang].description}
               onChange={(e) => updateNewTr('description', e.target.value)}
@@ -593,6 +595,7 @@ function ServicesTab({ studio, apiFetch, onUnauth }: ServicesTabProps) {
           <label className="flex flex-col gap-1 text-sm text-gray-600">
             <span className="flex">{t('name_label')} <span className="text-red-500">*</span></span>
             <input
+              key={editLang}
               type="text"
               value={editTranslations[editLang].name}
               onChange={(e) => updateEditTr('name', e.target.value)}
@@ -604,6 +607,7 @@ function ServicesTab({ studio, apiFetch, onUnauth }: ServicesTabProps) {
           <label className="flex flex-col gap-1 text-sm text-gray-600 sm:col-span-2">
             {t('description_label')}
             <input
+              key={editLang}
               type="text"
               value={editTranslations[editLang].description}
               onChange={(e) => updateEditTr('description', e.target.value)}
@@ -1956,6 +1960,7 @@ function StudiosTab({ apiFetch, onUnauth, onStudiosChanged, secret }: StudiosTab
                 <LangTabs value={createLang} onChange={setCreateLang} />
               </div>
               <input
+                key={createLang}
                 value={createTranslations[createLang].name}
                 onChange={e => setCreateTranslations(prev => ({ ...prev, [createLang]: { ...prev[createLang], name: e.target.value } }))}
                 placeholder={t('name_placeholder')}
@@ -1984,6 +1989,7 @@ function StudiosTab({ apiFetch, onUnauth, onStudiosChanged, secret }: StudiosTab
           <div className="sm:col-span-2">
             <label className="block text-xs text-gray-500 mb-1">{t('schedule_label')} [{createLang.toUpperCase()}]</label>
             <textarea
+              key={createLang}
               value={createTranslations[createLang].schedule_text}
               onChange={e => setCreateTranslations(prev => ({ ...prev, [createLang]: { ...prev[createLang], schedule_text: e.target.value } }))}
               placeholder={t('schedule_placeholder')}
@@ -2074,6 +2080,7 @@ function StudiosTab({ apiFetch, onUnauth, onStudiosChanged, secret }: StudiosTab
                 <LangTabs value={editLang} onChange={setEditLang} />
               </div>
               <input
+                key={editLang}
                 value={editTranslations[editLang].name}
                 onChange={e => setEditTranslations(prev => ({ ...prev, [editLang]: { ...prev[editLang], name: e.target.value } }))}
                 required={editLang === 'uk'}
@@ -2099,6 +2106,7 @@ function StudiosTab({ apiFetch, onUnauth, onStudiosChanged, secret }: StudiosTab
           <div className="sm:col-span-2">
             <label className="block text-xs text-gray-500 mb-1">{t('schedule_label')} [{editLang.toUpperCase()}]</label>
             <textarea
+              key={editLang}
               value={editTranslations[editLang].schedule_text}
               onChange={e => setEditTranslations(prev => ({ ...prev, [editLang]: { ...prev[editLang], schedule_text: e.target.value } }))}
               rows={3}
