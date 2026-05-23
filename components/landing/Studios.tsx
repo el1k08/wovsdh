@@ -57,6 +57,8 @@ export default async function Studios() {
             const imageAlt = t('image_alt', { city: studio.city })
             const tr = (studio.translations as StudioTranslations | null)?.[language]
             const displayName = tr?.name || studio.name
+            const displayStreet = tr?.street || studio.street
+            const displayCity = tr?.city || studio.city
             const displayScheduleText = tr?.schedule_text || studio.schedule_text
             return (
               <article
@@ -82,7 +84,7 @@ export default async function Studios() {
                         'linear-gradient(to right, var(--color-rose), var(--color-gold))',
                     }}
                   >
-                    {studio.city}
+                    {displayCity}
                   </div>
                 </div>
 
@@ -95,7 +97,7 @@ export default async function Studios() {
                       fontSize: '1.5rem',
                     }}
                   >
-                    {studio.city}
+                    {displayName}
                   </h3>
 
                   {/* Address */}
@@ -107,10 +109,10 @@ export default async function Studios() {
                     />
                     <div>
                       <p className="text-sm font-medium text-[var(--color-charcoal)]">
-                        {studio.street}
+                        {displayStreet}
                       </p>
                       <p className="text-sm text-[var(--color-charcoal)] opacity-60">
-                        {studio.city}, {t('israel')}
+                        {displayCity}, {t('israel')}
                       </p>
                     </div>
                   </div>
