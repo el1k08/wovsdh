@@ -87,11 +87,18 @@ export async function POST(request: NextRequest) {
   }
 
   // Seed translations from name if not explicitly provided; schedule_text starts empty
-  const translations: StudioTranslations = body.translations ?? {
-    uk: { name, schedule_text: '' },
-    en: { name, schedule_text: '' },
-    he: { name, schedule_text: '' },
-  }
+  const translationsInput = body.translations
+  const translations: StudioTranslations = translationsInput
+    ? {
+        uk: { name: translationsInput.uk?.name ?? name, schedule_text: translationsInput.uk?.schedule_text ?? '', street: translationsInput.uk?.street ?? street ?? '', city: translationsInput.uk?.city ?? city },
+        en: { name: translationsInput.en?.name ?? name, schedule_text: translationsInput.en?.schedule_text ?? '', street: translationsInput.en?.street ?? street ?? '', city: translationsInput.en?.city ?? city },
+        he: { name: translationsInput.he?.name ?? name, schedule_text: translationsInput.he?.schedule_text ?? '', street: translationsInput.he?.street ?? street ?? '', city: translationsInput.he?.city ?? city },
+      }
+    : {
+        uk: { name, schedule_text: '', street: street ?? '', city },
+        en: { name, schedule_text: '', street: street ?? '', city },
+        he: { name, schedule_text: '', street: street ?? '', city },
+      }
 
   const { data: studio, error: studioErr } = await supabaseAdmin
     .from('studios')

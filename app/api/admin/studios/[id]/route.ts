@@ -79,9 +79,16 @@ export async function PUT(
   if (body.schedule_text !== undefined) updates.schedule_text = body.schedule_text
 
   if (body.translations !== undefined) {
-    updates.translations = body.translations
-  } else if (body.name !== undefined || body.schedule_text !== undefined) {
-    // Sync uk locale in translations when name/schedule_text changes without explicit translations
+    // Merge top-level street/city into each locale of the translations object
+    // so both the DB columns and the JSONB field stay in sync.
+    const t = body.translations
+    updates.translations = {
+      uk: { ...t.uk, street: t.uk?.street ?? body.street ?? t.uk?.street ?? '', city: t.uk?.city ?? body.city ?? t.uk?.city ?? '' },
+      en: { ...t.en, street: t.en?.street ?? body.street ?? t.en?.street ?? '', city: t.en?.city ?? body.city ?? t.en?.city ?? '' },
+      he: { ...t.he, street: t.he?.street ?? body.street ?? t.he?.street ?? '', city: t.he?.city ?? body.city ?? t.he?.city ?? '' },
+    }
+  } else if (body.name !== undefined || body.schedule_text !== undefined || body.street !== undefined || body.city !== undefined) {
+    // Sync uk locale in translations when fields change without explicit translations
     const { data: current } = await supabaseAdmin
       .from('studios').select('translations').eq('id', id).maybeSingle()
     const existing = (current?.translations ?? {}) as StudioTranslations
@@ -90,6 +97,8 @@ export async function PUT(
       uk: {
         name: body.name ?? existing.uk?.name ?? '',
         schedule_text: body.schedule_text ?? existing.uk?.schedule_text ?? '',
+        street: body.street ?? existing.uk?.street ?? '',
+        city: body.city ?? existing.uk?.city ?? '',
       },
     }
   }

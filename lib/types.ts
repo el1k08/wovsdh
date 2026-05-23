@@ -17,6 +17,8 @@ export interface ServiceTranslation {
 export interface StudioTranslation {
   name: string;
   schedule_text: string;
+  street?: string;
+  city?: string;
 }
 
 export type ServiceTranslations = Record<Locale, ServiceTranslation>

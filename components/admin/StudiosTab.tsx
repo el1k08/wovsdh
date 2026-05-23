@@ -26,16 +26,14 @@ export function StudiosTab({ apiFetch, onUnauth, onStudiosChanged, secret }: Stu
 
   // Translation helpers
   const emptyStudioTranslations = (): StudioTranslations => ({
-    uk: { name: '', schedule_text: '' },
-    en: { name: '', schedule_text: '' },
-    he: { name: '', schedule_text: '' },
+    uk: { name: '', schedule_text: '', street: '', city: '' },
+    en: { name: '', schedule_text: '', street: '', city: '' },
+    he: { name: '', schedule_text: '', street: '', city: '' },
   })
 
   // Create form
   const [showCreate, setShowCreate] = useState(false)
   const [newId, setNewId] = useState('')
-  const [newStreet, setNewStreet] = useState('')
-  const [newCity, setNewCity] = useState('')
   const [newTimezone, setNewTimezone] = useState('Asia/Jerusalem')
   const [newSchedule, setNewSchedule] = useState<ScheduleRow[]>(buildStudioDefaultSchedule())
   const [formLoading, setFormLoading] = useState(false)
@@ -44,8 +42,6 @@ export function StudiosTab({ apiFetch, onUnauth, onStudiosChanged, secret }: Stu
 
   // Edit form
   const [editingId, setEditingId] = useState<string | null>(null)
-  const [editStreet, setEditStreet] = useState('')
-  const [editCity, setEditCity] = useState('')
   const [editLoading, setEditLoading] = useState(false)
   const [editLang, setEditLang] = useState<Locale>('uk')
   const [editTranslations, setEditTranslations] = useState<StudioTranslations>(emptyStudioTranslations())
@@ -86,8 +82,8 @@ export function StudiosTab({ apiFetch, onUnauth, onStudiosChanged, secret }: Stu
       body: JSON.stringify({
         id: newId.trim(),
         name: createTranslations.uk.name.trim(),
-        street: newStreet.trim(),
-        city: newCity.trim(),
+        street: (createTranslations.uk.street ?? '').trim(),
+        city: (createTranslations.uk.city ?? '').trim(),
         timezone: newTimezone.trim(),
         schedule: newSchedule,
         translations: createTranslations,
@@ -99,7 +95,7 @@ export function StudiosTab({ apiFetch, onUnauth, onStudiosChanged, secret }: Stu
     } else {
       setMessage({ type: 'success', text: t('success_create') })
       setShowCreate(false)
-      setNewId(''); setNewStreet(''); setNewCity('')
+      setNewId('')
       setNewTimezone('Asia/Jerusalem'); setNewSchedule(buildStudioDefaultSchedule())
       setCreateTranslations(emptyStudioTranslations()); setCreateLang('uk')
       await load(true)
@@ -110,14 +106,12 @@ export function StudiosTab({ apiFetch, onUnauth, onStudiosChanged, secret }: Stu
 
   const startEdit = (s: Studio) => {
     setEditingId(s.id)
-    setEditStreet(s.street ?? '')
-    setEditCity(s.city)
     setDeleteTarget(null)
     setEditLang('uk')
     setEditTranslations({
-      uk: { name: s.translations?.uk?.name ?? s.name, schedule_text: s.translations?.uk?.schedule_text ?? s.schedule_text ?? '' },
-      en: { name: s.translations?.en?.name ?? s.name, schedule_text: s.translations?.en?.schedule_text ?? s.schedule_text ?? '' },
-      he: { name: s.translations?.he?.name ?? s.name, schedule_text: s.translations?.he?.schedule_text ?? s.schedule_text ?? '' },
+      uk: { name: s.translations?.uk?.name ?? s.name, schedule_text: s.translations?.uk?.schedule_text ?? s.schedule_text ?? '', street: s.translations?.uk?.street ?? s.street ?? '', city: s.translations?.uk?.city ?? s.city ?? '' },
+      en: { name: s.translations?.en?.name ?? s.name, schedule_text: s.translations?.en?.schedule_text ?? s.schedule_text ?? '', street: s.translations?.en?.street ?? s.street ?? '', city: s.translations?.en?.city ?? s.city ?? '' },
+      he: { name: s.translations?.he?.name ?? s.name, schedule_text: s.translations?.he?.schedule_text ?? s.schedule_text ?? '', street: s.translations?.he?.street ?? s.street ?? '', city: s.translations?.he?.city ?? s.city ?? '' },
     })
   }
 
@@ -131,8 +125,8 @@ export function StudiosTab({ apiFetch, onUnauth, onStudiosChanged, secret }: Stu
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
         name: editTranslations.uk.name.trim(),
-        street: (editStreet ?? '').trim(),
-        city: editCity.trim(),
+        street: (editTranslations.uk.street ?? '').trim(),
+        city: (editTranslations.uk.city ?? '').trim(),
         schedule_text: editTranslations.uk.schedule_text,
         translations: editTranslations,
       }),
@@ -302,19 +296,23 @@ export function StudiosTab({ apiFetch, onUnauth, onStudiosChanged, secret }: Stu
               />
             </div>
             <div>
-              <label className="block text-xs text-gray-500 mb-1">{t('street_label')}</label>
+              <label className="block text-xs text-gray-500 mb-1">{t('street_label')} [{createLang.toUpperCase()}]</label>
               <input
-                value={newStreet} onChange={e => setNewStreet(e.target.value)}
+                key={`create-street-${createLang}`}
+                value={createTranslations[createLang].street ?? ''}
+                onChange={e => setCreateTranslations(prev => ({ ...prev, [createLang]: { ...prev[createLang], street: e.target.value } }))}
                 placeholder={t('street_placeholder')}
                 className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm text-[var(--color-charcoal)] focus:outline-none focus:border-[var(--color-rose)]"
               />
             </div>
             <div>
-              <label className="block text-xs text-gray-500 mb-1">{t('city_label')} *</label>
+              <label className="block text-xs text-gray-500 mb-1">{t('city_label')} [{createLang.toUpperCase()}] *</label>
               <input
-                value={newCity} onChange={e => setNewCity(e.target.value)}
+                key={`create-city-${createLang}`}
+                value={createTranslations[createLang].city ?? ''}
+                onChange={e => setCreateTranslations(prev => ({ ...prev, [createLang]: { ...prev[createLang], city: e.target.value } }))}
                 placeholder={t('city_placeholder')}
-                required
+                required={createLang === 'uk'}
                 className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm text-[var(--color-charcoal)] focus:outline-none focus:border-[var(--color-rose)]"
               />
             </div>
@@ -421,17 +419,21 @@ export function StudiosTab({ apiFetch, onUnauth, onStudiosChanged, secret }: Stu
               />
             </div>
             <div>
-              <label className="block text-xs text-gray-500 mb-1">{t('street_label')}</label>
+              <label className="block text-xs text-gray-500 mb-1">{t('street_label')} [{editLang.toUpperCase()}]</label>
               <input
-                value={editStreet} onChange={e => setEditStreet(e.target.value)}
+                key={`edit-street-${editLang}`}
+                value={editTranslations[editLang].street ?? ''}
+                onChange={e => setEditTranslations(prev => ({ ...prev, [editLang]: { ...prev[editLang], street: e.target.value } }))}
                 className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm text-[var(--color-charcoal)] focus:outline-none focus:border-[var(--color-rose)]"
               />
             </div>
             <div>
-              <label className="block text-xs text-gray-500 mb-1">{t('city_label')} *</label>
+              <label className="block text-xs text-gray-500 mb-1">{t('city_label')} [{editLang.toUpperCase()}] *</label>
               <input
-                value={editCity} onChange={e => setEditCity(e.target.value)}
-                required
+                key={`edit-city-${editLang}`}
+                value={editTranslations[editLang].city ?? ''}
+                onChange={e => setEditTranslations(prev => ({ ...prev, [editLang]: { ...prev[editLang], city: e.target.value } }))}
+                required={editLang === 'uk'}
                 className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm text-[var(--color-charcoal)] focus:outline-none focus:border-[var(--color-rose)]"
               />
             </div>
