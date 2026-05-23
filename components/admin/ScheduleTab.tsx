@@ -28,7 +28,9 @@ interface ScheduleTabProps {
 
 export function ScheduleTab({ studio, apiFetch, onUnauth }: ScheduleTabProps) {
   const t = useTranslations('admin.schedule_panel')
+  const tAdmin = useTranslations('admin')
   const tCommon = useTranslations('common')
+  const dayLabels = Array.from({ length: 7 }, (_, i) => tAdmin(`day_labels.${i}` as 'day_labels.0'))
   const [rows, setRows] = useState<ScheduleRow[]>(buildDefaultSchedule())
   const [loading, setLoading] = useState(false)
   const [saving, setSaving] = useState(false)
@@ -241,7 +243,6 @@ export function ScheduleTab({ studio, apiFetch, onUnauth }: ScheduleTabProps) {
         ) : (
           <div className="flex flex-col gap-2">
             {(() => {
-              const dayLabels = t.raw('day_labels') as string[]
               return rows.map((row) => (
               <div
                 key={row.day_of_week}

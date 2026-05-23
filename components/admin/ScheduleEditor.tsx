@@ -20,7 +20,7 @@ export function ScheduleEditor({
     onChange(next)
   }
   const SELECT_CLS = 'border border-gray-300 rounded-lg px-2 py-1 text-sm text-[var(--color-charcoal)] focus:outline-none focus:border-[var(--color-rose)] disabled:opacity-40'
-  const dayLabels = tAdmin.raw('day_labels') as string[]
+  const dayLabels = Array.from({ length: 7 }, (_, i) => tAdmin(`day_labels.${i}` as 'day_labels.0'))
   return (
     <div className="space-y-2">
       {rows.map((row, i) => (
