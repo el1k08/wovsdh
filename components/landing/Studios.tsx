@@ -1,4 +1,5 @@
 import { getTranslations, getLocale } from 'next-intl/server'
+import { unstable_noStore as noStore } from 'next/cache'
 import Image from 'next/image'
 import { MapPin, Clock } from 'lucide-react'
 import { supabaseAdmin } from '@/lib/supabase'
@@ -11,6 +12,7 @@ const IMAGE_SEEDS: Record<string, string> = {
 }
 
 export default async function Studios() {
+  noStore()
   const [t, locale] = await Promise.all([getTranslations('studios'), getLocale()])
   const language = resolveLocale(locale)
 
