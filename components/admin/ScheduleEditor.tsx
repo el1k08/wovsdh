@@ -30,7 +30,7 @@ export function ScheduleEditor({
             disabled={disabled}
             onChange={checked => updateRow(i, { is_working: checked })}
           />
-          <span className="w-6 text-sm text-[var(--color-charcoal)] font-medium">
+          <span className="w-12 text-sm text-[var(--color-charcoal)] font-medium">
             {dayLabels[row.day_of_week]}
           </span>
           <select

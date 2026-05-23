@@ -223,13 +223,13 @@
       "cancelled": "Cancelled"
     },
     "day_labels": [
-      "Su",
-      "Mo",
-      "Tu",
-      "We",
-      "Th",
-      "Fr",
-      "Sa"
+      "Sun",
+      "Mon",
+      "Tue",
+      "Wed",
+      "Thu",
+      "Fri",
+      "Sat"
     ],
     "services_panel": {
       "add_btn": "Add service",
