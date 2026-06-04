@@ -244,7 +244,11 @@ async function handleMessage(update: TelegramUpdate): Promise<void> {
     case '/start':
       await sendMessage({
         chat_id: chatId,
-        text: 'Вітаємо! Я бот для управління записами. Використовуйте /help для списку команд.',
+        text:
+          `Вітаємо! Я бот для сповіщень про нові записи.\n\n` +
+          `🪪 <b>Ваш Chat ID:</b> <code>${chatId}</code>\n\n` +
+          `Надайте цей Chat ID адміністратору, щоб отримувати сповіщення про нові записи.`,
+        parse_mode: 'HTML',
       })
       break
 

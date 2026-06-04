@@ -210,7 +210,8 @@
       "clients": "לקוחות",
       "bookings": "תורים",
       "schedule": "לוח זמנים",
-      "services": "שירותים"
+      "services": "שירותים",
+      "telegram": "טלגרם"
     },
     "slot_status": {
       "available": "פנוי",
@@ -382,6 +383,32 @@
       "error_load_booking": "שגיאה בטעינת תור",
       "error_network_load_booking": "שגיאת רשת בטעינת תור"
     },
-    "logout_btn": "התנתקות"
+    "logout_btn": "התנתקות",
+    "telegram_panel": {
+      "heading": "התראות טלגרם",
+      "subtitle": "ניהול מקבלי ההתראות על הזמנות חדשות",
+      "instructions_title": "כיצד לקבל את ה-Chat ID שלך:",
+      "instructions_text": "פתח את הבוט בטלגרם ושלח את הפקודה /start. הבוט ישיב עם ה-Chat ID המספרי שלך.",
+      "name_placeholder": "שם המאסטר",
+      "chat_id_placeholder": "123456789",
+      "add_btn": "הוסף",
+      "adding": "מוסיף...",
+      "loading": "טוען...",
+      "col_name": "שם",
+      "col_chat_id": "Chat ID",
+      "col_status": "סטטוס",
+      "col_actions": "פעולות",
+      "active": "פעיל",
+      "inactive": "לא פעיל",
+      "delete_btn": "מחק",
+      "delete_confirm": "להסיר את {name}? הם לא יקבלו עוד התראות.",
+      "no_users": "אין מקבלי התראות",
+      "error_load": "שגיאה בטעינת משתמשים",
+      "error_add": "שגיאה בהוספת משתמש",
+      "error_toggle": "שגיאה בעדכון סטטוס",
+      "error_delete": "שגיאה במחיקת משתמש",
+      "success_add": "הנמען נוסף",
+      "success_delete": "הנמען הוסר"
+    }
   }
 }

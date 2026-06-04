@@ -210,7 +210,8 @@
       "clients": "Клієнти",
       "bookings": "Записи",
       "schedule": "Розклад",
-      "services": "Послуги"
+      "services": "Послуги",
+      "telegram": "Telegram"
     },
     "slot_status": {
       "available": "Вільний",
@@ -382,6 +383,32 @@
       "error_load_booking": "Помилка завантаження запису",
       "error_network_load_booking": "Помилка під час завантаження запису"
     },
-    "logout_btn": "Вийти"
+    "logout_btn": "Вийти",
+    "telegram_panel": {
+      "heading": "Telegram сповіщення",
+      "subtitle": "Управління отримувачами сповіщень про нові записи",
+      "instructions_title": "Як отримати Chat ID:",
+      "instructions_text": "Відкрийте бота у Telegram та надішліть команду /start. Бот відповість повідомленням з вашим числовим Chat ID.",
+      "name_placeholder": "Ім'я майстра",
+      "chat_id_placeholder": "123456789",
+      "add_btn": "Додати",
+      "adding": "Додавання...",
+      "loading": "Завантаження...",
+      "col_name": "Ім'я",
+      "col_chat_id": "Chat ID",
+      "col_status": "Статус",
+      "col_actions": "Дії",
+      "active": "Активний",
+      "inactive": "Неактивний",
+      "delete_btn": "Видалити",
+      "delete_confirm": "Видалити {name}? Цей користувач більше не отримуватиме сповіщення.",
+      "no_users": "Немає отримувачів сповіщень",
+      "error_load": "Помилка завантаження користувачів",
+      "error_add": "Помилка додавання користувача",
+      "error_toggle": "Помилка оновлення статусу",
+      "error_delete": "Помилка видалення користувача",
+      "success_add": "Отримувача додано",
+      "success_delete": "Отримувача видалено"
+    }
   }
 }

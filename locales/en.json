@@ -210,7 +210,8 @@
       "clients": "Clients",
       "bookings": "Bookings",
       "schedule": "Schedule",
-      "services": "Services"
+      "services": "Services",
+      "telegram": "Telegram"
     },
     "slot_status": {
       "available": "Available",
@@ -382,6 +383,32 @@
       "error_load_booking": "Error loading booking",
       "error_network_load_booking": "Network error while loading booking"
     },
-    "logout_btn": "Log out"
+    "logout_btn": "Log out",
+    "telegram_panel": {
+      "heading": "Telegram notifications",
+      "subtitle": "Manage recipients for new booking notifications",
+      "instructions_title": "How to get your Chat ID:",
+      "instructions_text": "Open the bot in Telegram and send the /start command. The bot will reply with your numeric Chat ID.",
+      "name_placeholder": "Master name",
+      "chat_id_placeholder": "123456789",
+      "add_btn": "Add",
+      "adding": "Adding...",
+      "loading": "Loading...",
+      "col_name": "Name",
+      "col_chat_id": "Chat ID",
+      "col_status": "Status",
+      "col_actions": "Actions",
+      "active": "Active",
+      "inactive": "Inactive",
+      "delete_btn": "Delete",
+      "delete_confirm": "Remove {name}? They will no longer receive notifications.",
+      "no_users": "No notification recipients",
+      "error_load": "Failed to load users",
+      "error_add": "Failed to add user",
+      "error_toggle": "Failed to update status",
+      "error_delete": "Failed to delete user",
+      "success_add": "Recipient added",
+      "success_delete": "Recipient removed"
+    }
   }
 }

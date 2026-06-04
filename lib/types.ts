@@ -434,7 +434,8 @@ export type ApiErrorCode =
   | 'STUDIO_ID_TAKEN'
   | 'CLIENT_NOT_FOUND'
   | 'PHONE_ALREADY_EXISTS'
-  | 'INTERNAL_ERROR';
+  | 'INTERNAL_ERROR'
+  | 'INVALID_BODY';
 
 export interface ApiError {
   error: {

@@ -13,6 +13,7 @@ import {
   ServicesTab,
   StudioServicesAssignmentTab,
   StudiosTab,
+  TelegramTab,
 } from '@/components/admin'
 import type { AdminTab, SettingsSubTab } from '@/components/admin/types'
 import { formatLocalTime, formatLocalDate } from '@/components/admin/utils'
@@ -146,6 +147,7 @@ export default function AdminPage() {
               {([
                 { key: 'studios', label: t('tabs.studios') },
                 { key: 'services', label: t('tabs.services') },
+                { key: 'telegram', label: t('tabs.telegram') },
               ] as { key: SettingsSubTab; label: string }[]).map((sub) => (
                 <button
                   key={sub.key}
@@ -170,6 +172,12 @@ export default function AdminPage() {
             {settingsSubTab === 'services' && (
               <section className="bg-white border border-[var(--color-blush)] rounded-xl p-6">
                 <ServicesTab studio={studio} apiFetch={apiFetch} onUnauth={handleUnauth} />
+              </section>
+            )}
+
+            {settingsSubTab === 'telegram' && (
+              <section className="bg-white border border-[var(--color-blush)] rounded-xl p-6">
+                <TelegramTab apiFetch={apiFetch} onUnauth={handleUnauth} />
               </section>
             )}
           </div>
