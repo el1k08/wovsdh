@@ -65,10 +65,15 @@ export function TelegramTab({ apiFetch, onUnauth }: TelegramTabProps) {
       })
       if (res.status === 401) { onUnauth(); return }
       if (!res.ok) { showMsg({ type: 'error', text: t('error_add') }); return }
+      const data = await res.json() as { user: TelegramUser }
+      setUsers((prev) => {
+        const exists = prev.find((u) => u.id === data.user.id)
+        if (exists) return prev.map((u) => (u.id === data.user.id ? data.user : u))
+        return [data.user, ...prev]
+      })
       setNewName('')
       setNewChatId('')
       showMsg({ type: 'success', text: t('success_add') })
-      await loadUsers()
     } catch {
       showMsg({ type: 'error', text: t('error_add') })
     } finally {
