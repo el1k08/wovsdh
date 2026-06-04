@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useCallback } from 'react'
 import { useTranslations } from 'next-intl'
-import { Trash2, Send } from 'lucide-react'
+import { Trash2, Send, MessageCircle } from 'lucide-react'
 import type { InlineMessage } from './types'
 
 interface TelegramUser {
@@ -28,6 +28,7 @@ export function TelegramTab({ apiFetch, onUnauth }: TelegramTabProps) {
   const [newName, setNewName] = useState('')
   const [newChatId, setNewChatId] = useState('')
   const [adding, setAdding] = useState(false)
+  const [testingId, setTestingId] = useState<string | null>(null)
 
   const showMsg = (m: InlineMessage) => {
     setMsg(m)
@@ -94,6 +95,20 @@ export function TelegramTab({ apiFetch, onUnauth }: TelegramTabProps) {
       )
     } catch {
       showMsg({ type: 'error', text: t('error_toggle') })
+    }
+  }
+
+  async function handleTest(user: TelegramUser) {
+    setTestingId(user.id)
+    try {
+      const res = await apiFetch(`/api/admin/telegram/users/${user.id}`, { method: 'POST' })
+      if (res.status === 401) { onUnauth(); return }
+      if (!res.ok) { showMsg({ type: 'error', text: t('error_test') }); return }
+      showMsg({ type: 'success', text: t('success_test', { name: user.name }) })
+    } catch {
+      showMsg({ type: 'error', text: t('error_test') })
+    } finally {
+      setTestingId(null)
     }
   }
 
@@ -199,13 +214,23 @@ export function TelegramTab({ apiFetch, onUnauth }: TelegramTabProps) {
                     </button>
                   </td>
                   <td className="px-4 py-3 text-right">
-                    <button
-                      onClick={() => handleDelete(user)}
-                      className="p-1.5 text-red-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors"
-                      title={t('delete_btn')}
-                    >
-                      <Trash2 size={14} />
-                    </button>
+                    <div className="flex items-center justify-end gap-1">
+                      <button
+                        onClick={() => handleTest(user)}
+                        disabled={testingId === user.id}
+                        className="p-1.5 text-blue-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+                        title={t('test_btn')}
+                      >
+                        <MessageCircle size={14} />
+                      </button>
+                      <button
+                        onClick={() => handleDelete(user)}
+                        className="p-1.5 text-red-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors"
+                        title={t('delete_btn')}
+                      >
+                        <Trash2 size={14} />
+                      </button>
+                    </div>
                   </td>
                 </tr>
               ))}

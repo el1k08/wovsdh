@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { supabaseAdmin } from '@/lib/supabase'
+import { sendMessage } from '@/lib/telegram'
 import type { ApiError } from '@/lib/types'
 
 const LOG_PREFIX = '[api/admin/telegram/users/[id]]'
@@ -78,6 +79,55 @@ export async function DELETE(
     console.error(`${LOG_PREFIX} DB error deleting user`, { id, error })
     return NextResponse.json<ApiError>(
       { error: { code: 'INTERNAL_ERROR', message: 'Failed to delete user.' } },
+      { status: 500 },
+    )
+  }
+
+  return NextResponse.json({ ok: true })
+}
+
+// POST /api/admin/telegram/users/[id] — send test message
+export async function POST(
+  request: NextRequest,
+  { params }: { params: Promise<{ id: string }> },
+): Promise<NextResponse> {
+  if (!requireAdminAuth(request)) {
+    return NextResponse.json<ApiError>(
+      { error: { code: 'UNAUTHORIZED', message: 'Invalid or missing X-Admin-Secret header.' } },
+      { status: 401 },
+    )
+  }
+
+  const { id } = await params
+
+  const { data, error } = await supabaseAdmin
+    .from('allowed_users')
+    .select('telegram_chat_id, name')
+    .eq('id', id)
+    .single()
+
+  if (error || !data) {
+    return NextResponse.json<ApiError>(
+      { error: { code: 'CLIENT_NOT_FOUND', message: 'User not found.' } },
+      { status: 404 },
+    )
+  }
+
+  const user = data as { telegram_chat_id: number; name: string }
+
+  const result = await sendMessage({
+    chat_id: user.telegram_chat_id,
+    text:
+      `✅ <b>Тестове повідомлення</b>\n\n` +
+      `Привіт, <b>${user.name}</b>! Сповіщення налаштовані правильно.\n` +
+      `Ви будете отримувати повідомлення про нові записи.`,
+    parse_mode: 'HTML',
+  })
+
+  if (!result.ok) {
+    console.error(`${LOG_PREFIX} Telegram sendMessage failed`, { id, result })
+    return NextResponse.json<ApiError>(
+      { error: { code: 'INTERNAL_ERROR', message: 'Failed to send Telegram message. Check the bot token and chat ID.' } },
       { status: 500 },
     )
   }

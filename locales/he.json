@@ -408,7 +408,10 @@
       "error_toggle": "שגיאה בעדכון סטטוס",
       "error_delete": "שגיאה במחיקת משתמש",
       "success_add": "הנמען נוסף",
-      "success_delete": "הנמען הוסר"
+      "success_delete": "הנמען הוסר",
+      "test_btn": "שלח בדיקה",
+      "error_test": "שגיאה בשליחת הודעת בדיקה",
+      "success_test": "הודעת בדיקה נשלחה ל-{name}"
     }
   }
 }

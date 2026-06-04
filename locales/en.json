@@ -408,7 +408,10 @@
       "error_toggle": "Failed to update status",
       "error_delete": "Failed to delete user",
       "success_add": "Recipient added",
-      "success_delete": "Recipient removed"
+      "success_delete": "Recipient removed",
+      "test_btn": "Send test",
+      "error_test": "Failed to send test message",
+      "success_test": "Test message sent to {name}"
     }
   }
 }
