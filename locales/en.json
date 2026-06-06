@@ -202,7 +202,10 @@
       "heading": "Admin Panel Login",
       "password_placeholder": "Admin password",
       "error_empty": "Please enter the password",
-      "submit": "Sign In"
+      "submit": "Sign In",
+      "email_placeholder": "Email",
+      "error_invalid": "Invalid email or password",
+      "loading": "Signing in..."
     },
     "tabs": {
       "studios": "Studios",
@@ -211,7 +214,8 @@
       "bookings": "Bookings",
       "schedule": "Schedule",
       "services": "Services",
-      "telegram": "Telegram"
+      "telegram": "Telegram",
+      "users": "Users"
     },
     "slot_status": {
       "available": "Available",

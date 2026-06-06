@@ -1,17 +1,14 @@
 import { NextRequest, NextResponse } from 'next/server'
+import { verifyAdminRequest } from '@/lib/admin-auth'
 import { supabaseAdmin } from '@/lib/supabase'
 import type { ApiError } from '@/lib/types'
 
 const LOG_PREFIX = '[api/admin/studio-services]'
 
-function requireAdminAuth(request: NextRequest): boolean {
-  return request.headers.get('X-Admin-Secret') === process.env.ADMIN_SECRET_KEY
-}
-
 // GET /api/admin/studio-services?studio_id=X
 // Returns { service_ids: string[] } — service IDs assigned to the studio
 export async function GET(request: NextRequest): Promise<NextResponse> {
-  if (!requireAdminAuth(request)) {
+  if (!(await verifyAdminRequest(request))) {
     return NextResponse.json<ApiError>(
       { error: { code: 'UNAUTHORIZED', message: 'Admin authentication required.' } },
       { status: 401 },
@@ -47,7 +44,7 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
 // Body: { studio_id: string, service_ids: string[] }
 // Replaces all assignments for that studio
 export async function PUT(request: NextRequest): Promise<NextResponse> {
-  if (!requireAdminAuth(request)) {
+  if (!(await verifyAdminRequest(request))) {
     return NextResponse.json<ApiError>(
       { error: { code: 'UNAUTHORIZED', message: 'Admin authentication required.' } },
       { status: 401 },

@@ -13,10 +13,9 @@ interface StudiosTabProps {
   apiFetch: (path: string, options?: RequestInit) => Promise<Response>
   onUnauth: () => void
   onStudiosChanged: () => void
-  secret: string | null
-}
+  }
 
-export function StudiosTab({ apiFetch, onUnauth, onStudiosChanged, secret }: StudiosTabProps) {
+export function StudiosTab({ apiFetch, onUnauth, onStudiosChanged }: StudiosTabProps) {
   const t = useTranslations('admin.studios_panel')
   const tCommon = useTranslations('common')
 
@@ -169,7 +168,7 @@ export function StudiosTab({ apiFetch, onUnauth, onStudiosChanged, secret }: Stu
       // Use raw fetch — apiFetch forces Content-Type: application/json which breaks multipart
       const res = await fetch(`/api/admin/studios/${studioId}/image`, {
         method: 'PUT',
-        headers: { 'X-Admin-Secret': secret ?? '' },
+        headers: {  },
         body: form,
       })
       const data = await res.json() as { image_url?: string; error?: { message?: string } }
