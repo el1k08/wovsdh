@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useCallback } from 'react'
 import { useTranslations } from 'next-intl'
-import { Trash2, Send, MessageCircle } from 'lucide-react'
+import { Trash2, Send, MessageCircle, FlaskConical } from 'lucide-react'
 import type { InlineMessage } from './types'
 
 interface TelegramUser {
@@ -28,6 +28,7 @@ export function TelegramTab({ apiFetch, onUnauth }: TelegramTabProps) {
   const [newName, setNewName] = useState('')
   const [newChatId, setNewChatId] = useState('')
   const [adding, setAdding] = useState(false)
+  const [testingNew, setTestingNew] = useState(false)
   const [testingId, setTestingId] = useState<string | null>(null)
 
   const showMsg = (m: InlineMessage) => {
@@ -95,6 +96,27 @@ export function TelegramTab({ apiFetch, onUnauth }: TelegramTabProps) {
       )
     } catch {
       showMsg({ type: 'error', text: t('error_toggle') })
+    }
+  }
+
+  async function handleTestNew() {
+    const trimmedName = newName.trim()
+    const chatIdNum = Number(newChatId.trim())
+    if (!trimmedName || !chatIdNum) return
+
+    setTestingNew(true)
+    try {
+      const res = await apiFetch('/api/admin/telegram/test', {
+        method: 'POST',
+        body: JSON.stringify({ name: trimmedName, chat_id: chatIdNum }),
+      })
+      if (res.status === 401) { onUnauth(); return }
+      if (!res.ok) { showMsg({ type: 'error', text: t('error_test') }); return }
+      showMsg({ type: 'success', text: t('success_test', { name: trimmedName }) })
+    } catch {
+      showMsg({ type: 'error', text: t('error_test') })
+    } finally {
+      setTestingNew(false)
     }
   }
 
@@ -170,6 +192,15 @@ export function TelegramTab({ apiFetch, onUnauth }: TelegramTabProps) {
           required
           min={1}
         />
+        <button
+          type="button"
+          onClick={handleTestNew}
+          disabled={testingNew || !newName.trim() || !newChatId.trim()}
+          className="flex items-center gap-2 px-4 py-2 border border-blue-300 text-blue-600 rounded-lg text-sm font-medium hover:bg-blue-50 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+        >
+          <FlaskConical size={14} />
+          {testingNew ? t('adding') : t('test_btn')}
+        </button>
         <button
           type="submit"
           disabled={adding || !newName.trim() || !newChatId.trim()}
