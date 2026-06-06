@@ -4,7 +4,7 @@ import createNextIntlPlugin from 'next-intl/plugin'
 const withNextIntl = createNextIntlPlugin('./i18n/request.ts')
 
 const nextConfig: NextConfig = {
-  serverExternalPackages: ['pg', 'better-auth', '@better-auth/kysely-adapter', 'kysely'],
+  serverExternalPackages: ['pg', '@better-auth/kysely-adapter', 'kysely'],
   images: {
     remotePatterns: [
       {
