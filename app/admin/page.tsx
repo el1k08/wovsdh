@@ -3,6 +3,7 @@
 import { useState, useEffect, useCallback, useRef } from 'react'
 import { useTranslations } from 'next-intl'
 import { Building2, Settings, Users } from 'lucide-react'
+import { createClient } from '@supabase/supabase-js'
 import type { Studio, AdminBookingDTO } from '@/lib/types'
 import {
   AuthGate,
@@ -14,6 +15,7 @@ import {
   StudioServicesAssignmentTab,
   StudiosTab,
   TelegramTab,
+  UsersTab,
 } from '@/components/admin'
 import type { AdminTab, SettingsSubTab } from '@/components/admin/types'
 import { formatLocalTime, formatLocalDate } from '@/components/admin/utils'
@@ -22,7 +24,7 @@ export default function AdminPage() {
   const t = useTranslations('admin')
   const tCommon = useTranslations('common')
 
-  const [secret, setSecret] = useState<string | null>(null)
+  const [token, setToken] = useState<string | null>(null)
   const [studio, setStudio] = useState<string>('rishon')
   const [studios, setStudios] = useState<Studio[]>([])
   const [activeTab, setActiveTab] = useState<AdminTab>('bookings')
@@ -30,10 +32,19 @@ export default function AdminPage() {
   const [topSection, setTopSection] = useState<'studios' | 'settings' | 'clients'>('studios')
   const [editingBooking, setEditingBooking] = useState<AdminBookingDTO | null>(null)
 
-  // Bootstrap secret from localStorage on mount
+  // Restore Supabase session on mount and listen for token refresh
   useEffect(() => {
-    const stored = localStorage.getItem('admin_secret')
-    if (stored) setSecret(stored)
+    const supabase = createClient(
+      process.env.NEXT_PUBLIC_SUPABASE_URL!,
+      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+    )
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      if (session) setToken(session.access_token)
+    })
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+      setToken(session?.access_token ?? null)
+    })
+    return () => subscription.unsubscribe()
   }, [])
 
   // Sync URL ↔ nav state: read on first run, write on every subsequent change
@@ -47,7 +58,7 @@ export default function AdminPage() {
       const tab = p.get('tab')
       if (tab === 'bookings' || tab === 'schedule' || tab === 'services') setActiveTab(tab as AdminTab)
       const subtab = p.get('subtab')
-      if (subtab === 'studios' || subtab === 'services' || subtab === 'telegram') setSettingsSubTab(subtab as SettingsSubTab)
+      if (subtab === 'studios' || subtab === 'services' || subtab === 'telegram' || subtab === 'users') setSettingsSubTab(subtab as SettingsSubTab)
       const studioParam = p.get('studio')
       if (studioParam) setStudio(studioParam)
       return
@@ -66,17 +77,21 @@ export default function AdminPage() {
         ...options,
         headers: {
           'Content-Type': 'application/json',
-          'X-Admin-Secret': secret ?? '',
+          'Authorization': `Bearer ${token ?? ''}`,
           ...(options.headers ?? {}),
         },
       })
     },
-    [secret],
+    [token],
   )
 
   function handleUnauth() {
-    localStorage.removeItem('admin_secret')
-    setSecret(null)
+    const supabase = createClient(
+      process.env.NEXT_PUBLIC_SUPABASE_URL!,
+      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+    )
+    void supabase.auth.signOut()
+    setToken(null)
   }
 
   const loadStudios = useCallback(async () => {
@@ -91,13 +106,13 @@ export default function AdminPage() {
   }, [apiFetch])
 
   useEffect(() => {
-    if (secret) {
+    if (token) {
       loadStudios()
     }
-  }, [secret, loadStudios])
+  }, [token, loadStudios])
 
-  if (!secret) {
-    return <AuthGate onAuth={setSecret} />
+  if (!token) {
+    return <AuthGate onAuth={setToken} />
   }
 
   const TABS: { key: AdminTab; label: string }[] = [
@@ -116,10 +131,7 @@ export default function AdminPage() {
           </h1>
           <div className="flex items-center gap-4 self-start sm:self-auto">
             <button
-              onClick={() => {
-                localStorage.removeItem('admin_secret')
-                setSecret(null)
-              }}
+              onClick={handleUnauth}
               className="text-sm text-gray-500 underline"
             >
               {t('logout_btn')}
@@ -172,6 +184,7 @@ export default function AdminPage() {
                 { key: 'studios', label: t('tabs.studios') },
                 { key: 'services', label: t('tabs.services') },
                 { key: 'telegram', label: t('tabs.telegram') },
+                { key: 'users', label: t('tabs.users') },
               ] as { key: SettingsSubTab; label: string }[]).map((sub) => (
                 <button
                   key={sub.key}
@@ -189,7 +202,7 @@ export default function AdminPage() {
 
             {settingsSubTab === 'studios' && (
               <section className="bg-white border border-[var(--color-blush)] rounded-xl p-6">
-                <StudiosTab apiFetch={apiFetch} onUnauth={handleUnauth} onStudiosChanged={loadStudios} secret={secret} />
+                <StudiosTab apiFetch={apiFetch} onUnauth={handleUnauth} onStudiosChanged={loadStudios} token={token} />
               </section>
             )}
 
@@ -202,6 +215,12 @@ export default function AdminPage() {
             {settingsSubTab === 'telegram' && (
               <section className="bg-white border border-[var(--color-blush)] rounded-xl p-6">
                 <TelegramTab apiFetch={apiFetch} onUnauth={handleUnauth} />
+              </section>
+            )}
+
+            {settingsSubTab === 'users' && (
+              <section className="bg-white border border-[var(--color-blush)] rounded-xl p-6">
+                <UsersTab apiFetch={apiFetch} onUnauth={handleUnauth} />
               </section>
             )}
           </div>
@@ -256,7 +275,7 @@ export default function AdminPage() {
             {activeTab === 'bookings' && (
               <BookingsPanel
                 studio={studio}
-                secret={secret}
+                token={token}
                 apiFetch={apiFetch}
                 onUnauth={handleUnauth}
                 onEditBooking={setEditingBooking}
@@ -265,7 +284,7 @@ export default function AdminPage() {
 
             {activeTab === 'schedule' && (
               <section className="bg-white border border-[var(--color-blush)] rounded-xl p-6">
-                <ScheduleTab studio={studio} apiFetch={apiFetch} onUnauth={handleUnauth} secret={secret} />
+                <ScheduleTab studio={studio} apiFetch={apiFetch} onUnauth={handleUnauth} token={token} />
               </section>
             )}
 

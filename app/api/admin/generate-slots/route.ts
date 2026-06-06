@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
+import { verifyAdminRequest } from '@/lib/admin-auth'
 import { supabaseAdmin } from '@/lib/supabase'
 import { isNonEmptyString, studioExists } from '@/lib/validation'
 import { SlotStatus } from '@/lib/types'
@@ -8,10 +9,6 @@ const LOG_PREFIX = '[api/admin/generate-slots]'
 
 const DATE_RE = /^\d{4}-\d{2}-\d{2}$/
 const TZ = 'Asia/Jerusalem'
-
-function requireAdminAuth(request: NextRequest): boolean {
-  return request.headers.get('X-Admin-Secret') === process.env.ADMIN_SECRET_KEY
-}
 
 function isValidDateParam(str: string): boolean {
   if (!DATE_RE.test(str)) return false
@@ -41,7 +38,7 @@ function padTwo(n: number): string {
 
 // POST /api/admin/generate-slots
 export async function POST(request: NextRequest): Promise<NextResponse> {
-  if (!requireAdminAuth(request)) {
+  if (!(await verifyAdminRequest(request))) {
     return NextResponse.json<ApiError>(
       { error: { code: 'UNAUTHORIZED', message: 'Invalid or missing X-Admin-Secret header.' } },
       { status: 401 },

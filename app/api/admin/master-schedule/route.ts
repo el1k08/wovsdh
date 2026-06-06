@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
+import { verifyAdminRequest } from '@/lib/admin-auth'
 import { supabaseAdmin } from '@/lib/supabase'
 import { isNonEmptyString, studioExists } from '@/lib/validation'
 import type {
@@ -12,10 +13,6 @@ const LOG_PREFIX = '[api/admin/master-schedule]'
 
 const TIME_RE = /^\d{2}:\d{2}$/
 
-function requireAdminAuth(request: NextRequest): boolean {
-  return request.headers.get('X-Admin-Secret') === process.env.ADMIN_SECRET_KEY
-}
-
 function isValidTimeParam(str: string): boolean {
   if (!TIME_RE.test(str)) return false
   const [h, m] = str.split(':').map(Number)
@@ -24,7 +21,7 @@ function isValidTimeParam(str: string): boolean {
 
 // GET /api/admin/master-schedule?studio_id=rishon
 export async function GET(request: NextRequest): Promise<NextResponse> {
-  if (!requireAdminAuth(request)) {
+  if (!(await verifyAdminRequest(request))) {
     return NextResponse.json<ApiError>(
       { error: { code: 'UNAUTHORIZED', message: 'Invalid or missing X-Admin-Secret header.' } },
       { status: 401 },
@@ -66,7 +63,7 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
 
 // PUT /api/admin/master-schedule
 export async function PUT(request: NextRequest): Promise<NextResponse> {
-  if (!requireAdminAuth(request)) {
+  if (!(await verifyAdminRequest(request))) {
     return NextResponse.json<ApiError>(
       { error: { code: 'UNAUTHORIZED', message: 'Invalid or missing X-Admin-Secret header.' } },
       { status: 401 },

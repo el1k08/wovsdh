@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
+import { verifyAdminRequest } from '@/lib/admin-auth'
 import { supabaseAdmin } from '@/lib/supabase'
 import { isValidUUID } from '@/lib/validation'
 import type { ApiError, AdminBookingDTO } from '@/lib/types'
@@ -7,16 +8,12 @@ const LOG_PREFIX = '[api/admin/bookings/[id]]'
 
 const PG_UNIQUE_VIOLATION = '23505'
 
-function requireAdminAuth(request: NextRequest): boolean {
-  return request.headers.get('X-Admin-Secret') === process.env.ADMIN_SECRET_KEY
-}
-
 // GET /api/admin/bookings/[id]
 export async function GET(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> },
 ): Promise<NextResponse> {
-  if (!requireAdminAuth(request)) {
+  if (!(await verifyAdminRequest(request))) {
     return NextResponse.json<ApiError>(
       { error: { code: 'UNAUTHORIZED', message: 'Invalid or missing X-Admin-Secret header.' } },
       { status: 401 },
@@ -123,7 +120,7 @@ export async function PUT(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> },
 ): Promise<NextResponse> {
-  if (!requireAdminAuth(request)) {
+  if (!(await verifyAdminRequest(request))) {
     return NextResponse.json<ApiError>(
       { error: { code: 'UNAUTHORIZED', message: 'Invalid or missing X-Admin-Secret header.' } },
       { status: 401 },

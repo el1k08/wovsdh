@@ -202,7 +202,10 @@
       "heading": "כניסה לפאנל הניהול",
       "password_placeholder": "סיסמת מנהל",
       "error_empty": "אנא הזינו סיסמה",
-      "submit": "כניסה"
+      "submit": "כניסה",
+      "email_placeholder": "אימייל",
+      "error_invalid": "אימייל או סיסמה שגויים",
+      "loading": "מתחבר..."
     },
     "tabs": {
       "studios": "סטודיות",
@@ -211,7 +214,8 @@
       "bookings": "תורים",
       "schedule": "לוח זמנים",
       "services": "שירותים",
-      "telegram": "טלגרם"
+      "telegram": "טלגרם",
+      "users": "משתמשים"
     },
     "slot_status": {
       "available": "פנוי",

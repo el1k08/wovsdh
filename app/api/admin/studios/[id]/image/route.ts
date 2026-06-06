@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
+import { verifyAdminRequest } from '@/lib/admin-auth'
 import { put, del } from '@vercel/blob'
 import { supabaseAdmin } from '@/lib/supabase'
 import type { ApiError } from '@/lib/types'
@@ -6,16 +7,12 @@ import type { ApiError } from '@/lib/types'
 const ALLOWED_TYPES = ['image/jpeg', 'image/png', 'image/webp']
 const MAX_BYTES = 2 * 1024 * 1024
 
-function requireAdminAuth(request: NextRequest): boolean {
-  return request.headers.get('X-Admin-Secret') === process.env.ADMIN_SECRET_KEY
-}
-
 // PUT /api/admin/studios/[id]/image — upload / replace photo
 export async function PUT(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> },
 ) {
-  if (!requireAdminAuth(request)) {
+  if (!(await verifyAdminRequest(request))) {
     return NextResponse.json<ApiError>(
       { error: { code: 'UNAUTHORIZED', message: 'Admin authentication required.' } },
       { status: 401 },
@@ -105,7 +102,7 @@ export async function DELETE(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> },
 ) {
-  if (!requireAdminAuth(request)) {
+  if (!(await verifyAdminRequest(request))) {
     return NextResponse.json<ApiError>(
       { error: { code: 'UNAUTHORIZED', message: 'Admin authentication required.' } },
       { status: 401 },

@@ -1,16 +1,13 @@
 import { NextRequest, NextResponse } from 'next/server'
+import { verifyAdminRequest } from '@/lib/admin-auth'
 import { sendMessage } from '@/lib/telegram'
 import type { ApiError } from '@/lib/types'
 
 const LOG_PREFIX = '[api/admin/telegram/test]'
 
-function requireAdminAuth(request: NextRequest): boolean {
-  return request.headers.get('X-Admin-Secret') === process.env.ADMIN_SECRET_KEY
-}
-
 // POST /api/admin/telegram/test — send test message to a chat_id without saving
 export async function POST(request: NextRequest): Promise<NextResponse> {
-  if (!requireAdminAuth(request)) {
+  if (!(await verifyAdminRequest(request))) {
     return NextResponse.json<ApiError>(
       { error: { code: 'UNAUTHORIZED', message: 'Invalid or missing X-Admin-Secret header.' } },
       { status: 401 },

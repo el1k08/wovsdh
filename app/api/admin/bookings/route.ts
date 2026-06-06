@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
+import { verifyAdminRequest } from '@/lib/admin-auth'
 import { supabaseAdmin } from '@/lib/supabase'
 import { isNonEmptyString, studioExists } from '@/lib/validation'
 import type { ApiError, AdminBookingDTO } from '@/lib/types'
@@ -6,10 +7,6 @@ import type { ApiError, AdminBookingDTO } from '@/lib/types'
 const LOG_PREFIX = '[api/admin/bookings]'
 const DATE_RE = /^\d{4}-\d{2}-\d{2}$/
 const TZ = 'Asia/Jerusalem'
-
-function requireAdminAuth(request: NextRequest): boolean {
-  return request.headers.get('X-Admin-Secret') === process.env.ADMIN_SECRET_KEY
-}
 
 function isValidDateParam(str: string): boolean {
   if (!DATE_RE.test(str)) return false
@@ -92,7 +89,7 @@ function rawToDTO(raw: RawBooking): AdminBookingDTO {
 
 // GET /api/admin/bookings?studio_id=&date_from=&date_to=
 export async function GET(request: NextRequest): Promise<NextResponse> {
-  if (!requireAdminAuth(request)) {
+  if (!(await verifyAdminRequest(request))) {
     return NextResponse.json<ApiError>(
       { error: { code: 'UNAUTHORIZED', message: 'Invalid or missing X-Admin-Secret header.' } },
       { status: 401 },

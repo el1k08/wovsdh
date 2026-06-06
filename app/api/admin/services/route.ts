@@ -1,17 +1,14 @@
 import { NextRequest, NextResponse } from 'next/server'
+import { verifyAdminRequest } from '@/lib/admin-auth'
 import { supabaseAdmin } from '@/lib/supabase'
 import { isNonEmptyString } from '@/lib/validation'
 import type { ApiError, GetServicesResponse, ServiceDTO, ServiceTranslations, CreateServiceRequest } from '@/lib/types'
 
 const LOG_PREFIX = '[api/admin/services]'
 
-function requireAdminAuth(request: NextRequest): boolean {
-  return request.headers.get('X-Admin-Secret') === process.env.ADMIN_SECRET_KEY
-}
-
 // GET /api/admin/services — all services including inactive
 export async function GET(request: NextRequest): Promise<NextResponse> {
-  if (!requireAdminAuth(request)) {
+  if (!(await verifyAdminRequest(request))) {
     return NextResponse.json<ApiError>(
       { error: { code: 'UNAUTHORIZED', message: 'Invalid or missing X-Admin-Secret header.' } },
       { status: 401 },
@@ -48,7 +45,7 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
 
 // POST /api/admin/services — create a new service
 export async function POST(request: NextRequest): Promise<NextResponse> {
-  if (!requireAdminAuth(request)) {
+  if (!(await verifyAdminRequest(request))) {
     return NextResponse.json<ApiError>(
       { error: { code: 'UNAUTHORIZED', message: 'Invalid or missing X-Admin-Secret header.' } },
       { status: 401 },

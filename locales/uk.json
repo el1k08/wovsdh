@@ -202,7 +202,10 @@
       "heading": "Вхід до панелі управління",
       "password_placeholder": "Пароль адміністратора",
       "error_empty": "Введіть пароль",
-      "submit": "Увійти"
+      "submit": "Увійти",
+      "email_placeholder": "Email",
+      "error_invalid": "Невірний email або пароль",
+      "loading": "Вхід..."
     },
     "tabs": {
       "studios": "Студії",
@@ -211,7 +214,8 @@
       "bookings": "Записи",
       "schedule": "Розклад",
       "services": "Послуги",
-      "telegram": "Telegram"
+      "telegram": "Telegram",
+      "users": "Користувачі"
     },
     "slot_status": {
       "available": "Вільний",
