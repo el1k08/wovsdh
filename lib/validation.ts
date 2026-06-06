@@ -68,12 +68,20 @@ export function isValidStudioSlug(str: string): boolean {
   return STUDIO_SLUG_RE.test(str)
 }
 
-/** Returns true when a studio with the given ID exists in the database. */
+const _studioCache = new Map<string, { result: boolean; expiresAt: number }>()
+
+/** Returns true when a studio with the given ID exists in the database. Results cached for 60s. */
 export async function studioExists(id: string): Promise<boolean> {
+  const cached = _studioCache.get(id)
+  if (cached && Date.now() < cached.expiresAt) return cached.result
+
   const { data } = await supabaseAdmin
     .from('studios')
     .select('id')
     .eq('id', id)
     .maybeSingle()
-  return data !== null
+
+  const result = data !== null
+  _studioCache.set(id, { result, expiresAt: Date.now() + 60_000 })
+  return result
 }

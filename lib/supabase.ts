@@ -1,6 +1,11 @@
 import { createClient, type SupabaseClient } from '@supabase/supabase-js'
 
+let _supabase: SupabaseClient | null = null
+let _supabaseAdmin: SupabaseClient | null = null
+
 function getSupabaseClient(): SupabaseClient {
+  if (_supabase) return _supabase
+
   const url = process.env.NEXT_PUBLIC_SUPABASE_URL
   const anonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
 
@@ -10,10 +15,13 @@ function getSupabaseClient(): SupabaseClient {
     )
   }
 
-  return createClient(url, anonKey)
+  _supabase = createClient(url, anonKey)
+  return _supabase
 }
 
 function getSupabaseAdminClient(): SupabaseClient {
+  if (_supabaseAdmin) return _supabaseAdmin
+
   const url = process.env.NEXT_PUBLIC_SUPABASE_URL
   const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY
 
@@ -23,9 +31,10 @@ function getSupabaseAdminClient(): SupabaseClient {
     )
   }
 
-  return createClient(url, serviceKey, {
+  _supabaseAdmin = createClient(url, serviceKey, {
     auth: { autoRefreshToken: false, persistSession: false },
   })
+  return _supabaseAdmin
 }
 
 // Public client — used in client components (anon RLS only)

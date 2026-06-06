@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, useRef } from 'react'
 import { useTranslations } from 'next-intl'
 import { Building2, Settings, Users } from 'lucide-react'
 import type { Studio, AdminBookingDTO } from '@/lib/types'
@@ -35,6 +35,30 @@ export default function AdminPage() {
     const stored = localStorage.getItem('admin_secret')
     if (stored) setSecret(stored)
   }, [])
+
+  // Sync URL ↔ nav state: read on first run, write on every subsequent change
+  const hasReadURL = useRef(false)
+  useEffect(() => {
+    if (!hasReadURL.current) {
+      hasReadURL.current = true
+      const p = new URLSearchParams(window.location.search)
+      const sec = p.get('section')
+      if (sec === 'studios' || sec === 'settings' || sec === 'clients') setTopSection(sec)
+      const tab = p.get('tab')
+      if (tab === 'bookings' || tab === 'schedule' || tab === 'services') setActiveTab(tab as AdminTab)
+      const subtab = p.get('subtab')
+      if (subtab === 'studios' || subtab === 'services' || subtab === 'telegram') setSettingsSubTab(subtab as SettingsSubTab)
+      const studioParam = p.get('studio')
+      if (studioParam) setStudio(studioParam)
+      return
+    }
+    const p = new URLSearchParams()
+    p.set('section', topSection)
+    p.set('tab', activeTab)
+    p.set('subtab', settingsSubTab)
+    if (studio) p.set('studio', studio)
+    window.history.replaceState(null, '', `/admin?${p.toString()}`)
+  }, [topSection, activeTab, settingsSubTab, studio])
 
   const apiFetch = useCallback(
     async (path: string, options: RequestInit = {}): Promise<Response> => {

@@ -1,10 +1,8 @@
-'use client'
-
-import { useTranslations } from 'next-intl'
+import { getTranslations } from 'next-intl/server'
 import BookingForm from '@/components/booking/BookingForm'
 
-export default function BookingSection() {
-  const t = useTranslations('booking')
+export default async function BookingSection() {
+  const t = await getTranslations('booking')
 
   return (
     <section

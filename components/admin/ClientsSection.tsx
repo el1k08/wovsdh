@@ -47,13 +47,13 @@ export function ClientsSection({ apiFetch, onUnauth, onEditBooking, hideBookings
 
   const INPUT_CLS = 'border border-gray-300 rounded-lg px-3 py-2 text-sm text-[var(--color-charcoal)] focus:outline-none focus:border-[var(--color-rose)]'
 
-  const loadClients = useCallback(async (searchTerm: string) => {
+  const loadClients = useCallback(async (searchTerm: string, signal?: AbortSignal) => {
     setLoading(true)
     setError(null)
     try {
       const params = new URLSearchParams({ limit: '50', page: '1' })
       if (searchTerm) params.set('search', searchTerm)
-      const res = await apiFetch(`/api/admin/clients?${params.toString()}`)
+      const res = await apiFetch(`/api/admin/clients?${params.toString()}`, { signal })
       if (!res.ok) {
         const body = await res.json() as { error?: { message?: string } }
         setError(body.error?.message ?? t('error_load'))
@@ -62,7 +62,8 @@ export function ClientsSection({ apiFetch, onUnauth, onEditBooking, hideBookings
       const data = await res.json() as { clients: AdminClientDTO[]; total: number }
       setClients(data.clients ?? [])
       setTotal(data.total ?? 0)
-    } catch {
+    } catch (err) {
+      if (err instanceof Error && err.name === 'AbortError') return
       setError(t('error_network_load'))
     } finally {
       setLoading(false)
@@ -70,7 +71,9 @@ export function ClientsSection({ apiFetch, onUnauth, onEditBooking, hideBookings
   }, [apiFetch, t])
 
   useEffect(() => {
-    void loadClients(search)
+    const controller = new AbortController()
+    void loadClients(search, controller.signal)
+    return () => controller.abort()
   }, [loadClients, search])
 
   function handleSearchChange(e: React.ChangeEvent<HTMLInputElement>) {
