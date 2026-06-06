@@ -75,7 +75,7 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
   }
 
   if (!data) {
-    return NextResponse.json<ClientLookupResponse>({ found: false }, { status: 404 })
+    return NextResponse.json<ClientLookupResponse>({ found: false })
   }
 
   return NextResponse.json<ClientLookupResponse>(

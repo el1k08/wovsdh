@@ -64,11 +64,13 @@ export default function BookingForm() {
   const [studiosLoading, setStudiosLoading] = useState(true)
 
   useEffect(() => {
-    fetch(`/api/studios?language=${locale}`)
+    const controller = new AbortController()
+    fetch(`/api/studios?language=${locale}`, { signal: controller.signal })
       .then(r => r.json())
       .then((data: GetStudiosResponse) => setStudios(data.studios ?? []))
       .catch(() => {/* use empty list */})
       .finally(() => setStudiosLoading(false))
+    return () => controller.abort()
   }, [locale])
 
   // -------------------------------------------------------------------------
@@ -89,7 +91,7 @@ export default function BookingForm() {
     } finally {
       setServicesLoading(false)
     }
-  }, [])
+  }, [locale, t])
 
   // -------------------------------------------------------------------------
   // Fetch available start times
@@ -113,7 +115,7 @@ export default function BookingForm() {
         setSlotsLoading(false)
       }
     },
-    [],
+    [t],
   )
 
   // -------------------------------------------------------------------------

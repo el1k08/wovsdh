@@ -1,6 +1,7 @@
 import { getTranslations, getLocale } from 'next-intl/server'
-import { unstable_noStore as noStore } from 'next/cache'
 import Image from 'next/image'
+
+export const revalidate = 60
 import { MapPin, Clock } from 'lucide-react'
 import { supabaseAdmin } from '@/lib/supabase'
 import { resolveLocale } from '@/lib/locale-utils'
@@ -12,7 +13,6 @@ const IMAGE_SEEDS: Record<string, string> = {
 }
 
 export default async function Studios() {
-  noStore()
   const [t, locale] = await Promise.all([getTranslations('studios'), getLocale()])
   const language = resolveLocale(locale)
 
@@ -52,7 +52,7 @@ export default async function Studios() {
 
         {/* Studios list */}
         <div className="grid grid-cols-1 gap-8 lg:grid-cols-2">
-          {studios.map((studio) => {
+          {studios.map((studio, index) => {
             const imageSeed = IMAGE_SEEDS[studio.id] ?? studio.id
             const imageAlt = t('image_alt', { city: studio.city })
             const tr = (studio.translations as StudioTranslations | null)?.[language]
@@ -74,7 +74,7 @@ export default async function Studios() {
                     fill
                     sizes="(max-width: 1024px) 100vw, 50vw"
                     className="object-cover"
-                    loading="lazy"
+                    priority={index === 0}
                   />
                   {/* City badge */}
                   <div

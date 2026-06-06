@@ -1,12 +1,12 @@
 import { getTranslations, getLocale } from 'next-intl/server'
-import { unstable_noStore as noStore } from 'next/cache'
 import { supabaseAdmin } from '@/lib/supabase'
+
+export const revalidate = 60
 import { resolveLocale } from '@/lib/locale-utils'
 import { ServiceStudioBadge } from './ServiceStudioBadge'
 import type { ServiceTranslations } from '@/lib/types'
 
 export default async function Services() {
-  noStore()
   const [t, locale] = await Promise.all([getTranslations('services'), getLocale()])
   const language = resolveLocale(locale)
 
