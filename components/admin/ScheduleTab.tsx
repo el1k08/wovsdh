@@ -23,7 +23,6 @@ interface ScheduleTabProps {
   studio: string
   apiFetch: (path: string, options?: RequestInit) => Promise<Response>
   onUnauth: () => void
-  token: string | null
 }
 
 export function ScheduleTab({ studio, apiFetch, onUnauth }: ScheduleTabProps) {

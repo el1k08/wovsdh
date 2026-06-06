@@ -2,16 +2,9 @@
 
 import React, { useState } from 'react'
 import { useTranslations } from 'next-intl'
-import { createClient } from '@supabase/supabase-js'
+import { authClient } from '@/lib/auth-client'
 
-function getSupabaseClient() {
-  return createClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
-  )
-}
-
-export function AuthGate({ onAuth }: { onAuth: (token: string) => void }) {
+export function AuthGate({ onAuth }: { onAuth: () => void }) {
   const t = useTranslations('admin.login')
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
@@ -28,20 +21,19 @@ export function AuthGate({ onAuth }: { onAuth: (token: string) => void }) {
     setLoading(true)
     setError('')
 
-    const supabase = getSupabaseClient()
-    const { data, error: authError } = await supabase.auth.signInWithPassword({
+    const { error: authError } = await authClient.signIn.email({
       email: email.trim(),
       password,
     })
 
     setLoading(false)
 
-    if (authError || !data.session) {
+    if (authError) {
       setError(t('error_invalid'))
       return
     }
 
-    onAuth(data.session.access_token)
+    onAuth()
   }
 
   return (

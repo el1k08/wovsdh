@@ -12,15 +12,13 @@ const INPUT_CLS =
 
 interface BookingsPanelProps {
   studio: string
-  token: string | null
-  apiFetch: (path: string, options?: RequestInit) => Promise<Response>
+    apiFetch: (path: string, options?: RequestInit) => Promise<Response>
   onUnauth: () => void
   onEditBooking: (booking: AdminBookingDTO) => void
 }
 
 export function BookingsPanel({
   studio,
-  token,
   apiFetch,
   onUnauth,
   onEditBooking,
@@ -36,7 +34,7 @@ export function BookingsPanel({
   const [cancellingId, setCancellingId] = useState<string | null>(null)
 
   const loadBookings = useCallback(async () => {
-    if (!token) return
+    
     setBookingsLoading(true)
     setBookingsMessage(null)
     try {
@@ -63,14 +61,14 @@ export function BookingsPanel({
       setBookingsLoading(false)
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [token, studio, listDateFrom, listDateTo, apiFetch])
+  }, [studio, listDateFrom, listDateTo, apiFetch])
 
   useEffect(() => {
     loadBookings()
   }, [studio])
 
   async function handleCancelBooking(id: string) {
-    if (!token) return
+    
     setCancellingId(id)
     setBookingsMessage(null)
     try {

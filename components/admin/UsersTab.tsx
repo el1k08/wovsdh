@@ -1,21 +1,17 @@
 'use client'
 
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect } from 'react'
 import { Trash2, UserPlus } from 'lucide-react'
+import { authClient } from '@/lib/auth-client'
 import type { InlineMessage } from './types'
 
 interface AdminUser {
   id: string
   email: string
-  created_at: string
+  createdAt: string
 }
 
-interface UsersTabProps {
-  apiFetch: (path: string, options?: RequestInit) => Promise<Response>
-  onUnauth: () => void
-}
-
-export function UsersTab({ apiFetch, onUnauth }: UsersTabProps) {
+export function UsersTab() {
   const [users, setUsers] = useState<AdminUser[]>([])
   const [loading, setLoading] = useState(true)
   const [msg, setMsg] = useState<InlineMessage | null>(null)
@@ -29,22 +25,24 @@ export function UsersTab({ apiFetch, onUnauth }: UsersTabProps) {
     setTimeout(() => setMsg(null), 4000)
   }
 
-  const loadUsers = useCallback(async () => {
+  async function loadUsers() {
     setLoading(true)
     try {
-      const res = await apiFetch('/api/admin/users')
-      if (res.status === 401) { onUnauth(); return }
-      if (!res.ok) { showMsg({ type: 'error', text: 'Ошибка загрузки пользователей' }); return }
-      const data = await res.json() as { users: AdminUser[] }
-      setUsers(data.users)
+      const { data, error } = await authClient.admin.listUsers({ query: {} })
+      if (error) { showMsg({ type: 'error', text: 'Ошибка загрузки пользователей' }); return }
+      setUsers((data?.users ?? []).map((u) => ({
+        id: u.id,
+        email: u.email,
+        createdAt: String(u.createdAt),
+      })))
     } catch {
       showMsg({ type: 'error', text: 'Ошибка сети' })
     } finally {
       setLoading(false)
     }
-  }, [apiFetch, onUnauth])
+  }
 
-  useEffect(() => { loadUsers() }, [loadUsers])
+  useEffect(() => { void loadUsers() }, [])
 
   async function handleAdd(e: React.FormEvent) {
     e.preventDefault()
@@ -52,21 +50,20 @@ export function UsersTab({ apiFetch, onUnauth }: UsersTabProps) {
     if (!email || !newPassword) return
     setAdding(true)
     try {
-      const res = await apiFetch('/api/admin/users', {
-        method: 'POST',
-        body: JSON.stringify({ email, password: newPassword }),
+      const { error } = await authClient.admin.createUser({
+        email,
+        password: newPassword,
+        name: email.split('@')[0],
+        role: 'admin',
       })
-      if (res.status === 401) { onUnauth(); return }
-      if (!res.ok) {
-        const body = await res.json() as { error?: { message?: string } }
-        showMsg({ type: 'error', text: body.error?.message ?? 'Ошибка добавления' })
+      if (error) {
+        showMsg({ type: 'error', text: error.message ?? 'Ошибка добавления' })
         return
       }
-      const data = await res.json() as { user: AdminUser }
-      setUsers((prev) => [data.user, ...prev])
       setNewEmail('')
       setNewPassword('')
       showMsg({ type: 'success', text: `Пользователь ${email} добавлен` })
+      void loadUsers()
     } catch {
       showMsg({ type: 'error', text: 'Ошибка сети' })
     } finally {
@@ -78,9 +75,8 @@ export function UsersTab({ apiFetch, onUnauth }: UsersTabProps) {
     if (!confirm(`Удалить ${user.email}?`)) return
     setDeletingId(user.id)
     try {
-      const res = await apiFetch(`/api/admin/users/${user.id}`, { method: 'DELETE' })
-      if (res.status === 401) { onUnauth(); return }
-      if (!res.ok) { showMsg({ type: 'error', text: 'Ошибка удаления' }); return }
+      const { error } = await authClient.admin.removeUser({ userId: user.id })
+      if (error) { showMsg({ type: 'error', text: 'Ошибка удаления' }); return }
       setUsers((prev) => prev.filter((u) => u.id !== user.id))
       showMsg({ type: 'success', text: `${user.email} удалён` })
     } catch {
@@ -107,7 +103,6 @@ export function UsersTab({ apiFetch, onUnauth }: UsersTabProps) {
         </p>
       )}
 
-      {/* Add user form */}
       <form onSubmit={handleAdd} className="flex flex-col sm:flex-row gap-3">
         <input
           type="email"
@@ -121,8 +116,8 @@ export function UsersTab({ apiFetch, onUnauth }: UsersTabProps) {
           type="password"
           value={newPassword}
           onChange={(e) => setNewPassword(e.target.value)}
-          placeholder="Пароль"
-          className="w-44 border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-[var(--color-rose)]"
+          placeholder="Пароль (мин. 8 символов)"
+          className="w-52 border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-[var(--color-rose)]"
           required
           minLength={8}
         />
@@ -136,7 +131,6 @@ export function UsersTab({ apiFetch, onUnauth }: UsersTabProps) {
         </button>
       </form>
 
-      {/* Users list */}
       {loading ? (
         <p className="text-sm text-gray-400">Загрузка...</p>
       ) : users.length === 0 ? (
@@ -156,7 +150,7 @@ export function UsersTab({ apiFetch, onUnauth }: UsersTabProps) {
                 <tr key={user.id} className="border-b border-[var(--color-blush)] last:border-0 hover:bg-gray-50/50">
                   <td className="px-4 py-3 font-medium text-[var(--color-charcoal)]">{user.email}</td>
                   <td className="px-4 py-3 text-gray-500">
-                    {new Date(user.created_at).toLocaleDateString('ru-RU')}
+                    {new Date(user.createdAt).toLocaleDateString('ru-RU')}
                   </td>
                   <td className="px-4 py-3 text-right">
                     <button

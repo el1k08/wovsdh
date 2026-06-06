@@ -3,7 +3,7 @@
 import { useState, useEffect, useCallback, useRef } from 'react'
 import { useTranslations } from 'next-intl'
 import { Building2, Settings, Users } from 'lucide-react'
-import { createClient } from '@supabase/supabase-js'
+import { authClient } from '@/lib/auth-client'
 import type { Studio, AdminBookingDTO } from '@/lib/types'
 import {
   AuthGate,
@@ -24,28 +24,14 @@ export default function AdminPage() {
   const t = useTranslations('admin')
   const tCommon = useTranslations('common')
 
-  const [token, setToken] = useState<string | null>(null)
+  const { data: session, isPending: sessionLoading } = authClient.useSession()
+  const isLoggedIn = !!session?.user
   const [studio, setStudio] = useState<string>('rishon')
   const [studios, setStudios] = useState<Studio[]>([])
   const [activeTab, setActiveTab] = useState<AdminTab>('bookings')
   const [settingsSubTab, setSettingsSubTab] = useState<SettingsSubTab>('studios')
   const [topSection, setTopSection] = useState<'studios' | 'settings' | 'clients'>('studios')
   const [editingBooking, setEditingBooking] = useState<AdminBookingDTO | null>(null)
-
-  // Restore Supabase session on mount and listen for token refresh
-  useEffect(() => {
-    const supabase = createClient(
-      process.env.NEXT_PUBLIC_SUPABASE_URL!,
-      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
-    )
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      if (session) setToken(session.access_token)
-    })
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
-      setToken(session?.access_token ?? null)
-    })
-    return () => subscription.unsubscribe()
-  }, [])
 
   // Sync URL ↔ nav state: read on first run, write on every subsequent change
   const hasReadURL = useRef(false)
@@ -71,27 +57,22 @@ export default function AdminPage() {
     window.history.replaceState(null, '', `/admin?${p.toString()}`)
   }, [topSection, activeTab, settingsSubTab, studio])
 
+  // Better Auth sends session via httpOnly cookie — no token needed in headers
   const apiFetch = useCallback(
     async (path: string, options: RequestInit = {}): Promise<Response> => {
       return fetch(path, {
         ...options,
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token ?? ''}`,
           ...(options.headers ?? {}),
         },
       })
     },
-    [token],
+    [],
   )
 
   function handleUnauth() {
-    const supabase = createClient(
-      process.env.NEXT_PUBLIC_SUPABASE_URL!,
-      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
-    )
-    void supabase.auth.signOut()
-    setToken(null)
+    void authClient.signOut()
   }
 
   const loadStudios = useCallback(async () => {
@@ -106,13 +87,21 @@ export default function AdminPage() {
   }, [apiFetch])
 
   useEffect(() => {
-    if (token) {
+    if (isLoggedIn) {
       loadStudios()
     }
-  }, [token, loadStudios])
+  }, [isLoggedIn, loadStudios])
 
-  if (!token) {
-    return <AuthGate onAuth={setToken} />
+  if (sessionLoading) {
+    return (
+      <main className="min-h-screen flex items-center justify-center bg-[var(--color-cream)]">
+        <p className="text-sm text-gray-400">Загрузка...</p>
+      </main>
+    )
+  }
+
+  if (!isLoggedIn) {
+    return <AuthGate onAuth={loadStudios} />
   }
 
   const TABS: { key: AdminTab; label: string }[] = [
@@ -202,7 +191,7 @@ export default function AdminPage() {
 
             {settingsSubTab === 'studios' && (
               <section className="bg-white border border-[var(--color-blush)] rounded-xl p-6">
-                <StudiosTab apiFetch={apiFetch} onUnauth={handleUnauth} onStudiosChanged={loadStudios} token={token} />
+                <StudiosTab apiFetch={apiFetch} onUnauth={handleUnauth} onStudiosChanged={loadStudios} />
               </section>
             )}
 
@@ -220,7 +209,7 @@ export default function AdminPage() {
 
             {settingsSubTab === 'users' && (
               <section className="bg-white border border-[var(--color-blush)] rounded-xl p-6">
-                <UsersTab apiFetch={apiFetch} onUnauth={handleUnauth} />
+                <UsersTab />
               </section>
             )}
           </div>
@@ -275,7 +264,6 @@ export default function AdminPage() {
             {activeTab === 'bookings' && (
               <BookingsPanel
                 studio={studio}
-                token={token}
                 apiFetch={apiFetch}
                 onUnauth={handleUnauth}
                 onEditBooking={setEditingBooking}
@@ -284,7 +272,7 @@ export default function AdminPage() {
 
             {activeTab === 'schedule' && (
               <section className="bg-white border border-[var(--color-blush)] rounded-xl p-6">
-                <ScheduleTab studio={studio} apiFetch={apiFetch} onUnauth={handleUnauth} token={token} />
+                <ScheduleTab studio={studio} apiFetch={apiFetch} onUnauth={handleUnauth} />
               </section>
             )}
 
