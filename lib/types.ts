@@ -435,7 +435,11 @@ export type ApiErrorCode =
   | 'CLIENT_NOT_FOUND'
   | 'PHONE_ALREADY_EXISTS'
   | 'INTERNAL_ERROR'
-  | 'INVALID_BODY';
+  | 'INVALID_BODY'
+  | 'NO_TELEGRAM'
+  | 'NO_CODE'
+  | 'CODE_EXPIRED'
+  | 'INVALID_CODE';
 
 export interface ApiError {
   error: {
