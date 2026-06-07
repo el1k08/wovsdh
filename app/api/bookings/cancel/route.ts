@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { supabaseAdmin } from '@/lib/supabase'
 import { deleteCalendarEvent } from '@/lib/google-calendar'
-import { notifyAllStaffCancellation } from '@/lib/telegram'
+import { notifyStaffCancellation } from '@/lib/notify'
 import { sendWhatsAppMessage } from '@/lib/whatsapp'
 import { BookingStatus } from '@/lib/types'
 import type { ApiError, CancelBookingResponse } from '@/lib/types'
@@ -172,7 +172,7 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
     `📅 ${startFormatted}\n` +
     `🏢 ${studioName}`
 
-  notifyAllStaffCancellation(telegramMessage).catch((err: unknown) =>
+  notifyStaffCancellation(telegramMessage, raw.studio_id).catch((err: unknown) =>
     console.error(`${LOG_PREFIX} Failed to notify staff of cancellation`, {
       booking_id: raw.id,
       error: err,
