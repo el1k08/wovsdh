@@ -182,8 +182,8 @@ export function UserSettingsModal({ onClose, apiFetch }: UserSettingsModalProps)
                   </div>
                   <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 text-xs text-blue-800 space-y-1">
                     <p className="font-medium">Как получить Chat ID:</p>
-                    <p>1. Напишите боту <span className="font-mono">@userinfobot</span></p>
-                    <p>2. Он ответит вашим Chat ID (число)</p>
+                    <p>1. Напишите боту <span className="font-mono">@wovsdh_bot</span></p>
+                    <p>2. Используйте команду для просмотра вашего ID</p>
                     <p>3. Вставьте его ниже и нажмите «Тест»</p>
                   </div>
                   <form onSubmit={saveTelegram} className="space-y-3">
