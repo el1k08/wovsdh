@@ -216,7 +216,8 @@
       "services": "Послуги",
       "telegram": "Telegram",
       "users": "Користувачі",
-      "instagram": "Instagram"
+      "instagram": "Instagram",
+      "twilio": "WhatsApp"
     },
     "slot_status": {
       "available": "Вільний",
@@ -527,6 +528,37 @@
       "success_removed": "Instagram відключено",
       "error_save": "Невірний або прострочений токен",
       "error_remove": "Помилка видалення токена",
+      "error_network": "Мережева помилка"
+    },
+    "twilio_tab": {
+      "heading": "WhatsApp сповіщення",
+      "desc": "Клієнти отримують повідомлення у WhatsApp при створенні та підтвердженні запису.",
+      "loading": "Завантаження...",
+      "credentials_heading": "Налаштування Twilio",
+      "account_sid_label": "Account SID",
+      "auth_token_label": "Auth Token",
+      "from_label": "Номер WhatsApp (From)",
+      "from_hint": "Номер із Twilio Sandbox або бізнес-номер, зареєстрований у WhatsApp Business API",
+      "save_btn": "Зберегти",
+      "saving": "Збереження...",
+      "status_heading": "Статус",
+      "from_saved": "Номер",
+      "enabled": "Увімкнено",
+      "disabled": "Вимкнено",
+      "test_btn": "Тест",
+      "testing": "...",
+      "remove_btn": "Видалити налаштування",
+      "removing": "Видалення...",
+      "remove_confirm": "Видалити налаштування Twilio? Сповіщення у WhatsApp будуть вимкнені.",
+      "info_title": "Коли надсилаються повідомлення:",
+      "info_on_booking": "При створенні запису — клієнт отримує підтвердження отримання заявки",
+      "info_on_confirm": "При підтвердженні майстром — клієнт отримує підтвердження запису",
+      "success_saved": "Налаштування збережено",
+      "success_removed": "Налаштування видалено",
+      "success_test": "Тестове повідомлення надіслано!",
+      "error_save": "Помилка збереження",
+      "error_remove": "Помилка видалення",
+      "error_test": "Не вдалося надіслати тестове повідомлення",
       "error_network": "Мережева помилка"
     }
   }

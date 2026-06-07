@@ -216,7 +216,8 @@
       "services": "שירותים",
       "telegram": "טלגרם",
       "users": "משתמשים",
-      "instagram": "אינסטגרם"
+      "instagram": "אינסטגרם",
+      "twilio": "וואטסאפ"
     },
     "slot_status": {
       "available": "פנוי",
@@ -527,6 +528,37 @@
       "success_removed": "האינסטגרם נותק",
       "error_save": "טוקן לא תקין או פג תוקף",
       "error_remove": "שגיאה בהסרת הטוקן",
+      "error_network": "שגיאת רשת"
+    },
+    "twilio_tab": {
+      "heading": "התראות וואטסאפ",
+      "desc": "לקוחות מקבלים הודעות בוואטסאפ בעת יצירת ואישור תור.",
+      "loading": "טוען...",
+      "credentials_heading": "הגדרות Twilio",
+      "account_sid_label": "Account SID",
+      "auth_token_label": "Auth Token",
+      "from_label": "מספר וואטסאפ (From)",
+      "from_hint": "מספר מ-Twilio Sandbox או מספר עסקי הרשום ב-WhatsApp Business API",
+      "save_btn": "שמור",
+      "saving": "שומר...",
+      "status_heading": "סטטוס",
+      "from_saved": "מספר",
+      "enabled": "פעיל",
+      "disabled": "לא פעיל",
+      "test_btn": "בדיקה",
+      "testing": "...",
+      "remove_btn": "מחק הגדרות",
+      "removing": "מוחק...",
+      "remove_confirm": "למחוק את הגדרות Twilio? התראות וואטסאפ יושבתו.",
+      "info_title": "מתי נשלחות הודעות:",
+      "info_on_booking": "בעת יצירת תור — הלקוח מקבל אישור קבלת הבקשה",
+      "info_on_confirm": "בעת אישור ע\"י המטפל — הלקוח מקבל אישור תור",
+      "success_saved": "ההגדרות נשמרו",
+      "success_removed": "ההגדרות נמחקו",
+      "success_test": "הודעת בדיקה נשלחה!",
+      "error_save": "שגיאה בשמירה",
+      "error_remove": "שגיאה במחיקה",
+      "error_test": "שגיאה בשליחת הודעת בדיקה",
       "error_network": "שגיאת רשת"
     }
   }

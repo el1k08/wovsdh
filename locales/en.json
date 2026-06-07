@@ -216,7 +216,8 @@
       "services": "Services",
       "telegram": "Telegram",
       "users": "Users",
-      "instagram": "Instagram"
+      "instagram": "Instagram",
+      "twilio": "WhatsApp"
     },
     "slot_status": {
       "available": "Available",
@@ -527,6 +528,37 @@
       "success_removed": "Instagram disconnected",
       "error_save": "Invalid or expired token",
       "error_remove": "Failed to remove token",
+      "error_network": "Network error"
+    },
+    "twilio_tab": {
+      "heading": "WhatsApp Notifications",
+      "desc": "Clients receive WhatsApp messages when a booking is created and confirmed.",
+      "loading": "Loading...",
+      "credentials_heading": "Twilio Settings",
+      "account_sid_label": "Account SID",
+      "auth_token_label": "Auth Token",
+      "from_label": "WhatsApp From Number",
+      "from_hint": "Your Twilio Sandbox number or a business number registered with WhatsApp Business API",
+      "save_btn": "Save",
+      "saving": "Saving...",
+      "status_heading": "Status",
+      "from_saved": "Number",
+      "enabled": "Enabled",
+      "disabled": "Disabled",
+      "test_btn": "Test",
+      "testing": "...",
+      "remove_btn": "Remove settings",
+      "removing": "Removing...",
+      "remove_confirm": "Remove Twilio settings? WhatsApp notifications will be disabled.",
+      "info_title": "When messages are sent:",
+      "info_on_booking": "On booking creation — client receives a booking received confirmation",
+      "info_on_confirm": "On master confirmation — client receives a booking confirmed message",
+      "success_saved": "Settings saved",
+      "success_removed": "Settings removed",
+      "success_test": "Test message sent!",
+      "error_save": "Failed to save",
+      "error_remove": "Failed to remove",
+      "error_test": "Failed to send test message",
       "error_network": "Network error"
     }
   }

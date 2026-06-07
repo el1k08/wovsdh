@@ -1,41 +1,81 @@
 /**
  * WhatsApp notification helpers via Twilio.
- * All HTTP calls use native fetch — no third-party SDKs.
+ * Credentials are read from the `settings` DB table first, falling back to env vars.
  * This module is server-side only.
  */
 
+import { supabaseAdmin } from './supabase'
+
 const LOG_PREFIX = '[whatsapp]'
 
-export async function sendWhatsAppMessage(params: {
-  to: string;
-  body: string;
-}): Promise<void> {
-  if (process.env.WHATSAPP_PROVIDER !== 'twilio') {
-    return
+interface TwilioSettings {
+  accountSid: string
+  authToken: string
+  from: string
+}
+
+async function getTwilioSettings(): Promise<TwilioSettings | null> {
+  try {
+    const { data } = await supabaseAdmin
+      .from('settings')
+      .select('key, value')
+      .in('key', ['twilio_account_sid', 'twilio_auth_token', 'twilio_whatsapp_from', 'twilio_enabled'])
+
+    if (data && data.length > 0) {
+      const map = Object.fromEntries((data as Array<{ key: string; value: string }>).map((r) => [r.key, r.value]))
+      if (
+        map.twilio_enabled === 'true' &&
+        map.twilio_account_sid &&
+        map.twilio_auth_token &&
+        map.twilio_whatsapp_from
+      ) {
+        return {
+          accountSid: map.twilio_account_sid,
+          authToken: map.twilio_auth_token,
+          from: map.twilio_whatsapp_from,
+        }
+      }
+    }
+  } catch {
+    // fall through to env vars
   }
 
+  // Fallback: env vars
+  if (process.env.WHATSAPP_PROVIDER !== 'twilio') return null
   const sid = process.env.TWILIO_ACCOUNT_SID
   const token = process.env.TWILIO_AUTH_TOKEN
   const from = process.env.TWILIO_WHATSAPP_FROM
+  if (!sid || !token || !from) return null
+  return { accountSid: sid, authToken: token, from }
+}
 
-  if (!sid || !token || !from) {
-    console.warn(`${LOG_PREFIX} Twilio env vars missing — skipping WhatsApp notification`)
+export async function sendWhatsAppMessage(params: {
+  to: string
+  body: string
+}): Promise<void> {
+  const settings = await getTwilioSettings()
+  if (!settings) {
+    console.warn(`${LOG_PREFIX} Twilio not configured — skipping WhatsApp notification`)
     return
   }
 
+  const { accountSid, authToken, from } = settings
+  const formattedFrom = from.startsWith('whatsapp:') ? from : `whatsapp:${from}`
+  const formattedTo = params.to.startsWith('whatsapp:') ? params.to : `whatsapp:${params.to}`
+
   const formBody = new URLSearchParams({
-    From: from,
-    To: `whatsapp:${params.to}`,
+    From: formattedFrom,
+    To: formattedTo,
     Body: params.body,
   })
 
   try {
     const res = await fetch(
-      `https://api.twilio.com/2010-04-01/Accounts/${sid}/Messages.json`,
+      `https://api.twilio.com/2010-04-01/Accounts/${accountSid}/Messages.json`,
       {
         method: 'POST',
         headers: {
-          'Authorization': 'Basic ' + Buffer.from(`${sid}:${token}`).toString('base64'),
+          Authorization: 'Basic ' + Buffer.from(`${accountSid}:${authToken}`).toString('base64'),
           'Content-Type': 'application/x-www-form-urlencoded',
         },
         body: formBody.toString(),

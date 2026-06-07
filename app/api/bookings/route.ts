@@ -7,6 +7,7 @@ import {
   studioExists,
 } from '@/lib/validation'
 import { notifyStaffNewBooking } from '@/lib/notify'
+import { sendWhatsAppMessage } from '@/lib/whatsapp'
 import type {
   ApiError,
   CreateBookingResponse,
@@ -238,6 +239,16 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
   // Fire-and-forget: Telegram notification must not block the client response
   notifyStaffNewBooking(booking.id).catch((err: unknown) =>
     console.error(`${LOG_PREFIX} Telegram notify failed`, { booking_id: booking.id, err }),
+  )
+
+  // Fire-and-forget: WhatsApp "booking received" notification to client
+  const waMessage =
+    `⏳ Ваш запис прийнято!\n` +
+    `Послуга: ${serviceData.name}\n` +
+    `Очікуйте підтвердження від нашого майстра.`
+
+  sendWhatsAppMessage({ to: validPhone, body: waMessage }).catch((err: unknown) =>
+    console.error(`${LOG_PREFIX} WhatsApp notify failed`, { booking_id: booking.id, err }),
   )
 
   return NextResponse.json<CreateBookingResponse>({ booking: responseBooking }, { status: 201 })

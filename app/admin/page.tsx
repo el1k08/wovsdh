@@ -12,6 +12,7 @@ import {
   BookingsPanel,
   ClientsSection,
   InstagramTab,
+  TwilioTab,
   ScheduleTab,
   ServicesTab,
   StudioServicesAssignmentTab,
@@ -62,7 +63,7 @@ export default function AdminPage() {
       const tab = p.get('tab')
       if (tab === 'bookings' || tab === 'schedule' || tab === 'services') setActiveTab(tab as AdminTab)
       const subtab = p.get('subtab')
-      if (subtab === 'studios' || subtab === 'services' || subtab === 'users' || subtab === 'instagram') setSettingsSubTab(subtab as SettingsSubTab)
+      if (subtab === 'studios' || subtab === 'services' || subtab === 'users' || subtab === 'instagram' || subtab === 'twilio') setSettingsSubTab(subtab as SettingsSubTab)
       const studioParam = p.get('studio')
       if (studioParam) setStudio(studioParam)
       return
@@ -161,6 +162,7 @@ export default function AdminPage() {
     { key: 'services', label: t('tabs.services') },
     { key: 'users', label: t('tabs.users') },
     { key: 'instagram', label: t('tabs.instagram') },
+    { key: 'twilio', label: t('tabs.twilio') },
   ]
 
   return (
@@ -263,6 +265,12 @@ export default function AdminPage() {
             {settingsSubTab === 'instagram' && (
               <section className="bg-white border border-[var(--color-blush)] rounded-xl p-6">
                 <InstagramTab apiFetch={apiFetch} />
+              </section>
+            )}
+
+            {settingsSubTab === 'twilio' && (
+              <section className="bg-white border border-[var(--color-blush)] rounded-xl p-6">
+                <TwilioTab apiFetch={apiFetch} />
               </section>
             )}
           </div>
