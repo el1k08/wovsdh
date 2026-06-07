@@ -1,8 +1,17 @@
 'use client'
 
-import { useState, useEffect } from 'react'
-import { X, MessageCircle, Shield, CheckCircle, AlertCircle, FlaskConical } from 'lucide-react'
+import { useState, useEffect, useTransition } from 'react'
+import { X, MessageCircle, Shield, CheckCircle, AlertCircle, FlaskConical, Languages } from 'lucide-react'
+import { useLocale } from 'next-intl'
+import { useRouter } from 'next/navigation'
+import { setLocaleCookie } from '@/app/actions'
 import type { InlineMessage } from './types'
+
+const LOCALES = [
+  { code: 'uk', label: 'Українська', flag: 'UA' },
+  { code: 'he', label: 'עברית', flag: 'HE' },
+  { code: 'en', label: 'English', flag: 'EN' },
+] as const
 
 interface UserProfile {
   id: string
@@ -19,8 +28,11 @@ interface UserSettingsModalProps {
 }
 
 export function UserSettingsModal({ onClose, apiFetch }: UserSettingsModalProps) {
-  const [tab, setTab] = useState<'telegram' | 'security'>('telegram')
+  const [tab, setTab] = useState<'telegram' | 'security' | 'language'>('telegram')
   const [profile, setProfile] = useState<UserProfile | null>(null)
+  const locale = useLocale()
+  const router = useRouter()
+  const [localePending, startLocaleTransition] = useTransition()
   const [loading, setLoading] = useState(true)
   const [msg, setMsg] = useState<InlineMessage | null>(null)
   const [saving, setSaving] = useState(false)
@@ -139,6 +151,7 @@ export function UserSettingsModal({ onClose, apiFetch }: UserSettingsModalProps)
           {[
             { key: 'telegram', label: 'Telegram', icon: MessageCircle },
             { key: 'security', label: 'Безопасность', icon: Shield },
+            { key: 'language', label: 'Язык', icon: Languages },
           ].map(({ key, label, icon: Icon }) => (
             <button
               key={key}
@@ -231,6 +244,45 @@ export function UserSettingsModal({ onClose, apiFetch }: UserSettingsModalProps)
                       Telegram подключён (ID: {profile.telegramChatId})
                     </div>
                   )}
+                </div>
+              )}
+
+              {tab === 'language' && (
+                <div className="space-y-4">
+                  <div>
+                    <h3 className="text-sm font-medium text-[var(--color-charcoal)] mb-1">Язык интерфейса</h3>
+                    <p className="text-xs text-gray-500">
+                      Выбранный язык сохраняется в браузере. Действует на всём сайте.
+                    </p>
+                  </div>
+                  <div className="space-y-2">
+                    {LOCALES.map(({ code, label, flag }) => {
+                      const isActive = locale === code
+                      return (
+                        <button
+                          key={code}
+                          onClick={() => {
+                            if (isActive) return
+                            startLocaleTransition(async () => {
+                              await setLocaleCookie(code)
+                              router.refresh()
+                            })
+                          }}
+                          disabled={localePending || isActive}
+                          className={`w-full flex items-center justify-between px-4 py-3 rounded-xl border-2 transition-colors ${
+                            isActive
+                              ? 'border-[var(--color-rose)] bg-[var(--color-blush)]'
+                              : 'border-gray-200 hover:border-[var(--color-rose)] hover:bg-gray-50'
+                          } disabled:opacity-60`}
+                        >
+                          <span className="text-sm font-medium text-[var(--color-charcoal)]">{label}</span>
+                          <span className={`text-xs font-semibold px-2 py-0.5 rounded ${
+                            isActive ? 'bg-[var(--color-rose)] text-white' : 'bg-gray-100 text-gray-500'
+                          }`}>{flag}</span>
+                        </button>
+                      )
+                    })}
+                  </div>
                 </div>
               )}
 

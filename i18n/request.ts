@@ -8,12 +8,22 @@ function isValidLocale(value: string): value is ValidLocale {
   return (validLocales as readonly string[]).includes(value)
 }
 
+// Maps browser language codes to our supported locales.
+// Russian maps to Ukrainian (close language, no ru locale available).
+// Everything else falls back to Hebrew (primary market).
+const LANG_MAP: Record<string, ValidLocale> = {
+  uk: 'uk',
+  ru: 'uk',
+  en: 'en',
+  he: 'he',
+  iw: 'he', // legacy Hebrew code used by some browsers
+}
+
 function detectFromAcceptLanguage(acceptLang: string): ValidLocale | null {
-  // Parse "he-IL,he;q=0.9,en;q=0.8,uk;q=0.7" → check each tag in order
   const tags = acceptLang.split(',').map((s) => s.split(';')[0]?.trim().toLowerCase()).filter(Boolean)
   for (const tag of tags) {
     const lang = tag.split('-')[0]
-    if (lang && isValidLocale(lang)) return lang
+    if (lang && LANG_MAP[lang]) return LANG_MAP[lang]!
   }
   return null
 }
@@ -22,13 +32,13 @@ export default getRequestConfig(async () => {
   const cookieStore = await cookies()
   const cookieLocale = cookieStore.get('locale')?.value
 
-  let locale: ValidLocale = 'uk'
+  let locale: ValidLocale = 'he'
   if (cookieLocale && isValidLocale(cookieLocale)) {
     locale = cookieLocale
   } else {
     const headersList = await headers()
     const acceptLang = headersList.get('accept-language') ?? ''
-    locale = detectFromAcceptLanguage(acceptLang) ?? 'uk'
+    locale = detectFromAcceptLanguage(acceptLang) ?? 'he'
   }
 
   return {
