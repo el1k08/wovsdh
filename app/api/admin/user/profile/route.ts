@@ -3,6 +3,8 @@ import { getAdminSession } from '@/lib/admin-auth'
 import { auth } from '@/lib/auth'
 import type { ApiError } from '@/lib/types'
 
+const COOKIE_NAME = '2fa_verified'
+
 export async function GET(request: NextRequest) {
   const session = await getAdminSession(request)
   if (!session) {
@@ -19,13 +21,24 @@ export async function GET(request: NextRequest) {
     telegramChatId?: string | null
     twoFactorEnabled?: boolean
   }
+
+  const twoFactorEnabled = user.twoFactorEnabled ?? false
+  let twoFactorPending = false
+
+  if (twoFactorEnabled) {
+    const sessionId = (session as { session?: { id?: string } }).session?.id ?? user.id
+    const cookie = request.cookies.get(COOKIE_NAME)?.value
+    twoFactorPending = cookie !== sessionId
+  }
+
   return NextResponse.json({
     id: user.id,
     email: user.email,
     name: user.name,
     role: user.role ?? 'admin',
     telegramChatId: user.telegramChatId ?? null,
-    twoFactorEnabled: user.twoFactorEnabled ?? false,
+    twoFactorEnabled,
+    twoFactorPending,
   })
 }
 

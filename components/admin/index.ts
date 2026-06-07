@@ -1,4 +1,5 @@
 export { AuthGate } from './AuthGate'
+export { TwoFactorVerify } from './TwoFactorVerify'
 export { UserDropdown } from './UserDropdown'
 export { UserSettingsModal } from './UserSettingsModal'
 export { BookingStatusBadge } from './BookingStatusBadge'

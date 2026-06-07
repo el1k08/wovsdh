@@ -7,6 +7,7 @@ import { authClient } from '@/lib/auth-client'
 import type { Studio, AdminBookingDTO } from '@/lib/types'
 import {
   AuthGate,
+  TwoFactorVerify,
   BookingStatusBadge,
   BookingsPanel,
   ClientsSection,
@@ -47,6 +48,7 @@ export default function AdminPage() {
   const [topSection, setTopSection] = useState<'studios' | 'settings' | 'clients'>('studios')
   const [editingBooking, setEditingBooking] = useState<AdminBookingDTO | null>(null)
   const [showUserSettings, setShowUserSettings] = useState(false)
+  const [twoFactorPending, setTwoFactorPending] = useState<boolean | null>(null)
 
   // Sync URL ↔ nav state
   const hasReadURL = useRef(false)
@@ -115,11 +117,16 @@ export default function AdminPage() {
 
   useEffect(() => {
     if (isLoggedIn) {
+      void apiFetch('/api/admin/user/profile').then(async (res) => {
+        if (!res.ok) return
+        const data = await res.json() as { twoFactorPending?: boolean }
+        setTwoFactorPending(data.twoFactorPending ?? false)
+      })
       loadStudios()
     }
-  }, [isLoggedIn, loadStudios])
+  }, [isLoggedIn, loadStudios, apiFetch])
 
-  if (sessionLoading) {
+  if (sessionLoading || (isLoggedIn && twoFactorPending === null)) {
     return (
       <main className="min-h-screen flex items-center justify-center bg-[var(--color-cream)]">
         <p className="text-sm text-gray-400">Загрузка...</p>
@@ -129,6 +136,16 @@ export default function AdminPage() {
 
   if (!isLoggedIn) {
     return <AuthGate onAuth={loadStudios} />
+  }
+
+  if (twoFactorPending === true) {
+    return (
+      <TwoFactorVerify
+        apiFetch={apiFetch}
+        onVerified={() => setTwoFactorPending(false)}
+        onSignOut={handleUnauth}
+      />
+    )
   }
 
   const TABS: { key: AdminTab; label: string }[] = [
