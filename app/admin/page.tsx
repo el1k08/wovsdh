@@ -14,11 +14,14 @@ import {
   ServicesTab,
   StudioServicesAssignmentTab,
   StudiosTab,
-  TelegramTab,
   UsersTab,
+  UserDropdown,
+  UserSettingsModal,
 } from '@/components/admin'
 import type { AdminTab, SettingsSubTab } from '@/components/admin/types'
 import { formatLocalTime, formatLocalDate } from '@/components/admin/utils'
+
+type UserRole = 'admin' | 'manager' | 'master'
 
 export default function AdminPage() {
   const t = useTranslations('admin')
@@ -26,14 +29,26 @@ export default function AdminPage() {
 
   const { data: session, isPending: sessionLoading } = authClient.useSession()
   const isLoggedIn = !!session?.user
+  const userEmail = session?.user?.email ?? ''
+  const userRole: UserRole = (() => {
+    const r = (session?.user as { role?: string } | undefined)?.role
+    if (r === 'manager') return 'manager'
+    if (r === 'master') return 'master'
+    return 'admin'
+  })()
+
+  const isAdmin = userRole === 'admin'
+  const isManager = userRole === 'admin' || userRole === 'manager'
+
   const [studio, setStudio] = useState<string>('rishon')
   const [studios, setStudios] = useState<Studio[]>([])
   const [activeTab, setActiveTab] = useState<AdminTab>('bookings')
   const [settingsSubTab, setSettingsSubTab] = useState<SettingsSubTab>('studios')
   const [topSection, setTopSection] = useState<'studios' | 'settings' | 'clients'>('studios')
   const [editingBooking, setEditingBooking] = useState<AdminBookingDTO | null>(null)
+  const [showUserSettings, setShowUserSettings] = useState(false)
 
-  // Sync URL ↔ nav state: read on first run, write on every subsequent change
+  // Sync URL ↔ nav state
   const hasReadURL = useRef(false)
   useEffect(() => {
     if (!hasReadURL.current) {
@@ -44,7 +59,7 @@ export default function AdminPage() {
       const tab = p.get('tab')
       if (tab === 'bookings' || tab === 'schedule' || tab === 'services') setActiveTab(tab as AdminTab)
       const subtab = p.get('subtab')
-      if (subtab === 'studios' || subtab === 'services' || subtab === 'telegram' || subtab === 'users') setSettingsSubTab(subtab as SettingsSubTab)
+      if (subtab === 'studios' || subtab === 'services' || subtab === 'users') setSettingsSubTab(subtab as SettingsSubTab)
       const studioParam = p.get('studio')
       if (studioParam) setStudio(studioParam)
       return
@@ -57,7 +72,6 @@ export default function AdminPage() {
     window.history.replaceState(null, '', `/admin?${p.toString()}`)
   }, [topSection, activeTab, settingsSubTab, studio])
 
-  // Better Auth sends session via httpOnly cookie — no token needed in headers
   const apiFetch = useCallback(
     async (path: string, options: RequestInit = {}): Promise<Response> => {
       return fetch(path, {
@@ -79,12 +93,25 @@ export default function AdminPage() {
     const res = await apiFetch('/api/admin/studios')
     if (!res.ok) return
     const data = await res.json() as { studios: Studio[] }
-    setStudios(data.studios)
+    let studioList = data.studios
+
+    // Masters only see their assigned studios
+    if (userRole === 'master' && session?.user?.id) {
+      try {
+        const r = await apiFetch(`/api/admin/users/${session.user.id}/studios`)
+        if (r.ok) {
+          const d = await r.json() as { studios: string[] }
+          studioList = studioList.filter((s) => d.studios.includes(s.id))
+        }
+      } catch { /* ignore */ }
+    }
+
+    setStudios(studioList)
     setStudio((prev) => {
-      if (data.studios.length === 0) return ''
-      return data.studios.find((s) => s.id === prev) ? prev : data.studios[0].id
+      if (studioList.length === 0) return ''
+      return studioList.find((s) => s.id === prev) ? prev : studioList[0]?.id ?? ''
     })
-  }, [apiFetch])
+  }, [apiFetch, userRole, session?.user?.id])
 
   useEffect(() => {
     if (isLoggedIn) {
@@ -110,6 +137,13 @@ export default function AdminPage() {
     { key: 'services', label: t('tabs.services') },
   ]
 
+  // Settings subtabs (no Telegram — moved to user settings)
+  const SETTINGS_SUBTABS: { key: SettingsSubTab; label: string }[] = [
+    { key: 'studios', label: t('tabs.studios') },
+    { key: 'services', label: t('tabs.services') },
+    { key: 'users', label: t('tabs.users') },
+  ]
+
   return (
     <main className="min-h-screen bg-[var(--color-cream)] p-4 md:p-8">
       <div className="max-w-5xl mx-auto">
@@ -119,12 +153,11 @@ export default function AdminPage() {
             {t('page_title')}
           </h1>
           <div className="flex items-center gap-4 self-start sm:self-auto">
-            <button
-              onClick={handleUnauth}
-              className="text-sm text-gray-500 underline"
-            >
-              {t('logout_btn')}
-            </button>
+            <UserDropdown
+              email={userEmail}
+              onOpenSettings={() => setShowUserSettings(true)}
+              onSignOut={handleUnauth}
+            />
           </div>
         </div>
 
@@ -141,40 +174,41 @@ export default function AdminPage() {
             <Building2 size={16} />
             {t('tabs.studios')}
           </button>
-          <button
-            onClick={() => setTopSection('settings')}
-            className={`flex items-center gap-2 px-5 py-2.5 rounded-lg text-sm font-medium transition-colors ${
-              topSection === 'settings'
-                ? 'bg-[var(--color-rose)] text-white shadow-sm'
-                : 'text-[var(--color-charcoal)] hover:bg-gray-50'
-            }`}
-          >
-            <Settings size={16} />
-            {t('tabs.settings')}
-          </button>
-          <button
-            onClick={() => setTopSection('clients')}
-            className={`flex items-center gap-2 px-5 py-2.5 rounded-lg text-sm font-medium transition-colors ${
-              topSection === 'clients'
-                ? 'bg-[var(--color-rose)] text-white shadow-sm'
-                : 'text-[var(--color-charcoal)] hover:bg-gray-50'
-            }`}
-          >
-            <Users size={16} />
-            {t('tabs.clients')}
-          </button>
+
+          {isAdmin && (
+            <button
+              onClick={() => setTopSection('settings')}
+              className={`flex items-center gap-2 px-5 py-2.5 rounded-lg text-sm font-medium transition-colors ${
+                topSection === 'settings'
+                  ? 'bg-[var(--color-rose)] text-white shadow-sm'
+                  : 'text-[var(--color-charcoal)] hover:bg-gray-50'
+              }`}
+            >
+              <Settings size={16} />
+              {t('tabs.settings')}
+            </button>
+          )}
+
+          {isManager && (
+            <button
+              onClick={() => setTopSection('clients')}
+              className={`flex items-center gap-2 px-5 py-2.5 rounded-lg text-sm font-medium transition-colors ${
+                topSection === 'clients'
+                  ? 'bg-[var(--color-rose)] text-white shadow-sm'
+                  : 'text-[var(--color-charcoal)] hover:bg-gray-50'
+              }`}
+            >
+              <Users size={16} />
+              {t('tabs.clients')}
+            </button>
+          )}
         </div>
 
-        {/* Settings panel */}
-        {topSection === 'settings' && (
+        {/* Settings panel — admin only */}
+        {topSection === 'settings' && isAdmin && (
           <div>
             <div className="flex gap-2 mb-6 border-b border-gray-100 pb-1">
-              {([
-                { key: 'studios', label: t('tabs.studios') },
-                { key: 'services', label: t('tabs.services') },
-                { key: 'telegram', label: t('tabs.telegram') },
-                { key: 'users', label: t('tabs.users') },
-              ] as { key: SettingsSubTab; label: string }[]).map((sub) => (
+              {SETTINGS_SUBTABS.map((sub) => (
                 <button
                   key={sub.key}
                   onClick={() => setSettingsSubTab(sub.key)}
@@ -201,22 +235,16 @@ export default function AdminPage() {
               </section>
             )}
 
-            {settingsSubTab === 'telegram' && (
-              <section className="bg-white border border-[var(--color-blush)] rounded-xl p-6">
-                <TelegramTab apiFetch={apiFetch} onUnauth={handleUnauth} />
-              </section>
-            )}
-
             {settingsSubTab === 'users' && (
               <section className="bg-white border border-[var(--color-blush)] rounded-xl p-6">
-                <UsersTab />
+                <UsersTab apiFetch={apiFetch} studios={studios} />
               </section>
             )}
           </div>
         )}
 
-        {/* Clients section */}
-        {topSection === 'clients' && (
+        {/* Clients section — admin + manager */}
+        {topSection === 'clients' && isManager && (
           <ClientsSection
             apiFetch={apiFetch}
             onUnauth={handleUnauth}
@@ -228,7 +256,7 @@ export default function AdminPage() {
         {/* Studio switcher + tabs */}
         {topSection === 'studios' && (
           <>
-            <div className="flex gap-2 mb-6">
+            <div className="flex gap-2 mb-6 flex-wrap">
               {studios.map((s) => (
                 <button
                   key={s.id}
@@ -244,7 +272,6 @@ export default function AdminPage() {
               ))}
             </div>
 
-            {/* Tab bar */}
             <div className="flex gap-1 mb-8 border-b border-gray-200">
               {TABS.map((tab) => (
                 <button
@@ -285,7 +312,7 @@ export default function AdminPage() {
         )}
       </div>
 
-      {/* Edit booking modal — rendered at root level so it works from any section */}
+      {/* Edit booking modal */}
       {editingBooking && (
         <div
           className="fixed inset-0 bg-black/40 flex items-center justify-center z-50"
@@ -342,6 +369,14 @@ export default function AdminPage() {
             </div>
           </div>
         </div>
+      )}
+
+      {/* User settings modal */}
+      {showUserSettings && (
+        <UserSettingsModal
+          onClose={() => setShowUserSettings(false)}
+          apiFetch={apiFetch}
+        />
       )}
     </main>
   )

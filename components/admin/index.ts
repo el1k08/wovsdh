@@ -1,4 +1,6 @@
 export { AuthGate } from './AuthGate'
+export { UserDropdown } from './UserDropdown'
+export { UserSettingsModal } from './UserSettingsModal'
 export { BookingStatusBadge } from './BookingStatusBadge'
 export { BookingsPanel } from './BookingsPanel'
 export { ClientsSection } from './ClientsSection'
