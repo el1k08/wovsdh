@@ -215,7 +215,8 @@
       "schedule": "לוח זמנים",
       "services": "שירותים",
       "telegram": "טלגרם",
-      "users": "משתמשים"
+      "users": "משתמשים",
+      "instagram": "אינסטגרם"
     },
     "slot_status": {
       "available": "פנוי",
@@ -503,6 +504,30 @@
       "test_btn": "שלח בדיקה",
       "error_test": "שגיאה בשליחת הודעת בדיקה",
       "success_test": "הודעת בדיקה נשלחה ל-{name}"
+    },
+    "instagram_tab": {
+      "heading": "אינסטגרם",
+      "desc": "חברו את האינסטגרם שלכם כדי שהגלריה באתר תציג את 9 הפרסומים האחרונים שלכם.",
+      "loading": "טוען...",
+      "connected_title": "אינסטגרם מחובר",
+      "connected_desc": "הטוקן פעיל. הגלריה באתר מציגה את הפרסומים האחרונים שלכם.",
+      "remove_btn": "נתק",
+      "removing": "מסיר...",
+      "remove_confirm": "לנתק את האינסטגרם? הגלריה תחזור לתמונות ברירת מחדל.",
+      "auto_refresh_title": "חידוש אוטומטי של הטוקן",
+      "auto_refresh_desc": "הטוקן מתחדש אוטומטית כל 30 יום — אין צורך לעשות דבר ידנית.",
+      "how_title": "איך לקבל טוקן:",
+      "how_step_1": "היכנסו ל-developers.facebook.com ופתחו את אפליקציית האינסטגרם שלכם",
+      "how_step_2": "עברו ל-Instagram Basic Display API ← User Token Generator",
+      "how_step_3": "צרו טוקן ארוך-טווח והדביקו אותו למטה",
+      "token_placeholder": "הדביקו כאן את הטוקן הארוך-טווח של האינסטגרם...",
+      "save_btn": "שמור וחבר",
+      "saving": "בודק...",
+      "success_connected": "האינסטגרם חובר בהצלחה!",
+      "success_removed": "האינסטגרם נותק",
+      "error_save": "טוקן לא תקין או פג תוקף",
+      "error_remove": "שגיאה בהסרת הטוקן",
+      "error_network": "שגיאת רשת"
     }
   }
 }

@@ -215,7 +215,8 @@
       "schedule": "Schedule",
       "services": "Services",
       "telegram": "Telegram",
-      "users": "Users"
+      "users": "Users",
+      "instagram": "Instagram"
     },
     "slot_status": {
       "available": "Available",
@@ -503,6 +504,30 @@
       "test_btn": "Send test",
       "error_test": "Failed to send test message",
       "success_test": "Test message sent to {name}"
+    },
+    "instagram_tab": {
+      "heading": "Instagram",
+      "desc": "Connect your Instagram account so the gallery section shows your latest 9 posts.",
+      "loading": "Loading...",
+      "connected_title": "Instagram connected",
+      "connected_desc": "Token is active. The gallery is showing your latest posts.",
+      "remove_btn": "Disconnect",
+      "removing": "Removing...",
+      "remove_confirm": "Disconnect Instagram? The gallery will revert to placeholder images.",
+      "auto_refresh_title": "Automatic token refresh",
+      "auto_refresh_desc": "The token refreshes automatically every 30 days — no manual action needed.",
+      "how_title": "How to get a token:",
+      "how_step_1": "Go to developers.facebook.com and open your Instagram app",
+      "how_step_2": "Navigate to Instagram Basic Display API → User Token Generator",
+      "how_step_3": "Generate a long-lived token and paste it below",
+      "token_placeholder": "Paste your long-lived Instagram access token...",
+      "save_btn": "Save & connect",
+      "saving": "Verifying...",
+      "success_connected": "Instagram connected successfully!",
+      "success_removed": "Instagram disconnected",
+      "error_save": "Invalid or expired token",
+      "error_remove": "Failed to remove token",
+      "error_network": "Network error"
     }
   }
 }

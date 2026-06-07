@@ -1,14 +1,35 @@
 import Image from 'next/image'
 import { getTranslations } from 'next-intl/server'
+import { getInstagramToken, getInstagramFeed } from '@/lib/instagram'
+
+async function fetchGalleryImages(t: Awaited<ReturnType<typeof getTranslations>>) {
+  try {
+    const token = await getInstagramToken()
+    if (token) {
+      const media = await getInstagramFeed(token, 9)
+      if (media.length > 0) {
+        return media.map((m, i) => ({
+          id: m.id,
+          src: m.media_url,
+          alt: t('image_alt', { n: i + 1 }),
+          href: m.permalink,
+        }))
+      }
+    }
+  } catch {
+    /* fall through to placeholders */
+  }
+  return Array.from({ length: 9 }, (_, i) => ({
+    id: String(i + 1),
+    src: `https://picsum.photos/seed/nails${i + 10}/400/400`,
+    alt: t('image_alt', { n: i + 1 }),
+    href: null,
+  }))
+}
 
 export default async function Gallery() {
   const t = await getTranslations('gallery')
-
-  const galleryImages = Array.from({ length: 9 }, (_, i) => ({
-    id: i + 1,
-    src: `https://picsum.photos/seed/nails${i + 10}/400/400`,
-    alt: t('image_alt', { n: i + 1 }),
-  }))
+  const galleryImages = await fetchGalleryImages(t)
 
   return (
     <section
@@ -46,17 +67,30 @@ export default async function Gallery() {
         >
           {galleryImages.map((image) => (
             <li key={image.id} className="group relative aspect-square overflow-hidden rounded-xl">
-              <Image
-                src={image.src}
-                alt={image.alt}
-                fill
-                sizes="(max-width: 640px) 50vw, (max-width: 1024px) 33vw, 400px"
-                className="object-cover transition-transform duration-500 group-hover:scale-105"
-                loading="lazy"
-              />
+              {image.href ? (
+                <a href={image.href} target="_blank" rel="noopener noreferrer" className="block w-full h-full">
+                  <Image
+                    src={image.src}
+                    alt={image.alt}
+                    fill
+                    sizes="(max-width: 640px) 50vw, (max-width: 1024px) 33vw, 400px"
+                    className="object-cover transition-transform duration-500 group-hover:scale-105"
+                    loading="lazy"
+                  />
+                </a>
+              ) : (
+                <Image
+                  src={image.src}
+                  alt={image.alt}
+                  fill
+                  sizes="(max-width: 640px) 50vw, (max-width: 1024px) 33vw, 400px"
+                  className="object-cover transition-transform duration-500 group-hover:scale-105"
+                  loading="lazy"
+                />
+              )}
               {/* Hover overlay */}
               <div
-                className="absolute inset-0 opacity-0 transition-opacity duration-300 group-hover:opacity-100"
+                className="absolute inset-0 opacity-0 transition-opacity duration-300 group-hover:opacity-100 pointer-events-none"
                 style={{
                   background:
                     'linear-gradient(to top, rgba(200,150,138,0.6) 0%, transparent 60%)',

@@ -215,7 +215,8 @@
       "schedule": "Розклад",
       "services": "Послуги",
       "telegram": "Telegram",
-      "users": "Користувачі"
+      "users": "Користувачі",
+      "instagram": "Instagram"
     },
     "slot_status": {
       "available": "Вільний",
@@ -503,6 +504,30 @@
       "test_btn": "Надіслати тест",
       "error_test": "Помилка відправки тестового повідомлення",
       "success_test": "Тестове повідомлення надіслано {name}"
+    },
+    "instagram_tab": {
+      "heading": "Instagram",
+      "desc": "Підключіть Instagram, щоб галерея на сайті показувала ваші останні 9 публікацій.",
+      "loading": "Завантаження...",
+      "connected_title": "Instagram підключено",
+      "connected_desc": "Токен активний. Галерея на сайті показує ваші останні публікації.",
+      "remove_btn": "Відключити",
+      "removing": "Видалення...",
+      "remove_confirm": "Відключити Instagram? Галерея повернеться до заглушок.",
+      "auto_refresh_title": "Автоматичне оновлення токена",
+      "auto_refresh_desc": "Токен оновлюється автоматично кожні 30 днів — нічого не потрібно робити вручну.",
+      "how_title": "Як отримати токен:",
+      "how_step_1": "Перейдіть на developers.facebook.com і відкрийте ваш Instagram додаток",
+      "how_step_2": "Перейдіть у Instagram Basic Display API → User Token Generator",
+      "how_step_3": "Згенеруйте довгостроковий токен і вставте його нижче",
+      "token_placeholder": "Вставте довгостроковий токен Instagram...",
+      "save_btn": "Зберегти та підключити",
+      "saving": "Перевірка...",
+      "success_connected": "Instagram успішно підключено!",
+      "success_removed": "Instagram відключено",
+      "error_save": "Невірний або прострочений токен",
+      "error_remove": "Помилка видалення токена",
+      "error_network": "Мережева помилка"
     }
   }
 }

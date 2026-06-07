@@ -12,7 +12,7 @@ export interface AdminServiceDTO extends ServiceDTO {
 
 export type AdminTab = 'bookings' | 'schedule' | 'services'
 
-export type SettingsSubTab = 'studios' | 'services' | 'users'
+export type SettingsSubTab = 'studios' | 'services' | 'users' | 'instagram'
 
 export interface InlineMessage {
   type: 'success' | 'error'

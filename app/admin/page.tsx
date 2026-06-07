@@ -11,6 +11,7 @@ import {
   BookingStatusBadge,
   BookingsPanel,
   ClientsSection,
+  InstagramTab,
   ScheduleTab,
   ServicesTab,
   StudioServicesAssignmentTab,
@@ -61,7 +62,7 @@ export default function AdminPage() {
       const tab = p.get('tab')
       if (tab === 'bookings' || tab === 'schedule' || tab === 'services') setActiveTab(tab as AdminTab)
       const subtab = p.get('subtab')
-      if (subtab === 'studios' || subtab === 'services' || subtab === 'users') setSettingsSubTab(subtab as SettingsSubTab)
+      if (subtab === 'studios' || subtab === 'services' || subtab === 'users' || subtab === 'instagram') setSettingsSubTab(subtab as SettingsSubTab)
       const studioParam = p.get('studio')
       if (studioParam) setStudio(studioParam)
       return
@@ -159,6 +160,7 @@ export default function AdminPage() {
     { key: 'studios', label: t('tabs.studios') },
     { key: 'services', label: t('tabs.services') },
     { key: 'users', label: t('tabs.users') },
+    { key: 'instagram', label: t('tabs.instagram') },
   ]
 
   return (
@@ -255,6 +257,12 @@ export default function AdminPage() {
             {settingsSubTab === 'users' && (
               <section className="bg-white border border-[var(--color-blush)] rounded-xl p-6">
                 <UsersTab apiFetch={apiFetch} studios={studios} />
+              </section>
+            )}
+
+            {settingsSubTab === 'instagram' && (
+              <section className="bg-white border border-[var(--color-blush)] rounded-xl p-6">
+                <InstagramTab apiFetch={apiFetch} />
               </section>
             )}
           </div>
