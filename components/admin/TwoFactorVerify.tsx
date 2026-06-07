@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useRef } from 'react'
 import { Shield, RefreshCw } from 'lucide-react'
+import { useTranslations } from 'next-intl'
 
 interface TwoFactorVerifyProps {
   apiFetch: (path: string, options?: RequestInit) => Promise<Response>
@@ -10,6 +11,7 @@ interface TwoFactorVerifyProps {
 }
 
 export function TwoFactorVerify({ apiFetch, onVerified, onSignOut }: TwoFactorVerifyProps) {
+  const t = useTranslations('admin.two_factor_verify')
   const [code, setCode] = useState('')
   const [sending, setSending] = useState(true)
   const [sent, setSent] = useState(false)
@@ -35,12 +37,12 @@ export function TwoFactorVerify({ apiFetch, onVerified, onSignOut }: TwoFactorVe
       })
       if (!res.ok) {
         const d = await res.json() as { error?: { message?: string } }
-        setError(d.error?.message ?? 'Не удалось отправить код')
+        setError(d.error?.message ?? t('error_send'))
         return
       }
       setSent(true)
     } catch {
-      setError('Ошибка сети')
+      setError(t('error_network'))
     } finally {
       setSending(false)
     }
@@ -58,13 +60,13 @@ export function TwoFactorVerify({ apiFetch, onVerified, onSignOut }: TwoFactorVe
       })
       if (!res.ok) {
         const d = await res.json() as { error?: { message?: string } }
-        setError(d.error?.message ?? 'Неверный код')
+        setError(d.error?.message ?? t('error_code'))
         setCode('')
         return
       }
       onVerified()
     } catch {
-      setError('Ошибка сети')
+      setError(t('error_network'))
     } finally {
       setVerifying(false)
     }
@@ -78,9 +80,9 @@ export function TwoFactorVerify({ apiFetch, onVerified, onSignOut }: TwoFactorVe
             <Shield size={26} className="text-[var(--color-rose)]" />
           </div>
           <div>
-            <h1 className="text-lg font-semibold text-[var(--color-charcoal)]">Двухфакторная аутентификация</h1>
+            <h1 className="text-lg font-semibold text-[var(--color-charcoal)]">{t('heading')}</h1>
             <p className="text-sm text-gray-500 mt-1">
-              {sending ? 'Отправляем код в Telegram...' : 'Код отправлен в Telegram. Введите его ниже.'}
+              {sending ? t('sending') : t('sent')}
             </p>
           </div>
         </div>
@@ -109,7 +111,7 @@ export function TwoFactorVerify({ apiFetch, onVerified, onSignOut }: TwoFactorVe
             disabled={code.length < 6 || verifying || sending}
             className="w-full py-3 bg-[var(--color-rose)] text-white rounded-xl font-medium hover:opacity-90 disabled:opacity-40 transition-opacity"
           >
-            {verifying ? 'Проверка...' : 'Подтвердить'}
+            {verifying ? t('verifying') : t('verify_btn')}
           </button>
         </form>
 
@@ -120,13 +122,13 @@ export function TwoFactorVerify({ apiFetch, onVerified, onSignOut }: TwoFactorVe
             className="flex items-center gap-1.5 text-gray-500 hover:text-[var(--color-charcoal)] disabled:opacity-40 transition-colors"
           >
             <RefreshCw size={13} />
-            Отправить снова
+            {t('resend')}
           </button>
           <button
             onClick={onSignOut}
             className="text-gray-400 hover:text-gray-600 transition-colors"
           >
-            Выйти
+            {t('sign_out')}
           </button>
         </div>
       </div>

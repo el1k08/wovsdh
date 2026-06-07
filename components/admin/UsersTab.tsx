@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useCallback } from 'react'
 import { Trash2, UserPlus, Building2 } from 'lucide-react'
+import { useTranslations } from 'next-intl'
 import { authClient } from '@/lib/auth-client'
 import type { InlineMessage } from './types'
 import type { Studio } from '@/lib/types'
@@ -13,21 +14,7 @@ interface AdminUser {
   name: string
   role: string
   createdAt: string
-  telegramChatId?: string | null
-  twoFactorEnabled?: boolean
   studios?: string[]
-}
-
-const ROLE_LABELS: Record<string, string> = {
-  admin: 'Администратор',
-  manager: 'Менеджер',
-  master: 'Мастер',
-}
-
-const ROLE_COLORS: Record<string, string> = {
-  admin: 'bg-purple-100 text-purple-700',
-  manager: 'bg-blue-100 text-blue-700',
-  master: 'bg-green-100 text-green-700',
 }
 
 interface UsersTabProps {
@@ -36,6 +23,7 @@ interface UsersTabProps {
 }
 
 export function UsersTab({ apiFetch, studios }: UsersTabProps) {
+  const t = useTranslations('admin.users_tab')
   const [users, setUsers] = useState<AdminUser[]>([])
   const [loading, setLoading] = useState(true)
   const [msg, setMsg] = useState<InlineMessage | null>(null)
@@ -49,6 +37,18 @@ export function UsersTab({ apiFetch, studios }: UsersTabProps) {
   const [assigningStudios, setAssigningStudios] = useState<Record<string, string[]>>({})
   const [savingStudios, setSavingStudios] = useState<string | null>(null)
 
+  const ROLE_LABELS: Record<string, string> = {
+    admin: t('role_admin'),
+    manager: t('role_manager'),
+    master: t('role_master'),
+  }
+
+  const ROLE_COLORS: Record<string, string> = {
+    admin: 'bg-purple-100 text-purple-700',
+    manager: 'bg-blue-100 text-blue-700',
+    master: 'bg-green-100 text-green-700',
+  }
+
   const showMsg = (m: InlineMessage) => {
     setMsg(m)
     setTimeout(() => setMsg(null), 4000)
@@ -58,7 +58,7 @@ export function UsersTab({ apiFetch, studios }: UsersTabProps) {
     setLoading(true)
     try {
       const { data, error } = await authClient.admin.listUsers({ query: {} })
-      if (error) { showMsg({ type: 'error', text: 'Ошибка загрузки пользователей' }); return }
+      if (error) { showMsg({ type: 'error', text: t('error_load') }); return }
       const rawUsers = (data?.users ?? []).map((u) => ({
         id: u.id,
         email: u.email,
@@ -66,7 +66,6 @@ export function UsersTab({ apiFetch, studios }: UsersTabProps) {
         role: (u as { role?: string }).role ?? 'admin',
         createdAt: String(u.createdAt),
       }))
-      // Load studio assignments for masters
       const withStudios = await Promise.all(rawUsers.map(async (u) => {
         if (u.role !== 'master') return { ...u, studios: [] }
         try {
@@ -79,16 +78,15 @@ export function UsersTab({ apiFetch, studios }: UsersTabProps) {
         }
       }))
       setUsers(withStudios)
-      // Init assigning state for masters
       const studioMap: Record<string, string[]> = {}
       withStudios.forEach((u) => { studioMap[u.id] = u.studios ?? [] })
       setAssigningStudios(studioMap)
     } catch {
-      showMsg({ type: 'error', text: 'Ошибка сети' })
+      showMsg({ type: 'error', text: t('error_network') })
     } finally {
       setLoading(false)
     }
-  }, [apiFetch])
+  }, [apiFetch, t])
 
   useEffect(() => { void loadUsers() }, [loadUsers])
 
@@ -107,32 +105,32 @@ export function UsersTab({ apiFetch, studios }: UsersTabProps) {
         role: newRole as any,
       })
       if (error) {
-        showMsg({ type: 'error', text: error.message ?? 'Ошибка добавления' })
+        showMsg({ type: 'error', text: error.message ?? t('error_add') })
         return
       }
       setNewEmail('')
       setNewPassword('')
       setNewName('')
       setNewRole('master')
-      showMsg({ type: 'success', text: `Пользователь ${email} добавлен` })
+      showMsg({ type: 'success', text: `${email}` })
       void loadUsers()
     } catch {
-      showMsg({ type: 'error', text: 'Ошибка сети' })
+      showMsg({ type: 'error', text: t('error_network') })
     } finally {
       setAdding(false)
     }
   }
 
   async function handleDelete(user: AdminUser) {
-    if (!confirm(`Удалить ${user.email}?`)) return
+    if (!confirm(t('delete_confirm', { email: user.email }))) return
     setDeletingId(user.id)
     try {
       const { error } = await authClient.admin.removeUser({ userId: user.id })
-      if (error) { showMsg({ type: 'error', text: 'Ошибка удаления' }); return }
+      if (error) { showMsg({ type: 'error', text: t('error_delete') }); return }
       setUsers((prev) => prev.filter((u) => u.id !== user.id))
-      showMsg({ type: 'success', text: `${user.email} удалён` })
+      showMsg({ type: 'success', text: user.email })
     } catch {
-      showMsg({ type: 'error', text: 'Ошибка сети' })
+      showMsg({ type: 'error', text: t('error_network') })
     } finally {
       setDeletingId(null)
     }
@@ -145,11 +143,11 @@ export function UsersTab({ apiFetch, studios }: UsersTabProps) {
         method: 'PUT',
         body: JSON.stringify({ studios: assigningStudios[userId] ?? [] }),
       })
-      if (!res.ok) { showMsg({ type: 'error', text: 'Ошибка сохранения студий' }); return }
+      if (!res.ok) { showMsg({ type: 'error', text: t('error_studios') }); return }
       setUsers((prev) => prev.map((u) => u.id === userId ? { ...u, studios: assigningStudios[userId] } : u))
-      showMsg({ type: 'success', text: 'Студии сохранены' })
+      showMsg({ type: 'success', text: t('success_studios') })
     } catch {
-      showMsg({ type: 'error', text: 'Ошибка сети' })
+      showMsg({ type: 'error', text: t('error_network') })
     } finally {
       setSavingStudios(null)
     }
@@ -170,8 +168,8 @@ export function UsersTab({ apiFetch, studios }: UsersTabProps) {
   return (
     <div className="space-y-6">
       <div>
-        <h2 className="text-lg font-semibold text-[var(--color-charcoal)]">Пользователи</h2>
-        <p className="text-sm text-gray-500 mt-0.5">Доступ к панели управления</p>
+        <h2 className="text-lg font-semibold text-[var(--color-charcoal)]">{t('heading')}</h2>
+        <p className="text-sm text-gray-500 mt-0.5">{t('desc')}</p>
       </div>
 
       {msg && (
@@ -184,14 +182,13 @@ export function UsersTab({ apiFetch, studios }: UsersTabProps) {
         </p>
       )}
 
-      {/* Add user form */}
       <form onSubmit={handleAdd} className="space-y-3">
         <div className="flex flex-col sm:flex-row gap-3">
           <input
             type="text"
             value={newName}
             onChange={(e) => setNewName(e.target.value)}
-            placeholder="Имя (необязательно)"
+            placeholder={t('name_placeholder')}
             className="flex-1 border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-[var(--color-rose)]"
           />
           <input
@@ -208,7 +205,7 @@ export function UsersTab({ apiFetch, studios }: UsersTabProps) {
             type="password"
             value={newPassword}
             onChange={(e) => setNewPassword(e.target.value)}
-            placeholder="Пароль (мин. 8 символов)"
+            placeholder={t('password_placeholder')}
             className="flex-1 border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-[var(--color-rose)]"
             required
             minLength={8}
@@ -218,9 +215,9 @@ export function UsersTab({ apiFetch, studios }: UsersTabProps) {
             onChange={(e) => setNewRole(e.target.value as UserRole)}
             className="border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-[var(--color-rose)] bg-white"
           >
-            <option value="master">Мастер</option>
-            <option value="manager">Менеджер</option>
-            <option value="admin">Администратор</option>
+            <option value="master">{t('role_master')}</option>
+            <option value="manager">{t('role_manager')}</option>
+            <option value="admin">{t('role_admin')}</option>
           </select>
           <button
             type="submit"
@@ -228,24 +225,23 @@ export function UsersTab({ apiFetch, studios }: UsersTabProps) {
             className="flex items-center justify-center gap-2 px-4 py-2 bg-[var(--color-rose)] text-white rounded-lg text-sm font-medium hover:opacity-90 transition-opacity disabled:opacity-50"
           >
             <UserPlus size={14} />
-            {adding ? 'Добавление...' : 'Добавить'}
+            {adding ? t('adding') : t('add_btn')}
           </button>
         </div>
       </form>
 
-      {/* Users table */}
       {loading ? (
-        <p className="text-sm text-gray-400">Загрузка...</p>
+        <p className="text-sm text-gray-400">{t('loading')}</p>
       ) : users.length === 0 ? (
-        <p className="text-sm text-gray-400">Нет пользователей</p>
+        <p className="text-sm text-gray-400">{t('no_users')}</p>
       ) : (
         <div className="rounded-xl border border-[var(--color-blush)] overflow-hidden">
           <table className="w-full text-sm">
             <thead>
               <tr className="bg-gray-50 border-b border-[var(--color-blush)]">
-                <th className="px-4 py-3 text-left font-medium text-gray-600">Имя / Email</th>
-                <th className="px-4 py-3 text-left font-medium text-gray-600">Роль</th>
-                <th className="px-4 py-3 text-left font-medium text-gray-600">Добавлен</th>
+                <th className="px-4 py-3 text-left font-medium text-gray-600">{t('col_name_email')}</th>
+                <th className="px-4 py-3 text-left font-medium text-gray-600">{t('col_role')}</th>
+                <th className="px-4 py-3 text-left font-medium text-gray-600">{t('col_added')}</th>
                 <th className="px-4 py-3 text-right font-medium text-gray-600"></th>
               </tr>
             </thead>
@@ -263,7 +259,7 @@ export function UsersTab({ apiFetch, studios }: UsersTabProps) {
                       </span>
                     </td>
                     <td className="px-4 py-3 text-gray-500 text-xs">
-                      {new Date(user.createdAt).toLocaleDateString('ru-RU')}
+                      {new Date(user.createdAt).toLocaleDateString()}
                     </td>
                     <td className="px-4 py-3 text-right">
                       <div className="flex items-center justify-end gap-1">
@@ -271,7 +267,7 @@ export function UsersTab({ apiFetch, studios }: UsersTabProps) {
                           <button
                             onClick={() => setExpandedId(expandedId === user.id ? null : user.id)}
                             className={`p-1.5 rounded-lg transition-colors ${expandedId === user.id ? 'text-[var(--color-rose)] bg-[var(--color-blush)]' : 'text-gray-400 hover:text-[var(--color-rose)] hover:bg-[var(--color-blush)]'}`}
-                            title="Студии"
+                            title={t('studios_btn_title')}
                           >
                             <Building2 size={14} />
                           </button>
@@ -280,7 +276,7 @@ export function UsersTab({ apiFetch, studios }: UsersTabProps) {
                           onClick={() => handleDelete(user)}
                           disabled={deletingId === user.id}
                           className="p-1.5 text-red-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors disabled:opacity-40"
-                          title="Удалить"
+                          title={t('delete_btn_title')}
                         >
                           <Trash2 size={14} />
                         </button>
@@ -291,9 +287,9 @@ export function UsersTab({ apiFetch, studios }: UsersTabProps) {
                     <tr key={`${user.id}-studios`} className="border-b border-[var(--color-blush)] bg-gray-50/50">
                       <td colSpan={4} className="px-4 py-3">
                         <div className="space-y-2">
-                          <p className="text-xs font-medium text-gray-500 uppercase tracking-wide">Доступные студии</p>
+                          <p className="text-xs font-medium text-gray-500 uppercase tracking-wide">{t('studios_title')}</p>
                           {studios.length === 0 ? (
-                            <p className="text-xs text-gray-400">Нет студий</p>
+                            <p className="text-xs text-gray-400">{t('no_studios')}</p>
                           ) : (
                             <div className="flex flex-wrap gap-2">
                               {studios.map((s) => {
@@ -319,7 +315,7 @@ export function UsersTab({ apiFetch, studios }: UsersTabProps) {
                             disabled={savingStudios === user.id}
                             className="mt-1 px-3 py-1.5 bg-[var(--color-rose)] text-white rounded-lg text-xs font-medium hover:opacity-90 disabled:opacity-50 transition-opacity"
                           >
-                            {savingStudios === user.id ? 'Сохранение...' : 'Сохранить'}
+                            {savingStudios === user.id ? t('saving_studios') : t('save_studios')}
                           </button>
                         </div>
                       </td>
@@ -332,13 +328,12 @@ export function UsersTab({ apiFetch, studios }: UsersTabProps) {
         </div>
       )}
 
-      {/* Role legend */}
       <div className="border border-gray-100 rounded-xl p-4 space-y-2">
-        <p className="text-xs font-medium text-gray-500 uppercase tracking-wide">Роли</p>
+        <p className="text-xs font-medium text-gray-500 uppercase tracking-wide">{t('roles_legend')}</p>
         <div className="space-y-1.5 text-xs text-gray-600">
-          <p><span className="inline-flex items-center px-1.5 py-0.5 rounded-full bg-purple-100 text-purple-700 font-medium mr-1.5">Администратор</span>Полный доступ ко всем разделам</p>
-          <p><span className="inline-flex items-center px-1.5 py-0.5 rounded-full bg-blue-100 text-blue-700 font-medium mr-1.5">Менеджер</span>Видит бронирования всех студий, нет настроек</p>
-          <p><span className="inline-flex items-center px-1.5 py-0.5 rounded-full bg-green-100 text-green-700 font-medium mr-1.5">Мастер</span>Видит только свои студии и их записи</p>
+          <p><span className="inline-flex items-center px-1.5 py-0.5 rounded-full bg-purple-100 text-purple-700 font-medium mr-1.5">{t('role_admin')}</span>{t('role_admin_desc')}</p>
+          <p><span className="inline-flex items-center px-1.5 py-0.5 rounded-full bg-blue-100 text-blue-700 font-medium mr-1.5">{t('role_manager')}</span>{t('role_manager_desc')}</p>
+          <p><span className="inline-flex items-center px-1.5 py-0.5 rounded-full bg-green-100 text-green-700 font-medium mr-1.5">{t('role_master')}</span>{t('role_master_desc')}</p>
         </div>
       </div>
     </div>

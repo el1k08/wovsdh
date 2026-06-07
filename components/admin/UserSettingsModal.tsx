@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useTransition } from 'react'
 import { X, MessageCircle, Shield, CheckCircle, AlertCircle, FlaskConical, Languages } from 'lucide-react'
-import { useLocale } from 'next-intl'
+import { useLocale, useTranslations } from 'next-intl'
 import { useRouter } from 'next/navigation'
 import { setLocaleCookie } from '@/app/actions'
 import type { InlineMessage } from './types'
@@ -28,17 +28,17 @@ interface UserSettingsModalProps {
 }
 
 export function UserSettingsModal({ onClose, apiFetch }: UserSettingsModalProps) {
+  const t = useTranslations('admin.user_settings')
   const [tab, setTab] = useState<'telegram' | 'security' | 'language'>('telegram')
   const [profile, setProfile] = useState<UserProfile | null>(null)
-  const locale = useLocale()
-  const router = useRouter()
-  const [localePending, startLocaleTransition] = useTransition()
   const [loading, setLoading] = useState(true)
   const [msg, setMsg] = useState<InlineMessage | null>(null)
   const [saving, setSaving] = useState(false)
-
   const [telegramInput, setTelegramInput] = useState('')
   const [testing, setTesting] = useState(false)
+  const locale = useLocale()
+  const router = useRouter()
+  const [localePending, startLocaleTransition] = useTransition()
 
   const showMsg = (m: InlineMessage) => {
     setMsg(m)
@@ -74,11 +74,11 @@ export function UserSettingsModal({ onClose, apiFetch }: UserSettingsModalProps)
         method: 'PATCH',
         body: JSON.stringify({ telegramChatId: chatId }),
       })
-      if (!res.ok) { showMsg({ type: 'error', text: 'Ошибка сохранения' }); return }
+      if (!res.ok) { showMsg({ type: 'error', text: t('error_save') }); return }
       setProfile((p) => p ? { ...p, telegramChatId: chatId } : p)
-      showMsg({ type: 'success', text: 'Telegram сохранён' })
+      showMsg({ type: 'success', text: t('success_telegram') })
     } catch {
-      showMsg({ type: 'error', text: 'Ошибка сети' })
+      showMsg({ type: 'error', text: t('error_network') })
     } finally {
       setSaving(false)
     }
@@ -93,10 +93,10 @@ export function UserSettingsModal({ onClose, apiFetch }: UserSettingsModalProps)
         method: 'POST',
         body: JSON.stringify({ name: profile?.name ?? 'User', chat_id: chatId }),
       })
-      if (!res.ok) { showMsg({ type: 'error', text: 'Не удалось отправить тест' }); return }
-      showMsg({ type: 'success', text: 'Тестовое сообщение отправлено!' })
+      if (!res.ok) { showMsg({ type: 'error', text: t('error_test') }); return }
+      showMsg({ type: 'success', text: t('success_test') })
     } catch {
-      showMsg({ type: 'error', text: 'Ошибка сети' })
+      showMsg({ type: 'error', text: t('error_network') })
     } finally {
       setTesting(false)
     }
@@ -106,7 +106,7 @@ export function UserSettingsModal({ onClose, apiFetch }: UserSettingsModalProps)
     if (!profile) return
     if (!profile.twoFactorEnabled && !profile.telegramChatId) {
       setTab('telegram')
-      showMsg({ type: 'error', text: 'Сначала подключите Telegram для 2FA' })
+      showMsg({ type: 'error', text: t('error_no_telegram') })
       return
     }
     setSaving(true)
@@ -116,11 +116,11 @@ export function UserSettingsModal({ onClose, apiFetch }: UserSettingsModalProps)
         method: 'PATCH',
         body: JSON.stringify({ twoFactorEnabled: next }),
       })
-      if (!res.ok) { showMsg({ type: 'error', text: 'Ошибка сохранения' }); return }
+      if (!res.ok) { showMsg({ type: 'error', text: t('error_save') }); return }
       setProfile((p) => p ? { ...p, twoFactorEnabled: next } : p)
-      showMsg({ type: 'success', text: next ? '2FA включена' : '2FA отключена' })
+      showMsg({ type: 'success', text: next ? t('success_2fa_on') : t('success_2fa_off') })
     } catch {
-      showMsg({ type: 'error', text: 'Ошибка сети' })
+      showMsg({ type: 'error', text: t('error_network') })
     } finally {
       setSaving(false)
     }
@@ -137,7 +137,7 @@ export function UserSettingsModal({ onClose, apiFetch }: UserSettingsModalProps)
       >
         {/* Header */}
         <div className="flex items-center justify-between px-6 py-4 border-b border-gray-100">
-          <h2 className="text-base font-semibold text-[var(--color-charcoal)]">Настройки аккаунта</h2>
+          <h2 className="text-base font-semibold text-[var(--color-charcoal)]">{t('heading')}</h2>
           <button
             onClick={onClose}
             className="p-1.5 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-lg transition-colors"
@@ -150,8 +150,8 @@ export function UserSettingsModal({ onClose, apiFetch }: UserSettingsModalProps)
         <div className="flex border-b border-gray-100 px-6">
           {[
             { key: 'telegram', label: 'Telegram', icon: MessageCircle },
-            { key: 'security', label: 'Безопасность', icon: Shield },
-            { key: 'language', label: 'Язык', icon: Languages },
+            { key: 'security', label: t('tab_security'), icon: Shield },
+            { key: 'language', label: t('tab_language'), icon: Languages },
           ].map(({ key, label, icon: Icon }) => (
             <button
               key={key}
@@ -171,7 +171,7 @@ export function UserSettingsModal({ onClose, apiFetch }: UserSettingsModalProps)
         {/* Content */}
         <div className="px-6 py-5">
           {loading ? (
-            <p className="text-sm text-gray-400 text-center py-8">Загрузка...</p>
+            <p className="text-sm text-gray-400 text-center py-8">{t('loading')}</p>
           ) : (
             <>
               {msg && (
@@ -188,16 +188,14 @@ export function UserSettingsModal({ onClose, apiFetch }: UserSettingsModalProps)
               {tab === 'telegram' && (
                 <div className="space-y-4">
                   <div>
-                    <h3 className="text-sm font-medium text-[var(--color-charcoal)] mb-1">Ваш Telegram</h3>
-                    <p className="text-xs text-gray-500">
-                      Укажите ваш Chat ID в Telegram. Используется для уведомлений и двухфакторной аутентификации.
-                    </p>
+                    <h3 className="text-sm font-medium text-[var(--color-charcoal)] mb-1">{t('telegram_heading')}</h3>
+                    <p className="text-xs text-gray-500">{t('telegram_desc')}</p>
                   </div>
                   <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 text-xs text-blue-800 space-y-1">
-                    <p className="font-medium">Как получить Chat ID:</p>
-                    <p>1. Напишите боту <span className="font-mono">@wovsdh_bot</span></p>
-                    <p>2. Используйте команду для просмотра вашего ID</p>
-                    <p>3. Вставьте его ниже и нажмите «Тест»</p>
+                    <p className="font-medium">{t('how_to_get')}</p>
+                    <p>1. {t('how_step_1')}</p>
+                    <p>2. {t('how_step_2')}</p>
+                    <p>3. {t('how_step_3')}</p>
                   </div>
                   <form onSubmit={saveTelegram} className="space-y-3">
                     <div className="flex gap-2">
@@ -205,7 +203,7 @@ export function UserSettingsModal({ onClose, apiFetch }: UserSettingsModalProps)
                         type="number"
                         value={telegramInput}
                         onChange={(e) => setTelegramInput(e.target.value)}
-                        placeholder="Chat ID (например: 123456789)"
+                        placeholder={t('chat_id_placeholder')}
                         className="flex-1 border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-[var(--color-rose)]"
                       />
                       <button
@@ -215,17 +213,23 @@ export function UserSettingsModal({ onClose, apiFetch }: UserSettingsModalProps)
                         className="flex items-center gap-1.5 px-3 py-2 border border-blue-300 text-blue-600 rounded-lg text-sm hover:bg-blue-50 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
                       >
                         <FlaskConical size={13} />
-                        {testing ? '...' : 'Тест'}
+                        {testing ? t('testing') : t('test_btn')}
                       </button>
                     </div>
                     <div className="flex gap-2">
                       {profile?.telegramChatId && (
                         <button
                           type="button"
-                          onClick={() => { setTelegramInput(''); void apiFetch('/api/admin/user/profile', { method: 'PATCH', body: JSON.stringify({ telegramChatId: null }) }).then(() => setProfile((p) => p ? { ...p, telegramChatId: null } : p)) }}
+                          onClick={() => {
+                            setTelegramInput('')
+                            void apiFetch('/api/admin/user/profile', {
+                              method: 'PATCH',
+                              body: JSON.stringify({ telegramChatId: null }),
+                            }).then(() => setProfile((p) => p ? { ...p, telegramChatId: null } : p))
+                          }}
                           className="px-4 py-2 border border-gray-300 text-gray-600 rounded-lg text-sm hover:bg-gray-50 transition-colors"
                         >
-                          Отвязать
+                          {t('unlink_btn')}
                         </button>
                       )}
                       <button
@@ -233,7 +237,7 @@ export function UserSettingsModal({ onClose, apiFetch }: UserSettingsModalProps)
                         disabled={saving}
                         className="flex-1 px-4 py-2 bg-[var(--color-rose)] text-white rounded-lg text-sm font-medium hover:opacity-90 disabled:opacity-50 transition-opacity"
                       >
-                        {saving ? 'Сохранение...' : 'Сохранить'}
+                        {saving ? t('saving') : t('save_btn')}
                       </button>
                     </div>
                   </form>
@@ -241,7 +245,7 @@ export function UserSettingsModal({ onClose, apiFetch }: UserSettingsModalProps)
                   {profile?.telegramChatId && (
                     <div className="flex items-center gap-2 text-xs text-green-700 bg-green-50 border border-green-200 rounded-lg px-3 py-2">
                       <CheckCircle size={13} />
-                      Telegram подключён (ID: {profile.telegramChatId})
+                      {t('telegram_connected', { id: profile.telegramChatId })}
                     </div>
                   )}
                 </div>
@@ -250,10 +254,8 @@ export function UserSettingsModal({ onClose, apiFetch }: UserSettingsModalProps)
               {tab === 'language' && (
                 <div className="space-y-4">
                   <div>
-                    <h3 className="text-sm font-medium text-[var(--color-charcoal)] mb-1">Язык интерфейса</h3>
-                    <p className="text-xs text-gray-500">
-                      Выбранный язык сохраняется в браузере. Действует на всём сайте.
-                    </p>
+                    <h3 className="text-sm font-medium text-[var(--color-charcoal)] mb-1">{t('language_heading')}</h3>
+                    <p className="text-xs text-gray-500">{t('language_desc')}</p>
                   </div>
                   <div className="space-y-2">
                     {LOCALES.map(({ code, label, flag }) => {
@@ -289,23 +291,21 @@ export function UserSettingsModal({ onClose, apiFetch }: UserSettingsModalProps)
               {tab === 'security' && (
                 <div className="space-y-4">
                   <div>
-                    <h3 className="text-sm font-medium text-[var(--color-charcoal)] mb-1">Двухфакторная аутентификация</h3>
-                    <p className="text-xs text-gray-500">
-                      При включённой 2FA при входе на ваш Telegram придёт код подтверждения.
-                    </p>
+                    <h3 className="text-sm font-medium text-[var(--color-charcoal)] mb-1">{t('security_heading')}</h3>
+                    <p className="text-xs text-gray-500">{t('security_desc')}</p>
                   </div>
 
                   {!profile?.telegramChatId && (
                     <div className="flex items-start gap-2 bg-amber-50 border border-amber-200 rounded-lg p-3 text-xs text-amber-800">
                       <AlertCircle size={14} className="flex-shrink-0 mt-0.5" />
                       <div>
-                        <p className="font-medium">Telegram не подключён</p>
-                        <p>Для включения 2FA сначала подключите Telegram на вкладке «Telegram».</p>
+                        <p className="font-medium">{t('no_telegram_title')}</p>
+                        <p>{t('no_telegram_desc')}</p>
                         <button
                           onClick={() => setTab('telegram')}
                           className="mt-1 underline font-medium"
                         >
-                          Перейти к настройке
+                          {t('no_telegram_link')}
                         </button>
                       </div>
                     </div>
@@ -313,9 +313,9 @@ export function UserSettingsModal({ onClose, apiFetch }: UserSettingsModalProps)
 
                   <div className="flex items-center justify-between p-4 border border-gray-200 rounded-xl">
                     <div>
-                      <p className="text-sm font-medium text-[var(--color-charcoal)]">2FA через Telegram</p>
+                      <p className="text-sm font-medium text-[var(--color-charcoal)]">{t('twofa_label')}</p>
                       <p className="text-xs text-gray-500 mt-0.5">
-                        {profile?.twoFactorEnabled ? 'Включена' : 'Отключена'}
+                        {profile?.twoFactorEnabled ? t('twofa_enabled') : t('twofa_disabled')}
                       </p>
                     </div>
                     <button
@@ -334,7 +334,7 @@ export function UserSettingsModal({ onClose, apiFetch }: UserSettingsModalProps)
                   {profile?.twoFactorEnabled && (
                     <div className="flex items-center gap-2 text-xs text-green-700 bg-green-50 border border-green-200 rounded-lg px-3 py-2">
                       <Shield size={13} />
-                      2FA активна. При следующем входе потребуется код из Telegram.
+                      {t('twofa_active_msg')}
                     </div>
                   )}
                 </div>

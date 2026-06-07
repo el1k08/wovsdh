@@ -2,6 +2,7 @@
 
 import { useState, useRef, useEffect } from 'react'
 import { LogOut, Settings, ChevronDown } from 'lucide-react'
+import { useTranslations } from 'next-intl'
 
 interface UserDropdownProps {
   email: string
@@ -10,6 +11,7 @@ interface UserDropdownProps {
 }
 
 export function UserDropdown({ email, onOpenSettings, onSignOut }: UserDropdownProps) {
+  const t = useTranslations('admin.user_dropdown')
   const [open, setOpen] = useState(false)
   const ref = useRef<HTMLDivElement>(null)
 
@@ -46,14 +48,14 @@ export function UserDropdown({ email, onOpenSettings, onSignOut }: UserDropdownP
             className="w-full flex items-center gap-2.5 px-3 py-2.5 text-sm text-[var(--color-charcoal)] hover:bg-gray-50 transition-colors"
           >
             <Settings size={15} className="text-gray-400" />
-            Настройки аккаунта
+            {t('settings')}
           </button>
           <button
             onClick={() => { setOpen(false); onSignOut() }}
             className="w-full flex items-center gap-2.5 px-3 py-2.5 text-sm text-red-500 hover:bg-red-50 transition-colors"
           >
             <LogOut size={15} />
-            Выйти
+            {t('sign_out')}
           </button>
         </div>
       )}
