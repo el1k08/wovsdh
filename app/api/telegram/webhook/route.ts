@@ -247,7 +247,7 @@ async function handleMessage(update: TelegramUpdate): Promise<void> {
         text:
           `Вітаємо! Я бот для сповіщень про нові записи.\n\n` +
           `🪪 <b>Ваш Chat ID:</b> <code>${chatId}</code>\n\n` +
-          `Надайте цей Chat ID адміністратору, щоб отримувати сповіщення про нові записи.`,
+          `Введіть цей Chat ID у налаштуваннях свого акаунту в адмін-панелі, щоб отримувати сповіщення.`,
         parse_mode: 'HTML',
       })
       break
