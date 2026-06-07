@@ -1,4 +1,5 @@
 import { supabaseAdmin } from './supabase'
+import { encrypt, decrypt } from './encryption'
 
 export interface InstagramMedia {
   id: string
@@ -18,13 +19,18 @@ export async function getInstagramToken(): Promise<string | null> {
     .select('value')
     .eq('key', SETTINGS_KEY)
     .single()
-  return data?.value ?? null
+  if (!data?.value) return null
+  try {
+    return decrypt(data.value)
+  } catch {
+    return data.value // fallback for plain legacy values
+  }
 }
 
 export async function setInstagramToken(token: string): Promise<void> {
   await supabaseAdmin
     .from('settings')
-    .upsert({ key: SETTINGS_KEY, value: token, updated_at: new Date().toISOString() }, { onConflict: 'key' })
+    .upsert({ key: SETTINGS_KEY, value: encrypt(token), updated_at: new Date().toISOString() }, { onConflict: 'key' })
 }
 
 export async function deleteInstagramToken(): Promise<void> {

@@ -1,17 +1,25 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { verifyAdminRequest } from '@/lib/admin-auth'
 import { supabaseAdmin } from '@/lib/supabase'
+import { encrypt, decrypt } from '@/lib/encryption'
 import { sendWhatsAppMessage } from '@/lib/whatsapp'
 import type { ApiError } from '@/lib/types'
 
 const KEYS = ['twilio_account_sid', 'twilio_auth_token', 'twilio_whatsapp_from', 'twilio_enabled'] as const
+
+const SENSITIVE_KEYS = ['twilio_account_sid', 'twilio_auth_token', 'twilio_whatsapp_from']
 
 async function getSettings() {
   const { data } = await supabaseAdmin
     .from('settings')
     .select('key, value')
     .in('key', [...KEYS])
-  const map = Object.fromEntries((data ?? []).map((r: { key: string; value: string }) => [r.key, r.value]))
+  const raw = Object.fromEntries((data ?? []).map((r: { key: string; value: string }) => [r.key, r.value]))
+  // Decrypt sensitive fields for internal use
+  const map: Record<string, string> = {}
+  for (const [k, v] of Object.entries(raw)) {
+    map[k] = SENSITIVE_KEYS.includes(k) ? (() => { try { return decrypt(v) } catch { return v } })() : v
+  }
   return map
 }
 
@@ -83,9 +91,9 @@ export async function POST(request: NextRequest) {
   }
 
   await Promise.all([
-    upsert('twilio_account_sid', sid),
-    upsert('twilio_auth_token', token),
-    upsert('twilio_whatsapp_from', from),
+    upsert('twilio_account_sid', encrypt(sid)),
+    upsert('twilio_auth_token', encrypt(token)),
+    upsert('twilio_whatsapp_from', encrypt(from)),
     upsert('twilio_enabled', body.enabled !== false ? 'true' : 'false'),
   ])
 

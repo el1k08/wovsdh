@@ -5,6 +5,7 @@
  */
 
 import { supabaseAdmin } from './supabase'
+import { decrypt } from './encryption'
 
 const LOG_PREFIX = '[whatsapp]'
 
@@ -22,17 +23,17 @@ async function getTwilioSettings(): Promise<TwilioSettings | null> {
       .in('key', ['twilio_account_sid', 'twilio_auth_token', 'twilio_whatsapp_from', 'twilio_enabled'])
 
     if (data && data.length > 0) {
-      const map = Object.fromEntries((data as Array<{ key: string; value: string }>).map((r) => [r.key, r.value]))
+      const raw = Object.fromEntries((data as Array<{ key: string; value: string }>).map((r) => [r.key, r.value]))
       if (
-        map.twilio_enabled === 'true' &&
-        map.twilio_account_sid &&
-        map.twilio_auth_token &&
-        map.twilio_whatsapp_from
+        raw.twilio_enabled === 'true' &&
+        raw.twilio_account_sid &&
+        raw.twilio_auth_token &&
+        raw.twilio_whatsapp_from
       ) {
         return {
-          accountSid: map.twilio_account_sid,
-          authToken: map.twilio_auth_token,
-          from: map.twilio_whatsapp_from,
+          accountSid: decrypt(raw.twilio_account_sid),
+          authToken: decrypt(raw.twilio_auth_token),
+          from: decrypt(raw.twilio_whatsapp_from),
         }
       }
     }
