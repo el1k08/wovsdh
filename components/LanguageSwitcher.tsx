@@ -7,6 +7,7 @@ import { setLocaleCookie } from '@/app/actions'
 
 const LOCALES = [
   { code: 'uk', label: 'UA' },
+  { code: 'ru', label: 'RU' },
   { code: 'en', label: 'EN' },
   { code: 'he', label: 'HE' },
 ] as const

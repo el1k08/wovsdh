@@ -9,6 +9,7 @@ import type { InlineMessage } from './types'
 
 const LOCALES = [
   { code: 'uk', label: 'Українська', flag: 'UA' },
+  { code: 'ru', label: 'Русский', flag: 'RU' },
   { code: 'he', label: 'עברית', flag: 'HE' },
   { code: 'en', label: 'English', flag: 'EN' },
 ] as const

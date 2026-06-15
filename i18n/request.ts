@@ -1,7 +1,7 @@
 import { getRequestConfig } from 'next-intl/server'
 import { cookies, headers } from 'next/headers'
 
-const validLocales = ['uk', 'en', 'he'] as const
+const validLocales = ['uk', 'ru', 'en', 'he'] as const
 type ValidLocale = typeof validLocales[number]
 
 function isValidLocale(value: string): value is ValidLocale {
@@ -9,11 +9,10 @@ function isValidLocale(value: string): value is ValidLocale {
 }
 
 // Maps browser language codes to our supported locales.
-// Russian maps to Ukrainian (close language, no ru locale available).
 // Everything else falls back to Hebrew (primary market).
 const LANG_MAP: Record<string, ValidLocale> = {
   uk: 'uk',
-  ru: 'uk',
+  ru: 'ru',
   en: 'en',
   he: 'he',
   iw: 'he', // legacy Hebrew code used by some browsers

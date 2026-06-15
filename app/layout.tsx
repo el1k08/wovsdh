@@ -44,7 +44,7 @@ export const metadata: Metadata = {
   openGraph: {
     type: 'website',
     locale: 'uk_UA',
-    alternateLocale: ['he_IL', 'en_US'],
+    alternateLocale: ['ru_RU', 'he_IL', 'en_US'],
     url: '/',
     siteName: 'WOVSDH Nails',
     title: 'WOVSDH Nails — Манікюр та педикюр в Ізраїлі',

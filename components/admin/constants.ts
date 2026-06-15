@@ -1,6 +1,6 @@
 import type { Locale } from '@/lib/types'
 
-export const LOCALES: Locale[] = ['uk', 'en', 'he']
+export const LOCALES: Locale[] = ['uk', 'ru', 'en', 'he']
 
 function generateTimeOptions(): string[] {
   const options: string[] = []

@@ -103,6 +103,7 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
   // Seed translations from name/description if not explicitly provided
   const translations: ServiceTranslations = req.translations ?? {
     uk: { name: trimmedName, description: trimmedDescription ?? '' },
+    ru: { name: trimmedName, description: trimmedDescription ?? '' },
     en: { name: trimmedName, description: trimmedDescription ?? '' },
     he: { name: trimmedName, description: trimmedDescription ?? '' },
   }

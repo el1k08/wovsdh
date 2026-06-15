@@ -26,6 +26,7 @@ export function StudiosTab({ apiFetch, onUnauth, onStudiosChanged }: StudiosTabP
   // Translation helpers
   const emptyStudioTranslations = (): StudioTranslations => ({
     uk: { name: '', schedule_text: '', street: '', city: '' },
+    ru: { name: '', schedule_text: '', street: '', city: '' },
     en: { name: '', schedule_text: '', street: '', city: '' },
     he: { name: '', schedule_text: '', street: '', city: '' },
   })
@@ -109,6 +110,7 @@ export function StudiosTab({ apiFetch, onUnauth, onStudiosChanged }: StudiosTabP
     setEditLang('uk')
     setEditTranslations({
       uk: { name: s.translations?.uk?.name ?? s.name, schedule_text: s.translations?.uk?.schedule_text ?? s.schedule_text ?? '', street: s.translations?.uk?.street ?? s.street ?? '', city: s.translations?.uk?.city ?? s.city ?? '' },
+      ru: { name: s.translations?.ru?.name ?? s.name, schedule_text: s.translations?.ru?.schedule_text ?? s.schedule_text ?? '', street: s.translations?.ru?.street ?? s.street ?? '', city: s.translations?.ru?.city ?? s.city ?? '' },
       en: { name: s.translations?.en?.name ?? s.name, schedule_text: s.translations?.en?.schedule_text ?? s.schedule_text ?? '', street: s.translations?.en?.street ?? s.street ?? '', city: s.translations?.en?.city ?? s.city ?? '' },
       he: { name: s.translations?.he?.name ?? s.name, schedule_text: s.translations?.he?.schedule_text ?? s.schedule_text ?? '', street: s.translations?.he?.street ?? s.street ?? '', city: s.translations?.he?.city ?? s.city ?? '' },
     })

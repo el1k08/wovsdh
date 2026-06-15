@@ -7,7 +7,7 @@
 // i18n Translation Types
 // ---------------------------------------------------------------------------
 
-export type Locale = 'uk' | 'en' | 'he'
+export type Locale = 'uk' | 'ru' | 'en' | 'he'
 
 export interface ServiceTranslation {
   name: string;

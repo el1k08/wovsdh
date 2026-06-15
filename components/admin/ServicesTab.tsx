@@ -25,6 +25,7 @@ export function ServicesTab({ studio, apiFetch, onUnauth }: ServicesTabProps) {
   // Translation helpers
   const emptyServiceTranslations = (): ServiceTranslations => ({
     uk: { name: '', description: '' },
+    ru: { name: '', description: '' },
     en: { name: '', description: '' },
     he: { name: '', description: '' },
   })
@@ -137,6 +138,7 @@ export function ServicesTab({ studio, apiFetch, onUnauth }: ServicesTabProps) {
     setEditLang('uk')
     setEditTranslations({
       uk: { name: svc.translations?.uk?.name ?? svc.name, description: svc.translations?.uk?.description ?? svc.description ?? '' },
+      ru: { name: svc.translations?.ru?.name ?? svc.name, description: svc.translations?.ru?.description ?? svc.description ?? '' },
       en: { name: svc.translations?.en?.name ?? svc.name, description: svc.translations?.en?.description ?? svc.description ?? '' },
       he: { name: svc.translations?.he?.name ?? svc.name, description: svc.translations?.he?.description ?? svc.description ?? '' },
     })

@@ -2,7 +2,7 @@
 
 import type { Locale } from '@/lib/types'
 
-const LOCALES: Locale[] = ['uk', 'en', 'he']
+const LOCALES: Locale[] = ['uk', 'ru', 'en', 'he']
 
 export function LangTabs({ value, onChange }: { value: Locale; onChange: (l: Locale) => void }) {
   return (
