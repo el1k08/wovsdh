@@ -218,7 +218,7 @@ export function TwilioTab({ apiFetch }: TwilioTabProps) {
               </div>
 
               {/* Test message */}
-              <form onSubmit={handleTest} className="flex gap-2">
+              <form onSubmit={handleTest} className="flex flex-col sm:flex-row gap-2">
                 <input
                   type="tel"
                   value={testPhone}

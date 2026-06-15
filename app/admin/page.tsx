@@ -185,10 +185,10 @@ export default function AdminPage() {
         </div>
 
         {/* Top-level navigation */}
-        <div className="flex gap-1 mb-8 p-1 bg-white border border-gray-200 rounded-xl w-fit">
+        <div className="flex gap-1 mb-8 p-1 bg-white border border-gray-200 rounded-xl w-fit max-w-full overflow-x-auto">
           <button
             onClick={() => setTopSection('studios')}
-            className={`flex items-center gap-2 px-5 py-2.5 rounded-lg text-sm font-medium transition-colors ${
+            className={`flex items-center gap-2 px-3 sm:px-5 py-2.5 rounded-lg text-sm font-medium transition-colors shrink-0 whitespace-nowrap ${
               topSection === 'studios'
                 ? 'bg-[var(--color-rose)] text-white shadow-sm'
                 : 'text-[var(--color-charcoal)] hover:bg-gray-50'
@@ -201,7 +201,7 @@ export default function AdminPage() {
           {isAdmin && (
             <button
               onClick={() => setTopSection('settings')}
-              className={`flex items-center gap-2 px-5 py-2.5 rounded-lg text-sm font-medium transition-colors ${
+              className={`flex items-center gap-2 px-3 sm:px-5 py-2.5 rounded-lg text-sm font-medium transition-colors shrink-0 whitespace-nowrap ${
                 topSection === 'settings'
                   ? 'bg-[var(--color-rose)] text-white shadow-sm'
                   : 'text-[var(--color-charcoal)] hover:bg-gray-50'
@@ -215,7 +215,7 @@ export default function AdminPage() {
           {isManager && (
             <button
               onClick={() => setTopSection('clients')}
-              className={`flex items-center gap-2 px-5 py-2.5 rounded-lg text-sm font-medium transition-colors ${
+              className={`flex items-center gap-2 px-3 sm:px-5 py-2.5 rounded-lg text-sm font-medium transition-colors shrink-0 whitespace-nowrap ${
                 topSection === 'clients'
                   ? 'bg-[var(--color-rose)] text-white shadow-sm'
                   : 'text-[var(--color-charcoal)] hover:bg-gray-50'
@@ -230,12 +230,12 @@ export default function AdminPage() {
         {/* Settings panel — admin only */}
         {topSection === 'settings' && isAdmin && (
           <div>
-            <div className="flex gap-2 mb-6 border-b border-gray-100 pb-1">
+            <div className="flex gap-2 mb-6 border-b border-gray-100 pb-1 overflow-x-auto">
               {SETTINGS_SUBTABS.map((sub) => (
                 <button
                   key={sub.key}
                   onClick={() => setSettingsSubTab(sub.key)}
-                  className={`px-4 py-2 rounded-t-lg text-sm font-medium transition-colors border-b-2 -mb-px ${
+                  className={`px-4 py-2 rounded-t-lg text-sm font-medium transition-colors border-b-2 -mb-px shrink-0 whitespace-nowrap ${
                     settingsSubTab === sub.key
                       ? 'border-[var(--color-rose)] text-[var(--color-rose)]'
                       : 'border-transparent text-gray-500 hover:text-[var(--color-charcoal)]'
@@ -313,12 +313,12 @@ export default function AdminPage() {
               ))}
             </div>
 
-            <div className="flex gap-1 mb-8 border-b border-gray-200">
+            <div className="flex gap-1 mb-8 border-b border-gray-200 overflow-x-auto">
               {TABS.map((tab) => (
                 <button
                   key={tab.key}
                   onClick={() => setActiveTab(tab.key)}
-                  className={`px-4 py-2.5 text-sm font-medium transition-colors border-b-2 -mb-px ${
+                  className={`px-4 py-2.5 text-sm font-medium transition-colors border-b-2 -mb-px shrink-0 whitespace-nowrap ${
                     activeTab === tab.key
                       ? 'border-[var(--color-rose)] text-[var(--color-rose)]'
                       : 'border-transparent text-gray-500 hover:text-[var(--color-charcoal)]'
@@ -356,11 +356,11 @@ export default function AdminPage() {
       {/* Edit booking modal */}
       {editingBooking && (
         <div
-          className="fixed inset-0 bg-black/40 flex items-center justify-center z-50"
+          className="fixed inset-0 bg-black/40 flex items-center justify-center z-50 p-4"
           onClick={() => setEditingBooking(null)}
         >
           <div
-            className="bg-white rounded-xl p-6 max-w-md w-full mx-4 shadow-xl"
+            className="bg-white rounded-xl p-6 max-w-md w-full shadow-xl max-h-[90vh] overflow-y-auto"
             onClick={(e) => e.stopPropagation()}
           >
             <h3 className="text-lg font-semibold text-[var(--color-charcoal)] mb-4">

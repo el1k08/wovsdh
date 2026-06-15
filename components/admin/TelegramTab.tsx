@@ -188,7 +188,7 @@ export function TelegramTab({ apiFetch, onUnauth }: TelegramTabProps) {
           value={newChatId}
           onChange={(e) => setNewChatId(e.target.value)}
           placeholder={t('chat_id_placeholder')}
-          className="w-48 border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-[var(--color-rose)]"
+          className="w-full sm:w-48 border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-[var(--color-rose)]"
           required
           min={1}
         />

@@ -102,7 +102,7 @@ export function BookingsPanel({
       </h2>
 
       {/* Date range filters */}
-      <div className="flex flex-wrap gap-4 mb-4">
+      <div className="flex flex-col sm:flex-row sm:flex-wrap gap-3 sm:gap-4 mb-4">
         <label className="flex flex-col gap-1 text-sm text-gray-600">
           {t('bookings_panel.date_from')}
           <input

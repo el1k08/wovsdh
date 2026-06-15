@@ -148,7 +148,7 @@ export function UserSettingsModal({ onClose, apiFetch }: UserSettingsModalProps)
         </div>
 
         {/* Tabs */}
-        <div className="flex border-b border-gray-100 px-6">
+        <div className="flex border-b border-gray-100 px-3 sm:px-6 overflow-x-auto">
           {[
             { key: 'telegram', label: 'Telegram', icon: MessageCircle },
             { key: 'security', label: t('tab_security'), icon: Shield },
@@ -157,7 +157,7 @@ export function UserSettingsModal({ onClose, apiFetch }: UserSettingsModalProps)
             <button
               key={key}
               onClick={() => setTab(key as typeof tab)}
-              className={`flex items-center gap-1.5 px-3 py-3 text-sm font-medium border-b-2 -mb-px transition-colors ${
+              className={`flex items-center gap-1.5 px-3 py-3 text-sm font-medium border-b-2 -mb-px transition-colors shrink-0 whitespace-nowrap ${
                 tab === key
                   ? 'border-[var(--color-rose)] text-[var(--color-rose)]'
                   : 'border-transparent text-gray-500 hover:text-[var(--color-charcoal)]'

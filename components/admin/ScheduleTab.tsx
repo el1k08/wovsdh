@@ -230,9 +230,9 @@ export function ScheduleTab({ studio, apiFetch, onUnauth }: ScheduleTabProps) {
   }
 
   return (
-    <div className="flex gap-6 items-start">
+    <div className="flex flex-col md:flex-row gap-6 md:items-start">
       {/* Left: Schedule editor (1/3) */}
-      <div className="w-1/3 shrink-0">
+      <div className="w-full md:w-1/3 md:shrink-0">
         <h2 className="text-lg font-semibold text-[var(--color-charcoal)] mb-4">
           {t('heading')}
         </h2>
@@ -303,10 +303,10 @@ export function ScheduleTab({ studio, apiFetch, onUnauth }: ScheduleTabProps) {
       </div>
 
       {/* Vertical divider */}
-      <div className="w-px bg-gray-100 self-stretch shrink-0" />
+      <div className="hidden md:block w-px bg-gray-100 self-stretch shrink-0" />
 
       {/* Right: Slots panel (2/3) */}
-      <div className="flex-1 min-w-0">
+      <div className="w-full md:flex-1 min-w-0">
         {/* Header with dropdown */}
         <div className="flex items-center justify-between mb-4">
           <h2 className="text-lg font-semibold text-[var(--color-charcoal)]">{t('add_slots_btn')}</h2>
@@ -459,7 +459,7 @@ export function ScheduleTab({ studio, apiFetch, onUnauth }: ScheduleTabProps) {
       {/* Modal: custom ranges for current day */}
       {slotModal === 'day' && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/30 backdrop-blur-sm">
-          <div className="bg-white rounded-2xl shadow-xl p-6 w-full max-w-sm mx-4">
+          <div className="bg-white rounded-2xl shadow-xl p-6 w-full max-w-sm mx-4 max-h-[90vh] overflow-y-auto">
             <h3 className="text-base font-semibold text-[var(--color-charcoal)] mb-4">
               {t('add_slots_for')}{' '}
               {selectedDay
@@ -532,7 +532,7 @@ export function ScheduleTab({ studio, apiFetch, onUnauth }: ScheduleTabProps) {
       {/* Confirmation modal for schedule-based bulk generation */}
       {pendingGenerate && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/30 backdrop-blur-sm">
-          <div className="bg-white rounded-2xl shadow-xl p-6 w-full max-w-sm mx-4">
+          <div className="bg-white rounded-2xl shadow-xl p-6 w-full max-w-sm mx-4 max-h-[90vh] overflow-y-auto">
             <h3 className="text-base font-semibold text-[var(--color-charcoal)] mb-2">
               {tCommon('confirm')}
             </h3>
@@ -586,7 +586,7 @@ export function ScheduleTab({ studio, apiFetch, onUnauth }: ScheduleTabProps) {
       {/* Modal: date range (uses schedule) */}
       {slotModal === 'range' && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/30 backdrop-blur-sm">
-          <div className="bg-white rounded-2xl shadow-xl p-6 w-full max-w-sm mx-4">
+          <div className="bg-white rounded-2xl shadow-xl p-6 w-full max-w-sm mx-4 max-h-[90vh] overflow-y-auto">
             <h3 className="text-base font-semibold text-[var(--color-charcoal)] mb-4">
               {t('add_range_heading')}
             </h3>
