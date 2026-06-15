@@ -96,7 +96,7 @@ export function BookingsPanel({
   }
 
   return (
-    <section className="bg-white border border-[var(--color-blush)] rounded-xl p-6">
+    <section className="sm:bg-white sm:border sm:border-[var(--color-blush)] sm:rounded-xl sm:p-6">
       <h2 className="text-lg font-semibold text-[var(--color-charcoal)] mb-4">
         {t('bookings_panel.list_heading')}
       </h2>
@@ -138,8 +138,69 @@ export function BookingsPanel({
         </p>
       )}
 
-      {/* Table */}
-      <div className="overflow-x-auto">
+      {/* Mobile: card list */}
+      <div className="sm:hidden space-y-2.5">
+        {!bookingsLoading && bookings.length === 0 && (
+          <p className="py-10 text-center text-gray-400 text-sm">{t('bookings_panel.no_bookings')}</p>
+        )}
+        {bookingsLoading && (
+          <p className="py-10 text-center text-gray-400 text-sm">{tCommon('loading')}</p>
+        )}
+        {!bookingsLoading && bookings.map((booking) => {
+          const serviceName =
+            typeof (booking.service_snapshot as { name?: string }).name === 'string'
+              ? (booking.service_snapshot as { name?: string }).name
+              : '—'
+          const isCancelling = cancellingId === booking.id
+          const isCancelled = booking.status === 'CANCELLED'
+          return (
+            <div
+              key={booking.id}
+              onClick={() => onEditBooking(booking)}
+              className="rounded-2xl bg-white border border-black/5 p-4 active:bg-black/[0.02] transition-colors"
+            >
+              <div className="flex items-start justify-between gap-3">
+                <p className="font-semibold text-[var(--color-charcoal)] truncate">
+                  {booking.client_first_name} {booking.client_last_name}
+                </p>
+                <BookingStatusBadge status={booking.status} />
+              </div>
+              <p className="mt-0.5 text-sm text-gray-500 truncate">{serviceName}</p>
+              <div className="mt-2 flex items-center gap-2 text-xs text-gray-500">
+                <span>{booking.start_at ? formatLocalDate(booking.start_at) : '—'}</span>
+                <span className="text-gray-300">·</span>
+                <span className="whitespace-nowrap">
+                  {booking.start_at && booking.end_at
+                    ? `${formatLocalTime(booking.start_at)}–${formatLocalTime(booking.end_at)}`
+                    : '—'}
+                </span>
+              </div>
+              <div className="mt-3 flex gap-2">
+                <button
+                  onClick={(e) => { e.stopPropagation(); onEditBooking(booking) }}
+                  className="flex-1 rounded-xl bg-blue-50 text-blue-600 border border-blue-200 py-2 text-sm font-medium active:bg-blue-100 transition-colors"
+                >
+                  {t('bookings_panel.edit_btn')}
+                </button>
+                <button
+                  onClick={(e) => { e.stopPropagation(); handleCancelBooking(booking.id) }}
+                  disabled={isCancelled || isCancelling}
+                  className={`flex-1 rounded-xl py-2 text-sm font-medium transition-colors ${
+                    !isCancelled && !isCancelling
+                      ? 'bg-red-50 text-red-600 border border-red-200 active:bg-red-100'
+                      : 'bg-gray-100 text-gray-400 border border-gray-200 cursor-not-allowed'
+                  }`}
+                >
+                  {isCancelling ? t('bookings_panel.cancelling') : t('bookings_panel.cancel_booking')}
+                </button>
+              </div>
+            </div>
+          )
+        })}
+      </div>
+
+      {/* Desktop: table */}
+      <div className="hidden sm:block overflow-x-auto">
         <table className="w-full text-sm border-collapse">
           <thead>
             <tr className="border-b border-gray-200 text-left text-gray-500">

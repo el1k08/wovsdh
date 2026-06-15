@@ -211,7 +211,7 @@ export function ClientsSection({ apiFetch, onUnauth, onEditBooking, hideBookings
   }
 
   return (
-    <section className="bg-white border border-[var(--color-blush)] rounded-xl p-6">
+    <section className="sm:bg-white sm:border sm:border-[var(--color-blush)] sm:rounded-xl sm:p-6">
       {/* Section header */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6">
         <div className="flex items-center gap-3">
@@ -254,8 +254,80 @@ export function ClientsSection({ apiFetch, onUnauth, onEditBooking, hideBookings
         <p className="mb-4 text-sm text-red-500">{deleteError}</p>
       )}
 
-      {/* Table */}
-      <div className="overflow-x-auto">
+      {/* Mobile: card list */}
+      <div className="sm:hidden space-y-2.5">
+        {loading && [1, 2, 3].map((n) => (
+          <div key={n} className="rounded-2xl bg-white border border-black/5 p-4">
+            <div className="h-4 w-32 bg-gray-100 rounded animate-pulse" />
+            <div className="mt-2 h-3 w-24 bg-gray-100 rounded animate-pulse" />
+          </div>
+        ))}
+        {!loading && clients.length === 0 && (
+          <p className="py-10 text-center text-gray-400 text-sm">
+            {search ? t('no_clients_search') : t('no_clients')}
+          </p>
+        )}
+        {!loading && clients.map((client) => (
+          <div key={client.id} className="rounded-2xl bg-white border border-black/5 p-4">
+            <div className="flex items-start justify-between gap-3">
+              <p className="font-semibold text-[var(--color-charcoal)] truncate">
+                {client.first_name} {client.last_name}
+              </p>
+              <span className="text-xs text-gray-400 whitespace-nowrap shrink-0">{formatDate(client.created_at)}</span>
+            </div>
+            <div className="mt-1 space-y-0.5 text-sm text-gray-500">
+              <p>{client.phone}</p>
+              {client.email && <p className="truncate">{client.email}</p>}
+              {client.city && <p>{client.city}</p>}
+            </div>
+            <div className="mt-3 flex gap-2">
+              <button
+                onClick={() => openEditModal(client)}
+                className="flex-1 rounded-xl bg-blue-50 text-blue-600 border border-blue-200 py-2 text-xs font-medium active:bg-blue-100 transition-colors"
+              >
+                {t('change_btn')}
+              </button>
+              <button
+                onClick={() => void openBookingsModal(client)}
+                className="flex-1 rounded-xl border border-gray-300 text-[var(--color-charcoal)] py-2 text-xs font-medium active:bg-gray-50 transition-colors"
+              >
+                {t('view_bookings')}
+              </button>
+              <button
+                onClick={() => setDeleteTarget((prev) => prev === client.id ? null : client.id)}
+                className="flex-1 rounded-xl border border-red-200 text-red-600 bg-red-50 py-2 text-xs font-medium active:bg-red-100 transition-colors"
+              >
+                {t('delete_btn')}
+              </button>
+            </div>
+            {deleteTarget === client.id && (
+              <div className="mt-3 rounded-xl bg-red-50 border border-red-200 p-3">
+                <p className="text-sm text-red-700">
+                  {t('delete_confirm', { name: `${client.first_name} ${client.last_name}` })}
+                </p>
+                <div className="mt-2 flex gap-2">
+                  <button
+                    onClick={() => void handleDelete(client.id)}
+                    disabled={deleting}
+                    className="flex-1 rounded-xl bg-red-600 text-white py-2 text-xs font-medium active:bg-red-700 disabled:opacity-50"
+                  >
+                    {deleting ? tCommon('deleting') : tCommon('confirm')}
+                  </button>
+                  <button
+                    onClick={() => setDeleteTarget(null)}
+                    className="flex-1 rounded-xl border border-gray-300 text-gray-600 bg-white py-2 text-xs font-medium"
+                  >
+                    {tCommon('cancel')}
+                  </button>
+                </div>
+              </div>
+            )}
+          </div>
+        ))}
+      </div>
+
+      {/* Desktop: table */}
+      <div className="hidden sm:block overflow-x-auto">
         <table className="w-full text-sm border-collapse">
           <thead>
             <tr className="border-b border-gray-200 text-left text-gray-500">
