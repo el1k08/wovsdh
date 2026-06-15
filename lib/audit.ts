@@ -39,8 +39,10 @@ function isPublicIp(ip: string | null | undefined): ip is string {
   return true
 }
 
-/** Best-effort geo lookup. Returns {} on any failure — never throws. */
-async function geoLookup(ip: string | null): Promise<{ country?: string; city?: string }> {
+type Geo = { country?: string; region?: string; city?: string }
+
+/** Best-effort geo lookup via ipapi.co. Returns {} on any failure — never throws. */
+async function geoLookup(ip: string | null): Promise<Geo> {
   if (!isPublicIp(ip)) return {}
   try {
     const controller = new AbortController()
@@ -51,15 +53,44 @@ async function geoLookup(ip: string | null): Promise<{ country?: string; city?: 
     })
     clearTimeout(timer)
     if (!res.ok) return {}
-    const data = (await res.json()) as { error?: boolean; country_name?: string; country?: string; city?: string }
+    const data = (await res.json()) as {
+      error?: boolean
+      country_name?: string
+      country?: string
+      region?: string
+      city?: string
+    }
     if (data?.error) return {}
     return {
       country: data.country_name || data.country || undefined,
+      region: data.region || undefined,
       city: data.city || undefined,
     }
   } catch {
     return {}
   }
+}
+
+/**
+ * Resolve geo for an IP, reusing a previous lookup for the same IP from the
+ * audit table when available. Keeps every event located while making at most
+ * one external API call per distinct IP (and zero latency on follow-up events
+ * like OTP_SENT / TWO_FACTOR_* that share the login's IP).
+ */
+async function resolveGeo(ip: string | null): Promise<Geo> {
+  if (!isPublicIp(ip)) return {}
+  const { data } = await supabaseAdmin
+    .from('admin_login_audit')
+    .select('country, region, city')
+    .eq('ip_address', ip)
+    .not('country', 'is', null)
+    .order('created_at', { ascending: false })
+    .limit(1)
+  if (data && data.length > 0) {
+    const r = data[0] as Geo
+    return { country: r.country ?? undefined, region: r.region ?? undefined, city: r.city ?? undefined }
+  }
+  return geoLookup(ip)
 }
 
 async function sendNewLocationAlert(input: {
@@ -68,6 +99,7 @@ async function sendNewLocationAlert(input: {
   ipAddress: string | null
   userAgent: string | null
   country?: string
+  region?: string
   city?: string
 }) {
   if (!input.userId) return
@@ -79,7 +111,7 @@ async function sendNewLocationAlert(input: {
   const chatId = (data as { telegram_chat_id: string | null } | null)?.telegram_chat_id
   if (!chatId) return
 
-  const where = [input.city, input.country].filter(Boolean).join(', ') || input.ipAddress || 'unknown location'
+  const where = [input.city, input.region, input.country].filter(Boolean).join(', ') || input.ipAddress || 'unknown location'
   const lines = [
     '🛡️ <b>Новий вхід в адмінку</b>',
     '⚠️ <i>З місця, якого раніше не було.</i>',
@@ -102,15 +134,12 @@ export async function recordAuditEvent(input: RecordInput): Promise<void> {
   try {
     const { event, email = null, userId = null, ipAddress = null, userAgent = null } = input
 
-    let country: string | undefined
-    let city: string | undefined
+    // Resolve country/region/city for every event (cached per IP).
+    const geo = await resolveGeo(ipAddress)
+    const { country, region, city } = geo
     let isNewLocation = false
 
     if (event === 'LOGIN_SUCCESS') {
-      const geo = await geoLookup(ipAddress)
-      country = geo.country
-      city = geo.city
-
       // "New location" = no prior successful login from this country (or IP,
       // if geo is unavailable) for this admin.
       let q = supabaseAdmin
@@ -134,12 +163,13 @@ export async function recordAuditEvent(input: RecordInput): Promise<void> {
       ip_address: ipAddress,
       user_agent: userAgent,
       country: country ?? null,
+      region: region ?? null,
       city: city ?? null,
       is_new_location: isNewLocation,
     })
 
     if (event === 'LOGIN_SUCCESS' && isNewLocation) {
-      sendNewLocationAlert({ userId, email, ipAddress, userAgent, country, city }).catch((err) =>
+      sendNewLocationAlert({ userId, email, ipAddress, userAgent, country, region, city }).catch((err) =>
         console.error('[audit] new-location alert failed', err),
       )
     }

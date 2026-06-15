@@ -13,6 +13,7 @@ interface AuditRow {
   ip_address: string | null
   user_agent: string | null
   country: string | null
+  region: string | null
   city: string | null
   is_new_location: boolean
   created_at: string
@@ -198,7 +199,7 @@ export function SecurityTab({ apiFetch, onUnauth }: SecurityTabProps) {
               </thead>
               <tbody>
                 {logs.map((l) => {
-                  const location = [l.city, l.country].filter(Boolean).join(', ') || '—'
+                  const location = [l.city, l.region, l.country].filter(Boolean).join(', ') || '—'
                   return (
                     <tr key={l.id} className="border-b border-[var(--color-blush)] last:border-0 hover:bg-gray-50/50">
                       <td className="px-4 py-3 whitespace-nowrap">
