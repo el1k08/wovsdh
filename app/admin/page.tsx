@@ -249,19 +249,19 @@ export default function AdminPage() {
             </div>
 
             {settingsSubTab === 'studios' && (
-              <section className="bg-white border border-[var(--color-blush)] rounded-xl p-6">
+              <section className="sm:bg-white sm:border sm:border-[var(--color-blush)] sm:rounded-xl sm:p-6">
                 <StudiosTab apiFetch={apiFetch} onUnauth={handleUnauth} onStudiosChanged={loadStudios} />
               </section>
             )}
 
             {settingsSubTab === 'services' && (
-              <section className="bg-white border border-[var(--color-blush)] rounded-xl p-6">
+              <section className="sm:bg-white sm:border sm:border-[var(--color-blush)] sm:rounded-xl sm:p-6">
                 <ServicesTab studio={studio} apiFetch={apiFetch} onUnauth={handleUnauth} />
               </section>
             )}
 
             {settingsSubTab === 'users' && (
-              <section className="bg-white border border-[var(--color-blush)] rounded-xl p-6">
+              <section className="sm:bg-white sm:border sm:border-[var(--color-blush)] sm:rounded-xl sm:p-6">
                 <UsersTab apiFetch={apiFetch} studios={studios} />
               </section>
             )}
@@ -279,7 +279,7 @@ export default function AdminPage() {
             )}
 
             {settingsSubTab === 'security' && (
-              <section className="bg-white border border-[var(--color-blush)] rounded-xl p-6">
+              <section className="sm:bg-white sm:border sm:border-[var(--color-blush)] sm:rounded-xl sm:p-6">
                 <SecurityTab apiFetch={apiFetch} onUnauth={handleUnauth} />
               </section>
             )}

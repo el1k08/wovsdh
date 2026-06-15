@@ -235,7 +235,77 @@ export function UsersTab({ apiFetch, studios }: UsersTabProps) {
       ) : users.length === 0 ? (
         <p className="text-sm text-gray-400">{t('no_users')}</p>
       ) : (
-        <div className="rounded-xl border border-[var(--color-blush)] overflow-hidden">
+        <>
+        {/* Mobile cards */}
+        <div className="sm:hidden space-y-2.5">
+          {users.map((user) => (
+            <div key={user.id} className="rounded-2xl bg-white border border-black/5 p-4">
+              <div className="flex items-start justify-between gap-3">
+                <div className="min-w-0">
+                  <p className="font-semibold text-[var(--color-charcoal)] truncate">{user.name}</p>
+                  <p className="text-xs text-gray-400 truncate">{user.email}</p>
+                </div>
+                <span className={`shrink-0 inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium ${ROLE_COLORS[user.role] ?? 'bg-gray-100 text-gray-600'}`}>
+                  {ROLE_LABELS[user.role] ?? user.role}
+                </span>
+              </div>
+              <p className="mt-1 text-xs text-gray-400">{new Date(user.createdAt).toLocaleDateString()}</p>
+              <div className="mt-3 flex gap-2">
+                {user.role === 'master' && (
+                  <button
+                    onClick={() => setExpandedId(expandedId === user.id ? null : user.id)}
+                    className="flex-1 inline-flex items-center justify-center gap-1.5 rounded-xl border border-gray-300 text-[var(--color-charcoal)] py-2 text-xs font-medium active:bg-gray-50"
+                  >
+                    <Building2 size={14} />{t('studios_btn_title')}
+                  </button>
+                )}
+                <button
+                  onClick={() => handleDelete(user)}
+                  disabled={deletingId === user.id}
+                  className="flex-1 inline-flex items-center justify-center gap-1.5 rounded-xl border border-red-200 text-red-600 bg-red-50 py-2 text-xs font-medium active:bg-red-100 disabled:opacity-40"
+                >
+                  <Trash2 size={14} />{t('delete_btn_title')}
+                </button>
+              </div>
+              {user.role === 'master' && expandedId === user.id && (
+                <div className="mt-3 space-y-2 border-t border-gray-100 pt-3">
+                  <p className="text-xs font-medium text-gray-500 uppercase tracking-wide">{t('studios_title')}</p>
+                  {studios.length === 0 ? (
+                    <p className="text-xs text-gray-400">{t('no_studios')}</p>
+                  ) : (
+                    <div className="flex flex-wrap gap-2">
+                      {studios.map((s) => {
+                        const checked = (assigningStudios[user.id] ?? []).includes(s.id)
+                        return (
+                          <button
+                            key={s.id}
+                            onClick={() => toggleStudio(user.id, s.id)}
+                            className={`px-3 py-1.5 rounded-lg text-xs font-medium border transition-colors ${
+                              checked
+                                ? 'bg-[var(--color-rose)] text-white border-[var(--color-rose)]'
+                                : 'bg-white text-gray-600 border-gray-300'
+                            }`}
+                          >
+                            {s.name}
+                          </button>
+                        )
+                      })}
+                    </div>
+                  )}
+                  <button
+                    onClick={() => handleSaveStudios(user.id)}
+                    disabled={savingStudios === user.id}
+                    className="px-3 py-1.5 bg-[var(--color-rose)] text-white rounded-lg text-xs font-medium disabled:opacity-50"
+                  >
+                    {savingStudios === user.id ? t('saving_studios') : t('save_studios')}
+                  </button>
+                </div>
+              )}
+            </div>
+          ))}
+        </div>
+        {/* Desktop table */}
+        <div className="hidden sm:block rounded-xl border border-[var(--color-blush)] overflow-hidden">
           <table className="w-full text-sm">
             <thead>
               <tr className="bg-gray-50 border-b border-[var(--color-blush)]">
@@ -326,6 +396,7 @@ export function UsersTab({ apiFetch, studios }: UsersTabProps) {
             </tbody>
           </table>
         </div>
+        </>
       )}
 
       <div className="border border-gray-100 rounded-xl p-4 space-y-2">

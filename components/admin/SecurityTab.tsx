@@ -133,7 +133,36 @@ export function SecurityTab({ apiFetch, onUnauth }: SecurityTabProps) {
         ) : activeSessions.length === 0 ? (
           <p className="text-sm text-gray-400">{t('sessions_empty')}</p>
         ) : (
-          <div className="overflow-x-auto rounded-xl border border-[var(--color-blush)]">
+          <>
+          {/* Mobile cards */}
+          <div className="sm:hidden space-y-2.5">
+            {activeSessions.map((s) => (
+              <div key={s.token} className="rounded-2xl bg-white border border-black/5 p-4">
+                <div className="flex items-start justify-between gap-3">
+                  <p className="font-medium text-[var(--color-charcoal)]">{prettyUserAgent(s.userAgent)}</p>
+                  {s.token === currentToken ? (
+                    <span className="text-xs text-green-600 shrink-0">{t('this_device')}</span>
+                  ) : (
+                    <button
+                      onClick={() => handleRevoke(s.token)}
+                      disabled={revoking === s.token}
+                      className="inline-flex items-center gap-1 px-2.5 py-1 border border-gray-300 text-gray-600 rounded-lg text-xs font-medium active:border-red-300 active:text-red-600 disabled:opacity-40 shrink-0"
+                    >
+                      <LogOut size={12} />
+                      {revoking === s.token ? t('revoking') : t('revoke')}
+                    </button>
+                  )}
+                </div>
+                <div className="mt-2 space-y-0.5 text-xs text-gray-500">
+                  <p className="font-mono">{s.ipAddress ?? '—'}</p>
+                  <p>{t('col_signed_in')}: {fmt(s.createdAt)}</p>
+                  <p>{t('col_expires')}: {fmt(s.expiresAt)}</p>
+                </div>
+              </div>
+            ))}
+          </div>
+          {/* Desktop table */}
+          <div className="hidden sm:block overflow-x-auto rounded-xl border border-[var(--color-blush)]">
             <table className="w-full text-sm">
               <thead>
                 <tr className="bg-gray-50 border-b border-[var(--color-blush)]">
@@ -170,6 +199,7 @@ export function SecurityTab({ apiFetch, onUnauth }: SecurityTabProps) {
               </tbody>
             </table>
           </div>
+          </>
         )}
       </div>
 
@@ -185,7 +215,37 @@ export function SecurityTab({ apiFetch, onUnauth }: SecurityTabProps) {
         ) : logs.length === 0 ? (
           <p className="text-sm text-gray-400">{t('audit_empty')}</p>
         ) : (
-          <div className="overflow-x-auto rounded-xl border border-[var(--color-blush)]">
+          <>
+          {/* Mobile cards */}
+          <div className="sm:hidden space-y-2.5">
+            {logs.map((l) => {
+              const location = [l.city, l.region, l.country].filter(Boolean).join(', ') || '—'
+              return (
+                <div key={l.id} className="rounded-2xl bg-white border border-black/5 p-4">
+                  <div className="flex items-center justify-between gap-2">
+                    <span className={`inline-block rounded-full px-2.5 py-0.5 text-xs font-medium ${EVENT_STYLE[l.event] ?? 'bg-gray-100 text-gray-600'}`}>
+                      {t(`event_${l.event}`)}
+                    </span>
+                    <span className="text-xs text-gray-400 whitespace-nowrap">{fmt(l.created_at)}</span>
+                  </div>
+                  {l.is_new_location && (
+                    <span className="mt-1.5 inline-flex items-center gap-0.5 text-[11px] text-[var(--color-rose)]">
+                      <ShieldAlert size={11} />
+                      {t('new_location')}
+                    </span>
+                  )}
+                  <div className="mt-2 space-y-0.5 text-xs text-gray-500">
+                    {l.email && <p className="truncate">{l.email}</p>}
+                    <p>{location}</p>
+                    <p className="font-mono">{l.ip_address ?? '—'}</p>
+                    <p>{prettyUserAgent(l.user_agent)}</p>
+                  </div>
+                </div>
+              )
+            })}
+          </div>
+          {/* Desktop table */}
+          <div className="hidden sm:block overflow-x-auto rounded-xl border border-[var(--color-blush)]">
             <table className="w-full text-sm">
               <thead>
                 <tr className="bg-gray-50 border-b border-[var(--color-blush)]">
@@ -224,6 +284,7 @@ export function SecurityTab({ apiFetch, onUnauth }: SecurityTabProps) {
               </tbody>
             </table>
           </div>
+          </>
         )}
       </div>
     </div>

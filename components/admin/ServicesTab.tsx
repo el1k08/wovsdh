@@ -438,7 +438,64 @@ export function ServicesTab({ studio, apiFetch, onUnauth }: ServicesTabProps) {
       ) : services.length === 0 ? (
         <p className="text-sm text-gray-400 py-4">{t('error_load')}</p>
       ) : (
-        <div className="overflow-x-auto">
+        <>
+        {/* Mobile cards */}
+        <div className="sm:hidden space-y-2.5">
+          {services.map((svc) => (
+            <div key={svc.id} className="rounded-2xl bg-white border border-black/5 p-4">
+              <div className="flex items-start justify-between gap-3">
+                <div className="flex items-center gap-2 min-w-0">
+                  <span className="text-xl shrink-0">{svc.icon ?? '—'}</span>
+                  <p className="font-semibold text-[var(--color-charcoal)] truncate">{svc.name}</p>
+                </div>
+                <span className={`shrink-0 inline-block px-2 py-0.5 rounded text-xs font-medium ${
+                  svc.is_active
+                    ? 'bg-green-50 text-green-700 border border-green-200'
+                    : 'bg-gray-100 text-gray-500 border border-gray-300'
+                }`}>
+                  {svc.is_active ? t('active_label') : t('inactive_label')}
+                </span>
+              </div>
+              <p className="mt-1 text-sm text-gray-500">{formatDuration(svc.duration_minutes)} · ₪{svc.price}</p>
+              <div className="mt-3 flex gap-2">
+                <button
+                  onClick={() => startEdit(svc)}
+                  className="flex-1 rounded-xl border border-gray-300 text-[var(--color-charcoal)] py-2 text-xs font-medium active:bg-gray-50"
+                >
+                  {tCommon('edit')}
+                </button>
+                <button
+                  onClick={() => setDeleteTarget((prev) => prev === svc.id ? null : svc.id)}
+                  className="flex-1 rounded-xl border border-red-200 text-red-600 bg-red-50 py-2 text-xs font-medium active:bg-red-100"
+                >
+                  {tCommon('delete')}
+                </button>
+              </div>
+              {deleteTarget === svc.id && (
+                <div className="mt-3 rounded-xl bg-red-50 border border-red-200 p-3">
+                  <p className="text-sm text-red-700">{t('delete_confirm', { name: svc.name })}</p>
+                  <div className="mt-2 flex gap-2">
+                    <button
+                      onClick={() => handleDelete(svc.id)}
+                      disabled={deleting}
+                      className="flex-1 rounded-xl bg-red-600 text-white py-2 text-xs font-medium active:bg-red-700 disabled:opacity-50"
+                    >
+                      {deleting ? tCommon('deleting') : tCommon('confirm')}
+                    </button>
+                    <button
+                      onClick={() => setDeleteTarget(null)}
+                      className="flex-1 rounded-xl border border-gray-300 text-gray-600 bg-white py-2 text-xs font-medium"
+                    >
+                      {tCommon('cancel')}
+                    </button>
+                  </div>
+                </div>
+              )}
+            </div>
+          ))}
+        </div>
+        {/* Desktop table */}
+        <div className="hidden sm:block overflow-x-auto">
           <table className="w-full text-sm border-collapse">
             <thead>
               <tr className="border-b border-gray-200 text-left text-gray-500">
@@ -528,6 +585,7 @@ export function ServicesTab({ studio, apiFetch, onUnauth }: ServicesTabProps) {
             </tbody>
           </table>
         </div>
+        </>
       )}
 
     </div>

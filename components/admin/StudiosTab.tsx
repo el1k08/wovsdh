@@ -474,7 +474,56 @@ export function StudiosTab({ apiFetch, onUnauth, onStudiosChanged }: StudiosTabP
       ) : studiosList.length === 0 ? (
         <p className="text-sm text-gray-400">{t('edit_heading')}</p>
       ) : (
-        <div className="overflow-x-auto">
+        <>
+        {/* Mobile cards */}
+        <div className="sm:hidden space-y-2.5">
+          {studiosList.map((s) => (
+            <div key={s.id} className="rounded-2xl bg-white border border-black/5 p-4">
+              <p className="font-semibold text-[var(--color-charcoal)]">{s.name}</p>
+              <div className="mt-1 space-y-0.5 text-sm text-gray-500">
+                {s.street && <p>{s.street}</p>}
+                <p>{s.city}</p>
+                <p className="font-mono text-xs text-gray-400">{s.id}</p>
+              </div>
+              <div className="mt-3 flex gap-2">
+                <button
+                  onClick={() => startEdit(s)}
+                  className="flex-1 rounded-xl border border-gray-300 text-[var(--color-charcoal)] py-2 text-xs font-medium active:bg-gray-50"
+                >
+                  {tCommon('edit')}
+                </button>
+                <button
+                  onClick={() => setDeleteTarget(prev => prev === s.id ? null : s.id)}
+                  className="flex-1 rounded-xl border border-red-200 text-red-600 bg-red-50 py-2 text-xs font-medium active:bg-red-100"
+                >
+                  {tCommon('delete')}
+                </button>
+              </div>
+              {deleteTarget === s.id && (
+                <div className="mt-3 rounded-xl bg-red-50 border border-red-200 p-3">
+                  <p className="text-sm text-red-700">{t('delete_confirm', { name: s.name })}</p>
+                  <div className="mt-2 flex gap-2">
+                    <button
+                      onClick={() => handleDelete(s.id)}
+                      disabled={deleting}
+                      className="flex-1 rounded-xl bg-red-600 text-white py-2 text-xs font-medium active:bg-red-700 disabled:opacity-50"
+                    >
+                      {deleting ? tCommon('deleting') : tCommon('confirm')}
+                    </button>
+                    <button
+                      onClick={() => setDeleteTarget(null)}
+                      className="flex-1 rounded-xl border border-gray-300 text-gray-600 bg-white py-2 text-xs font-medium"
+                    >
+                      {tCommon('cancel')}
+                    </button>
+                  </div>
+                </div>
+              )}
+            </div>
+          ))}
+        </div>
+        {/* Desktop table */}
+        <div className="hidden sm:block overflow-x-auto">
           <table className="w-full text-sm">
             <thead>
               <tr className="border-b border-[var(--color-blush)]">
@@ -554,6 +603,7 @@ export function StudiosTab({ apiFetch, onUnauth, onStudiosChanged }: StudiosTabP
             </tbody>
           </table>
         </div>
+        </>
       )}
     </div>
   )
