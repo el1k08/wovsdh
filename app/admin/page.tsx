@@ -170,7 +170,7 @@ export default function AdminPage() {
   ]
 
   return (
-    <main className="app-shell font-ios min-h-screen bg-[var(--color-cream)] p-4 md:p-8 pb-28 sm:pb-8 px-safe">
+    <main className="app-shell font-ios min-h-screen bg-[var(--color-cream)] p-4 md:p-8 pb-28 sm:pb-8">
       <div className="max-w-5xl mx-auto">
         {/* Header */}
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-8 pt-safe">
