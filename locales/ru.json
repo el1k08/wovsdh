@@ -218,7 +218,8 @@
       "users": "Пользователи",
       "instagram": "Instagram",
       "twilio": "WhatsApp",
-      "security": "Безопасность"
+      "security": "Безопасность",
+      "profile": "Профиль"
     },
     "slot_status": {
       "available": "Свободный",

@@ -218,7 +218,8 @@
       "users": "Users",
       "instagram": "Instagram",
       "twilio": "WhatsApp",
-      "security": "Security"
+      "security": "Security",
+      "profile": "Profile"
     },
     "slot_status": {
       "available": "Available",

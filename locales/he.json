@@ -218,7 +218,8 @@
       "users": "משתמשים",
       "instagram": "אינסטגרם",
       "twilio": "וואטסאפ",
-      "security": "אבטחה"
+      "security": "אבטחה",
+      "profile": "פרופיל"
     },
     "slot_status": {
       "available": "פנוי",

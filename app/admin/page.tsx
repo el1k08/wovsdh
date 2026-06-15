@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useCallback, useRef } from 'react'
 import { useTranslations } from 'next-intl'
-import { Building2, Settings, Users } from 'lucide-react'
+import { Building2, Settings, Users, User, ChevronLeft, ChevronRight } from 'lucide-react'
 import { authClient } from '@/lib/auth-client'
 import type { Studio, AdminBookingDTO } from '@/lib/types'
 import {
@@ -19,6 +19,7 @@ import {
   StudiosTab,
   UsersTab,
   SecurityTab,
+  ProfilePanel,
   UserDropdown,
   UserSettingsModal,
 } from '@/components/admin'
@@ -48,7 +49,8 @@ export default function AdminPage() {
   const [studios, setStudios] = useState<Studio[]>([])
   const [activeTab, setActiveTab] = useState<AdminTab>('bookings')
   const [settingsSubTab, setSettingsSubTab] = useState<SettingsSubTab>('studios')
-  const [topSection, setTopSection] = useState<'studios' | 'settings' | 'clients'>('studios')
+  const [topSection, setTopSection] = useState<'studios' | 'settings' | 'clients' | 'profile'>('studios')
+  const [mobileStudioOpen, setMobileStudioOpen] = useState(false)
   const [editingBooking, setEditingBooking] = useState<AdminBookingDTO | null>(null)
   const [showUserSettings, setShowUserSettings] = useState(false)
   const [twoFactorPending, setTwoFactorPending] = useState<boolean | null>(null)
@@ -60,7 +62,7 @@ export default function AdminPage() {
       hasReadURL.current = true
       const p = new URLSearchParams(window.location.search)
       const sec = p.get('section')
-      if (sec === 'studios' || sec === 'settings' || sec === 'clients') setTopSection(sec)
+      if (sec === 'studios' || sec === 'settings' || sec === 'clients' || sec === 'profile') setTopSection(sec)
       const tab = p.get('tab')
       if (tab === 'bookings' || tab === 'schedule' || tab === 'services') setActiveTab(tab as AdminTab)
       const subtab = p.get('subtab')
@@ -175,7 +177,7 @@ export default function AdminPage() {
           <h1 className="text-3xl sm:text-2xl font-bold sm:font-semibold tracking-tight text-[var(--color-charcoal)]">
             {t('page_title')}
           </h1>
-          <div className="flex items-center gap-4 self-start sm:self-auto">
+          <div className="hidden sm:flex items-center gap-4 self-start sm:self-auto">
             <UserDropdown
               email={userEmail}
               onOpenSettings={() => setShowUserSettings(true)}
@@ -294,10 +296,54 @@ export default function AdminPage() {
           />
         )}
 
-        {/* Studio switcher + tabs */}
+        {/* Profile section — mobile (reached via bottom tab) */}
+        {topSection === 'profile' && (
+          <div className="sm:hidden">
+            <ProfilePanel apiFetch={apiFetch} onSignOut={handleUnauth} />
+          </div>
+        )}
+
+        {/* Studios section */}
         {topSection === 'studios' && (
           <>
-            <div className="flex gap-2 mb-6 flex-wrap">
+            {/* Mobile: studio list (master view, Telegram-style) */}
+            {!mobileStudioOpen && (
+              <ul className="sm:hidden -mt-2 rounded-2xl bg-white border border-black/5 divide-y divide-black/5 overflow-hidden">
+                {studios.map((s) => (
+                  <li key={s.id}>
+                    <button
+                      onClick={() => { setStudio(s.id); setMobileStudioOpen(true) }}
+                      className="w-full flex items-center justify-between px-4 py-3.5 text-left active:bg-black/5 transition-colors"
+                    >
+                      <span className="flex items-center gap-3 min-w-0">
+                        <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-[var(--color-blush)] text-[var(--color-rose)] shrink-0">
+                          <Building2 size={18} />
+                        </span>
+                        <span className="truncate text-sm font-medium text-[var(--color-charcoal)]">{s.name}</span>
+                      </span>
+                      <ChevronRight size={18} className="text-gray-300 shrink-0" />
+                    </button>
+                  </li>
+                ))}
+                {studios.length === 0 && (
+                  <li className="px-4 py-6 text-center text-sm text-gray-400">—</li>
+                )}
+              </ul>
+            )}
+
+            {/* Mobile: back to studio list (detail view) */}
+            {mobileStudioOpen && (
+              <button
+                onClick={() => setMobileStudioOpen(false)}
+                className="sm:hidden -mt-2 mb-3 flex items-center gap-0.5 text-[var(--color-rose)] text-sm font-medium"
+              >
+                <ChevronLeft size={20} />
+                {t('tabs.studios')}
+              </button>
+            )}
+
+            {/* Desktop: studio switcher row */}
+            <div className="hidden sm:flex gap-2 mb-6 flex-wrap">
               {studios.map((s) => (
                 <button
                   key={s.id}
@@ -312,6 +358,12 @@ export default function AdminPage() {
                 </button>
               ))}
             </div>
+
+            {/* Studio detail — desktop always, mobile only when a studio is opened */}
+            <div className={mobileStudioOpen ? '' : 'hidden sm:block'}>
+            <h2 className="sm:hidden text-2xl font-bold tracking-tight text-[var(--color-charcoal)] mb-4">
+              {studios.find((s) => s.id === studio)?.name}
+            </h2>
 
             <div className="flex gap-1 mb-8 border-b border-gray-200 overflow-x-auto">
               {TABS.map((tab) => (
@@ -349,6 +401,7 @@ export default function AdminPage() {
                 <StudioServicesAssignmentTab studio={studio} apiFetch={apiFetch} onUnauth={handleUnauth} />
               </section>
             )}
+            </div>
           </>
         )}
       </div>
@@ -423,14 +476,15 @@ export default function AdminPage() {
       {/* Mobile bottom tab bar (iOS-style, frosted glass) */}
       <nav
         className="glass sm:hidden fixed inset-x-0 bottom-0 z-40 border-t border-black/5 pb-safe"
-        aria-label={t('tabs.settings')}
+        aria-label={t('page_title')}
       >
         <div className="flex items-stretch justify-around px-2 pt-1.5">
           {([
             { key: 'studios' as const, label: t('tabs.studios'), Icon: Building2, show: true },
             { key: 'clients' as const, label: t('tabs.clients'), Icon: Users, show: isManager },
             { key: 'settings' as const, label: t('tabs.settings'), Icon: Settings, show: isAdmin },
-          ] as const)
+            { key: 'profile' as const, label: t('tabs.profile'), Icon: User, show: true },
+          ])
             .filter((item) => item.show)
             .map(({ key, label, Icon }) => {
               const active = topSection === key
@@ -438,7 +492,10 @@ export default function AdminPage() {
                 <button
                   key={key}
                   type="button"
-                  onClick={() => setTopSection(key)}
+                  onClick={() => {
+                    setTopSection(key)
+                    if (key === 'studios') setMobileStudioOpen(false)
+                  }}
                   aria-current={active ? 'page' : undefined}
                   className="flex flex-1 flex-col items-center gap-0.5 rounded-lg py-1.5 transition-colors active:bg-black/5"
                   style={{ color: active ? 'var(--color-rose)' : '#8a8080' }}

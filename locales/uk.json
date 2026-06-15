@@ -218,7 +218,8 @@
       "users": "Користувачі",
       "instagram": "Instagram",
       "twilio": "WhatsApp",
-      "security": "Безпека"
+      "security": "Безпека",
+      "profile": "Профіль"
     },
     "slot_status": {
       "available": "Вільний",
