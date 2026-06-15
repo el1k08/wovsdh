@@ -1,7 +1,7 @@
 'use client'
 
-import { useState, useEffect, useRef } from 'react'
-import { Shield, RefreshCw } from 'lucide-react'
+import { useState, useEffect, useRef, useCallback } from 'react'
+import { Shield, RefreshCw, ClipboardPaste } from 'lucide-react'
 import { useTranslations } from 'next-intl'
 
 interface TwoFactorVerifyProps {
@@ -17,6 +17,7 @@ export function TwoFactorVerify({ apiFetch, onVerified, onSignOut }: TwoFactorVe
   const [sent, setSent] = useState(false)
   const [verifying, setVerifying] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [detected, setDetected] = useState<string | null>(null)
   const inputRef = useRef<HTMLInputElement>(null)
 
   useEffect(() => {
@@ -26,6 +27,26 @@ export function TwoFactorVerify({ apiFetch, onVerified, onSignOut }: TwoFactorVe
   useEffect(() => {
     if (sent) inputRef.current?.focus()
   }, [sent])
+
+  // Best-effort: when the user returns to the app (after copying the code in
+  // Telegram), peek at the clipboard and offer a one-tap "paste" chip.
+  const peekClipboard = useCallback(async () => {
+    try {
+      const text = await navigator.clipboard.readText()
+      const m = text.match(/\b(\d{6})\b/)
+      if (m) setDetected(m[1])
+    } catch {
+      /* clipboard not readable without a gesture — ignore */
+    }
+  }, [])
+
+  useEffect(() => {
+    if (!sent) return
+    const onVisible = () => { if (document.visibilityState === 'visible') void peekClipboard() }
+    document.addEventListener('visibilitychange', onVisible)
+    void peekClipboard()
+    return () => document.removeEventListener('visibilitychange', onVisible)
+  }, [sent, peekClipboard])
 
   async function sendCode() {
     setSending(true)
@@ -48,15 +69,14 @@ export function TwoFactorVerify({ apiFetch, onVerified, onSignOut }: TwoFactorVe
     }
   }
 
-  async function handleVerify(e: React.FormEvent) {
-    e.preventDefault()
-    if (code.length < 6) return
+  const verifyCode = useCallback(async (value: string) => {
+    if (value.length < 6 || verifying) return
     setVerifying(true)
     setError(null)
     try {
       const res = await apiFetch('/api/admin/auth/2fa', {
         method: 'POST',
-        body: JSON.stringify({ action: 'verify', code }),
+        body: JSON.stringify({ action: 'verify', code: value }),
       })
       if (!res.ok) {
         const d = await res.json() as { error?: { message?: string } }
@@ -69,6 +89,26 @@ export function TwoFactorVerify({ apiFetch, onVerified, onSignOut }: TwoFactorVe
       setError(t('error_network'))
     } finally {
       setVerifying(false)
+    }
+  }, [apiFetch, verifying, onVerified, t])
+
+  function handleVerify(e: React.FormEvent) {
+    e.preventDefault()
+    void verifyCode(code)
+  }
+
+  // Explicit gesture → read clipboard, fill and submit in one tap.
+  async function pasteAndVerify() {
+    try {
+      const text = await navigator.clipboard.readText()
+      const m = text.match(/\b(\d{6})\b/)
+      if (m) {
+        setCode(m[1])
+        setDetected(null)
+        void verifyCode(m[1])
+      }
+    } catch {
+      setError(t('error_network'))
     }
   }
 
@@ -98,6 +138,7 @@ export function TwoFactorVerify({ apiFetch, onVerified, onSignOut }: TwoFactorVe
             ref={inputRef}
             type="text"
             inputMode="numeric"
+            autoComplete="one-time-code"
             pattern="[0-9]*"
             maxLength={6}
             value={code}
@@ -106,12 +147,34 @@ export function TwoFactorVerify({ apiFetch, onVerified, onSignOut }: TwoFactorVe
             disabled={sending || verifying}
             className="w-full border-2 border-gray-200 rounded-xl px-4 py-3 text-center text-2xl font-mono tracking-[0.5em] focus:outline-none focus:border-[var(--color-rose)] disabled:opacity-50 transition-colors"
           />
+
+          {detected && detected !== code && (
+            <button
+              type="button"
+              onClick={() => { setCode(detected); setDetected(null); void verifyCode(detected) }}
+              className="w-full flex items-center justify-center gap-2 rounded-xl border border-[var(--color-rose)]/40 bg-[var(--color-blush)]/50 py-2.5 text-sm font-medium text-[var(--color-rose)] active:opacity-80 transition-opacity"
+            >
+              <ClipboardPaste size={15} />
+              {t('paste_detected', { code: detected })}
+            </button>
+          )}
+
           <button
             type="submit"
             disabled={code.length < 6 || verifying || sending}
             className="w-full py-3 bg-[var(--color-rose)] text-white rounded-xl font-medium hover:opacity-90 disabled:opacity-40 transition-opacity"
           >
             {verifying ? t('verifying') : t('verify_btn')}
+          </button>
+
+          <button
+            type="button"
+            onClick={pasteAndVerify}
+            disabled={sending || verifying}
+            className="w-full flex items-center justify-center gap-1.5 text-sm text-gray-500 hover:text-[var(--color-charcoal)] disabled:opacity-40 transition-colors"
+          >
+            <ClipboardPaste size={14} />
+            {t('paste')}
           </button>
         </form>
 

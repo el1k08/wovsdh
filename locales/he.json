@@ -444,7 +444,9 @@
       "sign_out": "התנתקות",
       "error_send": "לא ניתן לשלוח קוד",
       "error_code": "קוד שגוי",
-      "error_network": "שגיאת רשת"
+      "error_network": "שגיאת רשת",
+      "paste": "הדבק קוד",
+      "paste_detected": "הדבק {code}"
     },
     "users_tab": {
       "heading": "משתמשים",

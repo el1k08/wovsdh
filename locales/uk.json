@@ -444,7 +444,9 @@
       "sign_out": "Вийти",
       "error_send": "Не вдалося надіслати код",
       "error_code": "Невірний код",
-      "error_network": "Мережева помилка"
+      "error_network": "Мережева помилка",
+      "paste": "Вставити код",
+      "paste_detected": "Вставити {code}"
     },
     "users_tab": {
       "heading": "Користувачі",
