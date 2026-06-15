@@ -168,11 +168,11 @@ export default function AdminPage() {
   ]
 
   return (
-    <main className="min-h-screen bg-[var(--color-cream)] p-4 md:p-8">
+    <main className="app-shell font-ios min-h-screen bg-[var(--color-cream)] p-4 md:p-8 pb-28 sm:pb-8 px-safe">
       <div className="max-w-5xl mx-auto">
         {/* Header */}
-        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-8">
-          <h1 className="text-2xl font-semibold text-[var(--color-charcoal)]">
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-8 pt-safe">
+          <h1 className="text-3xl sm:text-2xl font-bold sm:font-semibold tracking-tight text-[var(--color-charcoal)]">
             {t('page_title')}
           </h1>
           <div className="flex items-center gap-4 self-start sm:self-auto">
@@ -184,8 +184,8 @@ export default function AdminPage() {
           </div>
         </div>
 
-        {/* Top-level navigation */}
-        <div className="flex gap-1 mb-8 p-1 bg-white border border-gray-200 rounded-xl w-fit max-w-full overflow-x-auto">
+        {/* Top-level navigation — desktop (mobile uses the bottom tab bar) */}
+        <div className="hidden sm:flex gap-1 mb-8 p-1 bg-white border border-gray-200 rounded-xl w-fit max-w-full overflow-x-auto">
           <button
             onClick={() => setTopSection('studios')}
             className={`flex items-center gap-2 px-3 sm:px-5 py-2.5 rounded-lg text-sm font-medium transition-colors shrink-0 whitespace-nowrap ${
@@ -419,6 +419,37 @@ export default function AdminPage() {
           apiFetch={apiFetch}
         />
       )}
+
+      {/* Mobile bottom tab bar (iOS-style, frosted glass) */}
+      <nav
+        className="glass sm:hidden fixed inset-x-0 bottom-0 z-40 border-t border-black/5 pb-safe"
+        aria-label={t('tabs.settings')}
+      >
+        <div className="flex items-stretch justify-around px-2 pt-1.5">
+          {([
+            { key: 'studios' as const, label: t('tabs.studios'), Icon: Building2, show: true },
+            { key: 'clients' as const, label: t('tabs.clients'), Icon: Users, show: isManager },
+            { key: 'settings' as const, label: t('tabs.settings'), Icon: Settings, show: isAdmin },
+          ] as const)
+            .filter((item) => item.show)
+            .map(({ key, label, Icon }) => {
+              const active = topSection === key
+              return (
+                <button
+                  key={key}
+                  type="button"
+                  onClick={() => setTopSection(key)}
+                  aria-current={active ? 'page' : undefined}
+                  className="flex flex-1 flex-col items-center gap-0.5 rounded-lg py-1.5 transition-colors active:bg-black/5"
+                  style={{ color: active ? 'var(--color-rose)' : '#8a8080' }}
+                >
+                  <Icon size={23} strokeWidth={active ? 2.4 : 1.9} />
+                  <span className="text-[11px] font-medium leading-none">{label}</span>
+                </button>
+              )
+            })}
+        </div>
+      </nav>
     </main>
   )
 }

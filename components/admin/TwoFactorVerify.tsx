@@ -73,7 +73,7 @@ export function TwoFactorVerify({ apiFetch, onVerified, onSignOut }: TwoFactorVe
   }
 
   return (
-    <main className="min-h-screen bg-[var(--color-cream)] flex items-center justify-center p-4">
+    <main className="app-shell font-ios min-h-screen bg-[var(--color-cream)] flex items-center justify-center p-4 px-safe">
       <div className="bg-white rounded-2xl shadow-xl w-full max-w-sm p-8 space-y-6">
         <div className="flex flex-col items-center gap-3 text-center">
           <div className="w-14 h-14 rounded-full bg-[var(--color-blush)] flex items-center justify-center">

@@ -41,3 +41,48 @@ body {
 .scrollbar-hide::-webkit-scrollbar {
   display: none;
 }
+
+/* ---------------------------------------------------------------------------
+   iOS / PWA app-shell foundation
+   --------------------------------------------------------------------------- */
+
+/* Apple system font stack — used by the admin app shell for a native feel. */
+.font-ios {
+  font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", "SF Pro Display",
+    "Segoe UI", system-ui, var(--font-inter), sans-serif;
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+}
+
+/* Safe-area insets (notch / Dynamic Island / home indicator) for viewport-fit=cover. */
+.pt-safe { padding-top: env(safe-area-inset-top); }
+.pb-safe { padding-bottom: env(safe-area-inset-bottom); }
+.pl-safe { padding-left: env(safe-area-inset-left); }
+.pr-safe { padding-right: env(safe-area-inset-right); }
+.px-safe { padding-left: env(safe-area-inset-left); padding-right: env(safe-area-inset-right); }
+/* Fixed bars: add the inset on top of an existing padding value. */
+.pb-safe-2 { padding-bottom: calc(env(safe-area-inset-bottom) + 0.5rem); }
+.h-safe-bottom { height: env(safe-area-inset-bottom); }
+
+/* App-like touch behaviour: no tap flash, no text selection on chrome, no overscroll glow. */
+.app-shell {
+  -webkit-tap-highlight-color: transparent;
+  -webkit-touch-callout: none;
+  overscroll-behavior-y: contain;
+}
+.app-shell button,
+.app-shell a {
+  -webkit-tap-highlight-color: transparent;
+}
+
+/* Frosted "glass" surface for nav / tab bars. */
+.glass {
+  background-color: color-mix(in srgb, var(--color-cream) 72%, transparent);
+  backdrop-filter: saturate(180%) blur(20px);
+  -webkit-backdrop-filter: saturate(180%) blur(20px);
+}
+
+/* Standalone-only tweaks (when launched from the home screen). */
+@media (display-mode: standalone) {
+  html, body { overscroll-behavior-y: none; }
+}

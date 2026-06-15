@@ -37,7 +37,7 @@ export function AuthGate({ onAuth }: { onAuth: () => void }) {
   }
 
   return (
-    <main className="min-h-screen flex items-center justify-center bg-[var(--color-cream)] p-4">
+    <main className="app-shell font-ios min-h-screen flex items-center justify-center bg-[var(--color-cream)] p-4 px-safe">
       <div className="bg-white border border-[var(--color-blush)] rounded-xl p-8 w-full max-w-sm shadow-sm">
         <h1 className="text-xl font-semibold text-[var(--color-charcoal)] mb-6 text-center">
           {t('heading')}
