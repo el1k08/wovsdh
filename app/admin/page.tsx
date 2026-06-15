@@ -93,7 +93,14 @@ export default function AdminPage() {
   )
 
   function handleUnauth() {
+    setTwoFactorPending(null)
     void authClient.signOut()
+  }
+
+  // Fresh login: force the 2FA gate back to "unknown" so protected UI can't
+  // flash from a stale verified state before the profile re-check resolves.
+  function handleAuth() {
+    setTwoFactorPending(null)
   }
 
   const loadStudios = useCallback(async () => {
@@ -120,16 +127,25 @@ export default function AdminPage() {
     })
   }, [apiFetch, userRole, session?.user?.id])
 
+  // Reset the gate whenever the user is not logged in (covers logout → re-login).
   useEffect(() => {
-    if (isLoggedIn) {
-      void apiFetch('/api/admin/user/profile').then(async (res) => {
-        if (!res.ok) return
-        const data = await res.json() as { twoFactorPending?: boolean }
-        setTwoFactorPending(data.twoFactorPending ?? false)
-      })
-      loadStudios()
-    }
-  }, [isLoggedIn, loadStudios, apiFetch])
+    if (!isLoggedIn) setTwoFactorPending(null)
+  }, [isLoggedIn])
+
+  // On login, resolve whether 2FA is still pending before showing anything.
+  useEffect(() => {
+    if (!isLoggedIn) return
+    void apiFetch('/api/admin/user/profile').then(async (res) => {
+      if (!res.ok) return
+      const data = await res.json() as { twoFactorPending?: boolean }
+      setTwoFactorPending(data.twoFactorPending ?? false)
+    })
+  }, [isLoggedIn, apiFetch])
+
+  // Load protected data only after 2FA has been cleared.
+  useEffect(() => {
+    if (isLoggedIn && twoFactorPending === false) loadStudios()
+  }, [isLoggedIn, twoFactorPending, loadStudios])
 
   if (sessionLoading || (isLoggedIn && twoFactorPending === null)) {
     return (
@@ -140,7 +156,7 @@ export default function AdminPage() {
   }
 
   if (!isLoggedIn) {
-    return <AuthGate onAuth={loadStudios} />
+    return <AuthGate onAuth={handleAuth} />
   }
 
   if (twoFactorPending === true) {
