@@ -217,7 +217,8 @@
       "telegram": "טלגרם",
       "users": "משתמשים",
       "instagram": "אינסטגרם",
-      "twilio": "וואטסאפ"
+      "twilio": "וואטסאפ",
+      "security": "אבטחה"
     },
     "slot_status": {
       "available": "פנוי",
@@ -560,6 +561,38 @@
       "error_remove": "שגיאה במחיקה",
       "error_test": "שגיאה בשליחת הודעת בדיקה",
       "error_network": "שגיאת רשת"
+    },
+    "security_panel": {
+      "heading": "אבטחה",
+      "subtitle": "הפעלות פעילות של המנהל ויומן הכניסות.",
+      "sessions_heading": "הפעלות פעילות",
+      "sessions_empty": "אין הפעלות פעילות.",
+      "audit_heading": "יומן אירועים",
+      "audit_empty": "עדיין אין אירועים.",
+      "loading": "טוען…",
+      "col_device": "מכשיר",
+      "col_ip": "IP",
+      "col_signed_in": "כניסה",
+      "col_expires": "תוקף עד",
+      "col_action": "פעולה",
+      "col_event": "אירוע",
+      "col_account": "חשבון",
+      "col_location": "מיקום",
+      "col_when": "מתי",
+      "revoke": "נתק",
+      "revoking": "מנתק…",
+      "this_device": "מכשיר זה",
+      "new_location": "כניסה ממיקום חדש",
+      "new_location_badge": "חדש",
+      "error_load": "הטעינה נכשלה.",
+      "error_revoke": "ניתוק ההפעלה נכשל.",
+      "success_revoke": "ההפעלה נותקה.",
+      "event_LOGIN_SUCCESS": "כניסה",
+      "event_LOGIN_FAILED": "כניסה נכשלה",
+      "event_OTP_SENT": "נשלח קוד 2FA",
+      "event_TWO_FACTOR_SUCCESS": "2FA אומת",
+      "event_TWO_FACTOR_FAILED": "2FA נכשל",
+      "event_LOGOUT": "התנתקות"
     }
   }
 }

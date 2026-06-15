@@ -18,6 +18,7 @@ import {
   StudioServicesAssignmentTab,
   StudiosTab,
   UsersTab,
+  SecurityTab,
   UserDropdown,
   UserSettingsModal,
 } from '@/components/admin'
@@ -63,7 +64,7 @@ export default function AdminPage() {
       const tab = p.get('tab')
       if (tab === 'bookings' || tab === 'schedule' || tab === 'services') setActiveTab(tab as AdminTab)
       const subtab = p.get('subtab')
-      if (subtab === 'studios' || subtab === 'services' || subtab === 'users' || subtab === 'instagram' || subtab === 'twilio') setSettingsSubTab(subtab as SettingsSubTab)
+      if (subtab === 'studios' || subtab === 'services' || subtab === 'users' || subtab === 'instagram' || subtab === 'twilio' || subtab === 'security') setSettingsSubTab(subtab as SettingsSubTab)
       const studioParam = p.get('studio')
       if (studioParam) setStudio(studioParam)
       return
@@ -163,6 +164,7 @@ export default function AdminPage() {
     { key: 'users', label: t('tabs.users') },
     { key: 'instagram', label: t('tabs.instagram') },
     { key: 'twilio', label: t('tabs.twilio') },
+    { key: 'security', label: t('tabs.security') },
   ]
 
   return (
@@ -271,6 +273,12 @@ export default function AdminPage() {
             {settingsSubTab === 'twilio' && (
               <section className="bg-white border border-[var(--color-blush)] rounded-xl p-6">
                 <TwilioTab apiFetch={apiFetch} />
+              </section>
+            )}
+
+            {settingsSubTab === 'security' && (
+              <section className="bg-white border border-[var(--color-blush)] rounded-xl p-6">
+                <SecurityTab apiFetch={apiFetch} onUnauth={handleUnauth} />
               </section>
             )}
           </div>

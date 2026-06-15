@@ -217,7 +217,8 @@
       "telegram": "Telegram",
       "users": "Users",
       "instagram": "Instagram",
-      "twilio": "WhatsApp"
+      "twilio": "WhatsApp",
+      "security": "Security"
     },
     "slot_status": {
       "available": "Available",
@@ -560,6 +561,38 @@
       "error_remove": "Failed to remove",
       "error_test": "Failed to send test message",
       "error_network": "Network error"
+    },
+    "security_panel": {
+      "heading": "Security",
+      "subtitle": "Active admin sessions and the authentication audit trail.",
+      "sessions_heading": "Active sessions",
+      "sessions_empty": "No active sessions.",
+      "audit_heading": "Audit log",
+      "audit_empty": "No events recorded yet.",
+      "loading": "Loading…",
+      "col_device": "Device",
+      "col_ip": "IP",
+      "col_signed_in": "Signed in",
+      "col_expires": "Expires",
+      "col_action": "Action",
+      "col_event": "Event",
+      "col_account": "Account",
+      "col_location": "Location",
+      "col_when": "When",
+      "revoke": "Revoke",
+      "revoking": "Revoking…",
+      "this_device": "This device",
+      "new_location": "Login from a new location",
+      "new_location_badge": "new",
+      "error_load": "Failed to load.",
+      "error_revoke": "Failed to revoke session.",
+      "success_revoke": "Session revoked.",
+      "event_LOGIN_SUCCESS": "Login",
+      "event_LOGIN_FAILED": "Login failed",
+      "event_OTP_SENT": "2FA sent",
+      "event_TWO_FACTOR_SUCCESS": "2FA passed",
+      "event_TWO_FACTOR_FAILED": "2FA failed",
+      "event_LOGOUT": "Logout"
     }
   }
 }

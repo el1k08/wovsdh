@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { getAdminSession } from '@/lib/admin-auth'
 import { supabaseAdmin } from '@/lib/supabase'
 import { sendMessage } from '@/lib/telegram'
+import { recordAuditEvent, extractRequestMeta } from '@/lib/audit'
 import type { ApiError } from '@/lib/types'
 
 const CODE_TTL_MS = 5 * 60 * 1000 // 5 minutes
@@ -40,6 +41,8 @@ export async function POST(request: NextRequest) {
     telegramChatId?: string | null
   }
 
+  const actor = { userId: user.id, email: user.email, ...extractRequestMeta(request.headers) }
+
   let body: { action: string; code?: string }
   try {
     body = await request.json()
@@ -74,6 +77,8 @@ export async function POST(request: NextRequest) {
       parse_mode: 'HTML',
     })
 
+    await recordAuditEvent({ event: 'OTP_SENT', ...actor })
+
     return NextResponse.json({ required: true, sent: true })
   }
 
@@ -101,6 +106,7 @@ export async function POST(request: NextRequest) {
     }
 
     if (new Date(row.two_factor_expires_at) < new Date()) {
+      await recordAuditEvent({ event: 'TWO_FACTOR_FAILED', ...actor })
       return NextResponse.json<ApiError>(
         { error: { code: 'CODE_EXPIRED', message: 'Code expired. Request a new one.' } },
         { status: 400 },
@@ -108,6 +114,7 @@ export async function POST(request: NextRequest) {
     }
 
     if (row.two_factor_code !== body.code.trim()) {
+      await recordAuditEvent({ event: 'TWO_FACTOR_FAILED', ...actor })
       return NextResponse.json<ApiError>(
         { error: { code: 'INVALID_CODE', message: 'Incorrect code.' } },
         { status: 400 },
@@ -119,6 +126,8 @@ export async function POST(request: NextRequest) {
       .from('user')
       .update({ two_factor_code: null, two_factor_expires_at: null })
       .eq('id', user.id)
+
+    await recordAuditEvent({ event: 'TWO_FACTOR_SUCCESS', ...actor })
 
     const sessionId = (session as { session?: { id?: string } }).session?.id ?? user.id
     const res = NextResponse.json({ ok: true })

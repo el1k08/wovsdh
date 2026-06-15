@@ -217,7 +217,8 @@
       "telegram": "Telegram",
       "users": "Користувачі",
       "instagram": "Instagram",
-      "twilio": "WhatsApp"
+      "twilio": "WhatsApp",
+      "security": "Безпека"
     },
     "slot_status": {
       "available": "Вільний",
@@ -560,6 +561,38 @@
       "error_remove": "Помилка видалення",
       "error_test": "Не вдалося надіслати тестове повідомлення",
       "error_network": "Мережева помилка"
+    },
+    "security_panel": {
+      "heading": "Безпека",
+      "subtitle": "Активні сесії адміністратора та журнал входів.",
+      "sessions_heading": "Активні сесії",
+      "sessions_empty": "Немає активних сесій.",
+      "audit_heading": "Журнал подій",
+      "audit_empty": "Подій ще немає.",
+      "loading": "Завантаження…",
+      "col_device": "Пристрій",
+      "col_ip": "IP",
+      "col_signed_in": "Вхід",
+      "col_expires": "Діє до",
+      "col_action": "Дія",
+      "col_event": "Подія",
+      "col_account": "Акаунт",
+      "col_location": "Місце",
+      "col_when": "Час",
+      "revoke": "Завершити",
+      "revoking": "Завершення…",
+      "this_device": "Цей пристрій",
+      "new_location": "Вхід з нового місця",
+      "new_location_badge": "нове",
+      "error_load": "Не вдалося завантажити.",
+      "error_revoke": "Не вдалося завершити сесію.",
+      "success_revoke": "Сесію завершено.",
+      "event_LOGIN_SUCCESS": "Вхід",
+      "event_LOGIN_FAILED": "Невдалий вхід",
+      "event_OTP_SENT": "2FA надіслано",
+      "event_TWO_FACTOR_SUCCESS": "2FA пройдено",
+      "event_TWO_FACTOR_FAILED": "2FA не пройдено",
+      "event_LOGOUT": "Вихід"
     }
   }
 }
