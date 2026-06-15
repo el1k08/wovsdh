@@ -232,15 +232,15 @@ export default function AdminPage() {
         {/* Settings panel — admin only */}
         {topSection === 'settings' && isAdmin && (
           <div>
-            <div className="flex gap-2 mb-6 border-b border-gray-100 pb-1 overflow-x-auto">
+            <div className="flex flex-wrap gap-2 mb-6 sm:flex-nowrap sm:border-b sm:border-gray-100 sm:pb-1 sm:overflow-x-auto">
               {SETTINGS_SUBTABS.map((sub) => (
                 <button
                   key={sub.key}
                   onClick={() => setSettingsSubTab(sub.key)}
-                  className={`px-4 py-2 rounded-t-lg text-sm font-medium transition-colors border-b-2 -mb-px shrink-0 whitespace-nowrap ${
+                  className={`px-4 py-2 text-sm font-medium transition-colors whitespace-nowrap shrink-0 rounded-full sm:rounded-none sm:rounded-t-lg sm:border-b-2 sm:-mb-px ${
                     settingsSubTab === sub.key
-                      ? 'border-[var(--color-rose)] text-[var(--color-rose)]'
-                      : 'border-transparent text-gray-500 hover:text-[var(--color-charcoal)]'
+                      ? 'bg-[var(--color-rose)] text-white sm:bg-transparent sm:text-[var(--color-rose)] sm:border-[var(--color-rose)]'
+                      : 'bg-gray-100 text-gray-600 sm:bg-transparent sm:text-gray-500 sm:border-transparent sm:hover:text-[var(--color-charcoal)]'
                   }`}
                 >
                   {sub.label}
